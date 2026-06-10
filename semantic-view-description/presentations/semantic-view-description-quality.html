@@ -1,0 +1,856 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Grading Semantic View Description Quality</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+
+    :root {
+      --bg: #0F1B2D;
+      --sidebar-bg: #1B2A4A;
+      --primary: #29B5E8;
+      --accent: #7C3AED;
+      --text: #E2E8F0;
+      --text-muted: #94A3B8;
+      --card-bg: #162236;
+      --border: #2D4A6F;
+      --green: #10B981;
+      --orange: #F59E0B;
+      --red: #EF4444;
+    }
+
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      font-family: 'Inter', sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.6;
+      overflow-x: hidden;
+    }
+
+    .progress-bar {
+      position: fixed;
+      top: 0;
+      left: 0;
+      height: 3px;
+      background: linear-gradient(90deg, var(--primary), var(--accent));
+      z-index: 1000;
+      transition: width 0.1s;
+    }
+
+    .sidebar {
+      position: fixed;
+      left: 0;
+      top: 0;
+      width: 260px;
+      height: 100vh;
+      background: var(--sidebar-bg);
+      padding: 2rem 1.5rem;
+      overflow-y: auto;
+      border-right: 1px solid var(--border);
+      z-index: 100;
+    }
+
+    .sidebar h2 {
+      font-size: 1rem;
+      font-weight: 600;
+      color: var(--primary);
+      margin-bottom: 1.5rem;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+
+    .sidebar a {
+      display: block;
+      color: var(--text-muted);
+      text-decoration: none;
+      padding: 0.5rem 0.75rem;
+      border-radius: 6px;
+      font-size: 0.85rem;
+      margin-bottom: 0.25rem;
+      transition: all 0.2s;
+    }
+
+    .sidebar a:hover,
+    .sidebar a.active {
+      color: var(--text);
+      background: rgba(41, 181, 232, 0.1);
+    }
+
+    .sidebar a.active {
+      border-left: 3px solid var(--primary);
+      padding-left: calc(0.75rem - 3px);
+    }
+
+    .main {
+      margin-left: 260px;
+      padding: 0;
+    }
+
+    .slide {
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      padding: 4rem 3rem;
+      max-width: 1200px;
+      margin: 0 auto;
+    }
+
+    .slide h1 {
+      font-size: 2.5rem;
+      font-weight: 700;
+      margin-bottom: 1rem;
+      background: linear-gradient(135deg, var(--primary), var(--accent));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+
+    .slide h2 {
+      font-size: 1.75rem;
+      font-weight: 600;
+      color: var(--text);
+      margin-bottom: 1.5rem;
+    }
+
+    .slide h3 {
+      font-size: 1.25rem;
+      font-weight: 500;
+      color: var(--text-muted);
+      margin-bottom: 1rem;
+    }
+
+    .slide p {
+      font-size: 1.1rem;
+      color: var(--text-muted);
+      max-width: 700px;
+      text-align: center;
+    }
+
+    .stat-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 1.5rem;
+      width: 100%;
+      margin: 2rem 0;
+    }
+
+    .stat-card {
+      background: var(--card-bg);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 1.5rem;
+      text-align: center;
+    }
+
+    .stat-card .value {
+      font-size: 2rem;
+      font-weight: 700;
+      color: var(--primary);
+    }
+
+    .stat-card .label {
+      font-size: 0.85rem;
+      color: var(--text-muted);
+      margin-top: 0.5rem;
+    }
+
+    .card-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+      gap: 1.5rem;
+      width: 100%;
+      margin: 2rem 0;
+    }
+
+    .card {
+      background: var(--card-bg);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 1.5rem;
+    }
+
+    .card h4 {
+      font-size: 1rem;
+      font-weight: 600;
+      color: var(--text);
+      margin-bottom: 0.75rem;
+    }
+
+    .card p {
+      font-size: 0.9rem;
+      color: var(--text-muted);
+      text-align: left;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 2rem 0;
+      font-size: 0.9rem;
+    }
+
+    th {
+      background: var(--card-bg);
+      color: var(--primary);
+      font-weight: 600;
+      padding: 0.75rem 1rem;
+      text-align: left;
+      border-bottom: 2px solid var(--border);
+    }
+
+    td {
+      padding: 0.75rem 1rem;
+      border-bottom: 1px solid var(--border);
+      color: var(--text);
+    }
+
+    tr:hover td {
+      background: rgba(41, 181, 232, 0.05);
+    }
+
+    .bar-chart {
+      width: 100%;
+      margin: 2rem 0;
+    }
+
+    .bar-row {
+      display: flex;
+      align-items: center;
+      margin-bottom: 0.75rem;
+    }
+
+    .bar-label {
+      width: 160px;
+      font-size: 0.85rem;
+      color: var(--text-muted);
+      flex-shrink: 0;
+    }
+
+    .bar-track {
+      flex: 1;
+      height: 28px;
+      background: var(--card-bg);
+      border-radius: 6px;
+      overflow: hidden;
+      position: relative;
+    }
+
+    .bar-fill {
+      height: 100%;
+      background: linear-gradient(90deg, var(--primary), var(--accent));
+      border-radius: 6px;
+      transition: width 0.8s ease;
+    }
+
+    .bar-value {
+      margin-left: 0.75rem;
+      font-size: 0.85rem;
+      font-weight: 600;
+      color: var(--text);
+      min-width: 50px;
+    }
+
+    .highlight-box {
+      background: rgba(41, 181, 232, 0.1);
+      border: 1px solid var(--primary);
+      border-radius: 12px;
+      padding: 1.5rem;
+      margin: 1.5rem 0;
+      width: 100%;
+    }
+
+    .context-box {
+      background: rgba(124, 58, 237, 0.1);
+      border: 1px solid var(--accent);
+      border-radius: 12px;
+      padding: 1.5rem;
+      margin: 1.5rem 0;
+      width: 100%;
+    }
+
+    .warning-box {
+      background: rgba(245, 158, 11, 0.1);
+      border: 1px solid var(--orange);
+      border-radius: 12px;
+      padding: 1.5rem;
+      margin: 1.5rem 0;
+      width: 100%;
+    }
+
+    .badge-green { background: rgba(16, 185, 129, 0.15); color: var(--green); padding: 0.25rem 0.75rem; border-radius: 99px; font-size: 0.8rem; font-weight: 500; }
+    .badge-orange { background: rgba(245, 158, 11, 0.15); color: var(--orange); padding: 0.25rem 0.75rem; border-radius: 99px; font-size: 0.8rem; font-weight: 500; }
+    .badge-red { background: rgba(239, 68, 68, 0.15); color: var(--red); padding: 0.25rem 0.75rem; border-radius: 99px; font-size: 0.8rem; font-weight: 500; }
+    .badge-blue { background: rgba(41, 181, 232, 0.15); color: var(--primary); padding: 0.25rem 0.75rem; border-radius: 99px; font-size: 0.8rem; font-weight: 500; }
+    .badge-purple { background: rgba(124, 58, 237, 0.15); color: var(--accent); padding: 0.25rem 0.75rem; border-radius: 99px; font-size: 0.8rem; font-weight: 500; }
+
+    .score-high { color: var(--green); font-weight: 600; }
+    .score-mid { color: var(--orange); font-weight: 600; }
+    .score-low { color: var(--red); font-weight: 600; }
+    .score-best { color: var(--green); font-weight: 700; background: rgba(16, 185, 129, 0.1); padding: 0.2rem 0.5rem; border-radius: 4px; }
+
+    .slide ul {
+      list-style: none;
+      width: 100%;
+      max-width: 700px;
+    }
+
+    .slide ul li {
+      padding: 0.75rem 0;
+      padding-left: 1.5rem;
+      position: relative;
+      color: var(--text);
+      font-size: 1.05rem;
+    }
+
+    .slide ul li::before {
+      content: '';
+      position: absolute;
+      left: 0;
+      top: 50%;
+      transform: translateY(-50%);
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: var(--primary);
+    }
+
+    .anim-fade {
+      opacity: 0;
+      transform: translateY(20px);
+      transition: opacity 0.6s ease, transform 0.6s ease;
+    }
+
+    .anim-fade.visible {
+      opacity: 1;
+      transform: translateY(0);
+    }
+
+    code {
+      background: var(--card-bg);
+      border: 1px solid var(--border);
+      padding: 0.15rem 0.5rem;
+      border-radius: 4px;
+      font-size: 0.85rem;
+      font-family: 'JetBrains Mono', 'Fira Code', monospace;
+      color: var(--primary);
+    }
+
+    .code-block {
+      background: var(--card-bg);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 1.5rem;
+      margin: 1.5rem 0;
+      width: 100%;
+      font-family: 'JetBrains Mono', 'Fira Code', monospace;
+      font-size: 0.85rem;
+      line-height: 1.8;
+      overflow-x: auto;
+      white-space: pre;
+      color: var(--text-muted);
+    }
+
+    .code-block .keyword { color: var(--accent); }
+    .code-block .string { color: var(--green); }
+    .code-block .comment { color: #6B7280; font-style: italic; }
+    .code-block .good { color: var(--green); }
+    .code-block .bad { color: var(--red); }
+
+    .example-pair {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 1.5rem;
+      width: 100%;
+      margin: 1.5rem 0;
+    }
+
+    .example-bad {
+      background: rgba(239, 68, 68, 0.05);
+      border: 1px solid var(--red);
+      border-radius: 12px;
+      padding: 1.5rem;
+    }
+
+    .example-good {
+      background: rgba(16, 185, 129, 0.05);
+      border: 1px solid var(--green);
+      border-radius: 12px;
+      padding: 1.5rem;
+    }
+
+    .example-bad h4, .example-good h4 {
+      font-size: 0.85rem;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      margin-bottom: 0.75rem;
+    }
+
+    .example-bad h4 { color: var(--red); }
+    .example-good h4 { color: var(--green); }
+
+    .example-bad p, .example-good p {
+      font-size: 0.9rem;
+      text-align: left;
+      line-height: 1.6;
+    }
+
+    .example-bad code, .example-good code {
+      display: block;
+      margin-top: 0.5rem;
+      padding: 0.5rem 0.75rem;
+      font-size: 0.8rem;
+      white-space: pre-wrap;
+    }
+
+    .workflow-step {
+      display: flex;
+      align-items: flex-start;
+      gap: 1rem;
+      padding: 1.25rem 0;
+      border-bottom: 1px solid var(--border);
+      width: 100%;
+    }
+
+    .workflow-step:last-child {
+      border-bottom: none;
+    }
+
+    .step-number {
+      background: linear-gradient(135deg, var(--primary), var(--accent));
+      color: white;
+      width: 32px;
+      height: 32px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 700;
+      font-size: 0.85rem;
+      flex-shrink: 0;
+    }
+
+    .step-content h4 {
+      font-size: 1rem;
+      font-weight: 600;
+      color: var(--text);
+      margin-bottom: 0.25rem;
+    }
+
+    .step-content p {
+      font-size: 0.9rem;
+      color: var(--text-muted);
+      text-align: left;
+    }
+
+    @media (max-width: 900px) {
+      .sidebar { display: none; }
+      .main { margin-left: 0; }
+      .stat-grid { grid-template-columns: repeat(2, 1fr); }
+      .slide { padding: 2rem 1.5rem; }
+      .example-pair { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+  <div class="progress-bar"></div>
+
+  <nav class="sidebar">
+    <h2>Description Quality</h2>
+    <a href="#hero">Overview</a>
+    <a href="#why-descriptions">Why Descriptions Matter</a>
+    <a href="#four-criteria">The Four Criteria</a>
+    <a href="#precise">1. Preciseness</a>
+    <a href="#concise">2. Conciseness</a>
+    <a href="#non-circular">3. Non-Circular</a>
+    <a href="#correct">4. Correctness</a>
+    <a href="#grading-rubric">Grading Rubric</a>
+    <a href="#cortex-code">Cortex Code Review</a>
+    <a href="#demo-workflow">Demo Workflow</a>
+    <a href="#before-after">Before &amp; After</a>
+    <a href="#closing">Next Steps</a>
+  </nav>
+
+  <main class="main">
+
+    <!-- Hero -->
+    <section class="slide" id="hero">
+      <h1>Grading Semantic View Description Quality</h1>
+      <p>A framework for evaluating and improving descriptions across dimensions, facts, and metrics in Snowflake Semantic Views</p>
+      <div class="stat-grid" style="margin-top: 2rem;">
+        <div class="stat-card anim-fade"><div class="value">4</div><div class="label">Grading Criteria</div></div>
+        <div class="stat-card anim-fade"><div class="value">A-F</div><div class="label">Score Scale</div></div>
+        <div class="stat-card anim-fade"><div class="value">AI</div><div class="label">Automated Review</div></div>
+        <div class="stat-card anim-fade"><div class="value">2x</div><div class="label">Analyst Accuracy Lift</div></div>
+      </div>
+    </section>
+
+    <!-- Why Descriptions Matter -->
+    <section class="slide" id="why-descriptions">
+      <h2>Why Descriptions Matter</h2>
+      <h3>Descriptions are the bridge between your data model and AI comprehension</h3>
+      <div class="card-grid anim-fade">
+        <div class="card">
+          <h4>Cortex Analyst Accuracy</h4>
+          <p>Cortex Analyst reads descriptions to understand what dimensions, facts, and metrics mean. Poor descriptions lead to incorrect SQL generation and wrong answers.</p>
+        </div>
+        <div class="card">
+          <h4>Business User Trust</h4>
+          <p>When Cortex Analyst generates wrong queries, business users lose trust. Clear descriptions prevent ambiguity that causes misinterpretation.</p>
+        </div>
+        <div class="card">
+          <h4>Discoverability</h4>
+          <p>Good descriptions help users find the right metrics. "Revenue" could mean gross, net, recognized, or deferred -- the description disambiguates.</p>
+        </div>
+        <div class="card">
+          <h4>Maintenance at Scale</h4>
+          <p>As semantic views grow to hundreds of elements, descriptions serve as living documentation that prevents knowledge silos.</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- The Four Criteria -->
+    <section class="slide" id="four-criteria">
+      <h2>The Four Grading Criteria</h2>
+      <p>Every description is evaluated on four independent axes</p>
+      <div class="stat-grid" style="margin-top: 2rem;">
+        <div class="stat-card anim-fade">
+          <div class="value" style="font-size: 1.5rem;">Precise</div>
+          <div class="label">Specific enough to distinguish from similar concepts</div>
+        </div>
+        <div class="stat-card anim-fade">
+          <div class="value" style="font-size: 1.5rem;">Concise</div>
+          <div class="label">No unnecessary words or filler language</div>
+        </div>
+        <div class="stat-card anim-fade">
+          <div class="value" style="font-size: 1.5rem;">Non-Circular</div>
+          <div class="label">Does not restate the name as the definition</div>
+        </div>
+        <div class="stat-card anim-fade">
+          <div class="value" style="font-size: 1.5rem;">Correct</div>
+          <div class="label">Accurately reflects the underlying SQL expression</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Criterion 1: Preciseness -->
+    <section class="slide" id="precise">
+      <h2>1. Preciseness</h2>
+      <h3>Can this description uniquely identify what this element computes?</h3>
+      <div class="example-pair anim-fade">
+        <div class="example-bad">
+          <h4>Failing</h4>
+          <p><strong>Metric:</strong> TOTAL_REVENUE</p>
+          <code>"The total revenue"</code>
+          <p style="margin-top: 0.75rem; color: var(--text-muted); font-size: 0.85rem;">Does not specify: gross vs net, what time grain, which business line, or whether discounts are applied.</p>
+        </div>
+        <div class="example-good">
+          <h4>Passing</h4>
+          <p><strong>Metric:</strong> TOTAL_REVENUE</p>
+          <code>"Sum of extended price after applying line-item discounts, across all order statuses. Does not include tax or shipping."</code>
+          <p style="margin-top: 0.75rem; color: var(--text-muted); font-size: 0.85rem;">Specifies the calculation basis, discount treatment, scope, and exclusions.</p>
+        </div>
+      </div>
+      <div class="highlight-box anim-fade">
+        <strong>Key question:</strong> If a user has two similarly-named metrics, could they tell them apart from descriptions alone?
+      </div>
+    </section>
+
+    <!-- Criterion 2: Conciseness -->
+    <section class="slide" id="concise">
+      <h2>2. Conciseness</h2>
+      <h3>Does every word earn its place in the description?</h3>
+      <div class="example-pair anim-fade">
+        <div class="example-bad">
+          <h4>Failing</h4>
+          <p><strong>Dimension:</strong> ORDER_DATE</p>
+          <code>"This field represents the date on which the order was placed by the customer in the system and recorded in the database"</code>
+          <p style="margin-top: 0.75rem; color: var(--text-muted); font-size: 0.85rem;">27 words. "This field represents", "by the customer", "in the system", "and recorded in the database" are all filler.</p>
+        </div>
+        <div class="example-good">
+          <h4>Passing</h4>
+          <p><strong>Dimension:</strong> ORDER_DATE</p>
+          <code>"Date the order was placed"</code>
+          <p style="margin-top: 0.75rem; color: var(--text-muted); font-size: 0.85rem;">5 words. Same information, no filler. Cortex Analyst parses this faster and more reliably.</p>
+        </div>
+      </div>
+      <div class="warning-box anim-fade">
+        <strong>Common anti-patterns:</strong> Starting with "This is the...", "This field represents...", "This column contains...", or ending with "...in the database", "...in the system".
+      </div>
+    </section>
+
+    <!-- Criterion 3: Non-Circular -->
+    <section class="slide" id="non-circular">
+      <h2>3. Non-Circular</h2>
+      <h3>Does the description add information beyond what the name already says?</h3>
+      <div class="example-pair anim-fade">
+        <div class="example-bad">
+          <h4>Failing</h4>
+          <p><strong>Fact:</strong> DISCOUNTED_PRICE</p>
+          <code>"The discounted price"</code>
+          <p style="margin-top: 0.75rem; color: var(--text-muted); font-size: 0.85rem;">This is just the name with articles added. It tells the AI nothing it couldn't already infer.</p>
+        </div>
+        <div class="example-good">
+          <h4>Passing</h4>
+          <p><strong>Fact:</strong> DISCOUNTED_PRICE</p>
+          <code>"Extended price multiplied by (1 - discount rate). Represents per-line-item revenue after discount but before tax."</code>
+          <p style="margin-top: 0.75rem; color: var(--text-muted); font-size: 0.85rem;">Explains the formula, clarifies scope (per line item), and states what is excluded (tax).</p>
+        </div>
+      </div>
+      <div class="context-box anim-fade">
+        <strong>The test:</strong> Delete the element name. Does the description still convey meaning on its own? If you need the name to understand the description, it's circular.
+      </div>
+    </section>
+
+    <!-- Criterion 4: Correctness -->
+    <section class="slide" id="correct">
+      <h2>4. Correctness</h2>
+      <h3>Does the description accurately reflect the underlying SQL expression?</h3>
+      <div class="example-pair anim-fade">
+        <div class="example-bad">
+          <h4>Failing</h4>
+          <p><strong>Metric:</strong> ORDER_AVERAGE_VALUE</p>
+          <p><strong>Expression:</strong> <code>AVG(orders.o_totalprice)</code></p>
+          <code>"Total value of all orders"</code>
+          <p style="margin-top: 0.75rem; color: var(--text-muted); font-size: 0.85rem;">Says "total" but the expression uses AVG. This will confuse the AI into double-aggregating or misinterpreting user questions about averages.</p>
+        </div>
+        <div class="example-good">
+          <h4>Passing</h4>
+          <p><strong>Metric:</strong> ORDER_AVERAGE_VALUE</p>
+          <p><strong>Expression:</strong> <code>AVG(orders.o_totalprice)</code></p>
+          <code>"Average total price per order across all orders"</code>
+          <p style="margin-top: 0.75rem; color: var(--text-muted); font-size: 0.85rem;">Correctly identifies the aggregation (average), the measure (total price), and the grain (per order).</p>
+        </div>
+      </div>
+      <div class="highlight-box anim-fade">
+        <strong>Validation method:</strong> Compare the description against the SQL expression. The aggregation type, included columns, filters, and grain must all match.
+      </div>
+    </section>
+
+    <!-- Grading Rubric -->
+    <section class="slide" id="grading-rubric">
+      <h2>Grading Rubric</h2>
+      <h3>Each criterion is scored independently, then combined</h3>
+      <div class="anim-fade" style="width: 100%; overflow-x: auto;">
+        <table>
+          <thead>
+            <tr><th>Grade</th><th>Preciseness</th><th>Conciseness</th><th>Non-Circular</th><th>Correctness</th></tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td class="score-high">A</td>
+              <td>Uniquely identifies the element; includes scope, exclusions, and edge cases</td>
+              <td>Every word is necessary; under 20 words for simple elements</td>
+              <td>Description is entirely independent of the name</td>
+              <td>Perfectly matches the SQL expression including aggregation and filters</td>
+            </tr>
+            <tr>
+              <td class="score-mid">B</td>
+              <td>Mostly specific; minor ambiguity that wouldn't cause misuse</td>
+              <td>1-2 filler words but core meaning is tight</td>
+              <td>Adds substantial information beyond the name</td>
+              <td>Correct aggregation and grain; minor omissions on edge cases</td>
+            </tr>
+            <tr>
+              <td class="score-mid">C</td>
+              <td>Generic; could apply to multiple elements in the view</td>
+              <td>Noticeably verbose; could be 50% shorter</td>
+              <td>Partially restates the name but adds some new info</td>
+              <td>Right concept but wrong aggregation type or missing key detail</td>
+            </tr>
+            <tr>
+              <td class="score-low">D</td>
+              <td>Vague; provides almost no distinguishing information</td>
+              <td>Extremely verbose; buries meaning in boilerplate</td>
+              <td>Mostly just restates the name with filler words</td>
+              <td>Misleading; would cause incorrect AI-generated queries</td>
+            </tr>
+            <tr>
+              <td class="score-low">F</td>
+              <td>Missing or completely generic ("a metric")</td>
+              <td>N/A (missing description)</td>
+              <td>Exact copy of element name or trivial rewording</td>
+              <td>Contradicts the actual expression</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- Cortex Code Skill -->
+    <section class="slide" id="cortex-code">
+      <h2>Automating Review with Cortex Code</h2>
+      <h3>The semantic-view skill provides automated description quality analysis</h3>
+      <div class="card-grid anim-fade">
+        <div class="card">
+          <h4>Skill Invocation</h4>
+          <p>Cortex Code's <code>semantic-view</code> skill automatically loads when working with semantic view YAML or SQL definitions. It grades descriptions across all four criteria without manual prompting.</p>
+        </div>
+        <div class="card">
+          <h4>Expression-Aware</h4>
+          <p>The skill reads the SQL expression for each element and validates that the description accurately reflects the computation, catching "says SUM but uses AVG" errors.</p>
+        </div>
+        <div class="card">
+          <h4>Batch Analysis</h4>
+          <p>Review an entire semantic view at once. The skill produces a per-element scorecard covering all dimensions, facts, and metrics with specific improvement suggestions.</p>
+        </div>
+        <div class="card">
+          <h4>Fix-in-Place</h4>
+          <p>After identifying issues, Cortex Code can rewrite descriptions directly in your YAML or DDL, applying all four criteria simultaneously. You review and approve the changes.</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- Demo Workflow -->
+    <section class="slide" id="demo-workflow">
+      <h2>Demo: Review Workflow</h2>
+      <h3>How to use Cortex Code to grade and fix descriptions</h3>
+      <div class="anim-fade" style="width: 100%; max-width: 800px;">
+        <div class="workflow-step">
+          <div class="step-number">1</div>
+          <div class="step-content">
+            <h4>Load Your Semantic View</h4>
+            <p>Open your semantic view YAML file or use <code>cortex semantic-views describe &lt;name&gt;</code> to pull the current definition. The skill auto-activates when it detects semantic view content.</p>
+          </div>
+        </div>
+        <div class="workflow-step">
+          <div class="step-number">2</div>
+          <div class="step-content">
+            <h4>Request a Description Audit</h4>
+            <p>Ask Cortex Code: "Grade the descriptions in this semantic view" or "Review description quality for my semantic view." The skill evaluates each element against all four criteria.</p>
+          </div>
+        </div>
+        <div class="workflow-step">
+          <div class="step-number">3</div>
+          <div class="step-content">
+            <h4>Review the Scorecard</h4>
+            <p>Cortex Code returns a per-element breakdown showing grades for preciseness, conciseness, non-circularity, and correctness. Elements needing attention are flagged with specific issues.</p>
+          </div>
+        </div>
+        <div class="workflow-step">
+          <div class="step-number">4</div>
+          <div class="step-content">
+            <h4>Apply Suggested Rewrites</h4>
+            <p>For each failing element, Cortex Code proposes a rewritten description. Accept, modify, or reject each suggestion. Changes are applied directly to your YAML or DDL.</p>
+          </div>
+        </div>
+        <div class="workflow-step">
+          <div class="step-number">5</div>
+          <div class="step-content">
+            <h4>Validate with cortex reflect</h4>
+            <p>Run <code>cortex reflect</code> to validate the updated semantic view YAML compiles correctly. Then deploy via your CI/CD pipeline or directly with ALTER SEMANTIC VIEW.</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Before & After -->
+    <section class="slide" id="before-after">
+      <h2>Before &amp; After: Real Examples</h2>
+      <h3>Semantic view from TPCH sample data</h3>
+      <div class="anim-fade" style="width: 100%; overflow-x: auto;">
+        <table>
+          <thead>
+            <tr><th>Element</th><th>Before (Grade)</th><th>After (Grade)</th></tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><code>DISCOUNTED_PRICE</code> (fact)</td>
+              <td class="score-low">"Extended price after discount" (C-)<br><small style="color:var(--text-muted)">Not precise on formula; slightly circular</small></td>
+              <td class="score-high">"Extended price * (1 - discount rate), representing per-line revenue post-discount, pre-tax" (A)<br><small style="color:var(--text-muted)">Formula, scope, exclusions</small></td>
+            </tr>
+            <tr>
+              <td><code>ORDER_AVERAGE_VALUE</code> (metric)</td>
+              <td class="score-low">"Average order value across all orders" (B-)<br><small style="color:var(--text-muted)">Correct but imprecise on what's averaged</small></td>
+              <td class="score-high">"Average of o_totalprice per order, including all order statuses" (A)<br><small style="color:var(--text-muted)">Specifies the column, grain, and scope</small></td>
+            </tr>
+            <tr>
+              <td><code>CUSTOMER_NAME</code> (dim)</td>
+              <td class="score-low">"Name of the customer" (D)<br><small style="color:var(--text-muted)">Circular; just re-words the element name</small></td>
+              <td class="score-high">"Full name (c_name) from the customer master table, unique per customer key" (A-)<br><small style="color:var(--text-muted)">Source column, uniqueness, table reference</small></td>
+            </tr>
+            <tr>
+              <td><code>ORDER_YEAR</code> (dim)</td>
+              <td class="score-mid">"Year when the order was placed" (B)<br><small style="color:var(--text-muted)">Concise and correct but slightly circular</small></td>
+              <td class="score-high">"4-digit year extracted from o_orderdate via YEAR()" (A)<br><small style="color:var(--text-muted)">Source, function used, data shape</small></td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- Closing -->
+    <section class="slide" id="closing">
+      <h2>Next Steps</h2>
+      <div class="card-grid anim-fade">
+        <div class="card">
+          <h4>Audit Your Existing Views</h4>
+          <p>Run the semantic-view skill against your production semantic views to identify descriptions scoring below B on any criterion. Prioritize metrics and customer-facing dimensions.</p>
+        </div>
+        <div class="card">
+          <h4>Establish a Standard</h4>
+          <p>Adopt the four-criteria rubric as part of your semantic view development process. Add description review to PR checklists and CI pipelines.</p>
+        </div>
+        <div class="card">
+          <h4>Measure Analyst Accuracy</h4>
+          <p>Track Cortex Analyst accuracy before and after description improvements. Strong descriptions correlate directly with fewer incorrect query generations.</p>
+        </div>
+        <div class="card">
+          <h4>Automate with Cortex Code</h4>
+          <p>Integrate Cortex Code description review into your development workflow. Catch description regressions before they reach production.</p>
+        </div>
+      </div>
+      <div class="highlight-box anim-fade" style="margin-top: 2rem;">
+        <strong>Key takeaway:</strong> Descriptions are not documentation -- they are instructions to the AI. Treat them with the same rigor as your SQL expressions.
+      </div>
+    </section>
+
+  </main>
+
+  <script>
+    // Progress bar
+    const progressBar = document.querySelector('.progress-bar');
+    window.addEventListener('scroll', () => {
+      const scrollTop = window.scrollY;
+      const docHeight = document.documentElement.scrollHeight - window.innerHeight;
+      progressBar.style.width = (scrollTop / docHeight * 100) + '%';
+    });
+
+    // Scroll animations
+    const observer = new IntersectionObserver((entries) => {
+      entries.forEach(entry => {
+        if (entry.isIntersecting) {
+          entry.target.classList.add('visible');
+        }
+      });
+    }, { threshold: 0.1 });
+
+    document.querySelectorAll('.anim-fade').forEach(el => observer.observe(el));
+
+    // Active nav tracking
+    const sections = document.querySelectorAll('.slide');
+    const navLinks = document.querySelectorAll('.sidebar a');
+
+    window.addEventListener('scroll', () => {
+      let current = '';
+      sections.forEach(section => {
+        const sectionTop = section.offsetTop - 200;
+        if (window.scrollY >= sectionTop) {
+          current = section.getAttribute('id');
+        }
+      });
+      navLinks.forEach(link => {
+        link.classList.remove('active');
+        if (link.getAttribute('href') === '#' + current) {
+          link.classList.add('active');
+        }
+      });
+    });
+  </script>
+</body>
+</html>

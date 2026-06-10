@@ -1,0 +1,1362 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Evaluating Cortex Agents: From Theory to Production</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+
+    :root {
+      --bg: #0F1B2D;
+      --sidebar-bg: #1B2A4A;
+      --primary: #29B5E8;
+      --accent: #7C3AED;
+      --text: #E2E8F0;
+      --text-muted: #94A3B8;
+      --card-bg: #162236;
+      --border: #2D4A6F;
+      --green: #10B981;
+      --orange: #F59E0B;
+      --red: #EF4444;
+    }
+
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      font-family: 'Inter', sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.6;
+      overflow-x: hidden;
+    }
+
+    .progress-bar {
+      position: fixed;
+      top: 0;
+      left: 0;
+      height: 3px;
+      background: linear-gradient(90deg, var(--primary), var(--accent));
+      z-index: 1000;
+      transition: width 0.1s;
+    }
+
+    .sidebar {
+      position: fixed;
+      left: 0;
+      top: 0;
+      width: 260px;
+      height: 100vh;
+      background: var(--sidebar-bg);
+      padding: 2rem 1.5rem;
+      overflow-y: auto;
+      border-right: 1px solid var(--border);
+      z-index: 100;
+    }
+
+    .sidebar h2 {
+      font-size: 1rem;
+      font-weight: 600;
+      color: var(--primary);
+      margin-bottom: 1.5rem;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+
+    .sidebar .section-label {
+      font-size: 0.7rem;
+      font-weight: 600;
+      color: var(--accent);
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      margin-top: 1.25rem;
+      margin-bottom: 0.5rem;
+      padding-left: 0.75rem;
+    }
+
+    .sidebar a {
+      display: block;
+      color: var(--text-muted);
+      text-decoration: none;
+      padding: 0.5rem 0.75rem;
+      border-radius: 6px;
+      font-size: 0.85rem;
+      margin-bottom: 0.25rem;
+      transition: all 0.2s;
+    }
+
+    .sidebar a:hover,
+    .sidebar a.active {
+      color: var(--text);
+      background: rgba(41, 181, 232, 0.1);
+    }
+
+    .sidebar a.active {
+      border-left: 3px solid var(--primary);
+      padding-left: calc(0.75rem - 3px);
+    }
+
+    .main {
+      margin-left: 260px;
+      padding: 0;
+    }
+
+    .slide {
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      padding: 4rem 3rem;
+      max-width: 1200px;
+      margin: 0 auto;
+    }
+
+    .slide h1 {
+      font-size: 2.5rem;
+      font-weight: 700;
+      margin-bottom: 1rem;
+      background: linear-gradient(135deg, var(--primary), var(--accent));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+
+    .slide h2 {
+      font-size: 1.75rem;
+      font-weight: 600;
+      color: var(--text);
+      margin-bottom: 1.5rem;
+    }
+
+    .slide h3 {
+      font-size: 1.25rem;
+      font-weight: 500;
+      color: var(--text-muted);
+      margin-bottom: 1rem;
+    }
+
+    .slide p {
+      font-size: 1.1rem;
+      color: var(--text-muted);
+      max-width: 700px;
+      text-align: center;
+    }
+
+    .stat-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 1.5rem;
+      width: 100%;
+      margin: 2rem 0;
+    }
+
+    .stat-card {
+      background: var(--card-bg);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 1.5rem;
+      text-align: center;
+    }
+
+    .stat-card .value {
+      font-size: 2rem;
+      font-weight: 700;
+      color: var(--primary);
+    }
+
+    .stat-card .label {
+      font-size: 0.85rem;
+      color: var(--text-muted);
+      margin-top: 0.5rem;
+    }
+
+    .card-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+      gap: 1.5rem;
+      width: 100%;
+      margin: 2rem 0;
+    }
+
+    .card {
+      background: var(--card-bg);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 1.5rem;
+    }
+
+    .card h4 {
+      font-size: 1rem;
+      font-weight: 600;
+      color: var(--text);
+      margin-bottom: 0.75rem;
+    }
+
+    .card p {
+      font-size: 0.9rem;
+      color: var(--text-muted);
+      text-align: left;
+    }
+
+    .card ul {
+      list-style: none;
+      padding: 0;
+    }
+
+    .card ul li {
+      padding: 0.4rem 0;
+      padding-left: 1.25rem;
+      position: relative;
+      color: var(--text-muted);
+      font-size: 0.9rem;
+    }
+
+    .card ul li::before {
+      content: '';
+      position: absolute;
+      left: 0;
+      top: 50%;
+      transform: translateY(-50%);
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: var(--primary);
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 2rem 0;
+      font-size: 0.9rem;
+    }
+
+    th {
+      background: var(--card-bg);
+      color: var(--primary);
+      font-weight: 600;
+      padding: 0.75rem 1rem;
+      text-align: left;
+      border-bottom: 2px solid var(--border);
+    }
+
+    td {
+      padding: 0.75rem 1rem;
+      border-bottom: 1px solid var(--border);
+      color: var(--text);
+    }
+
+    tr:hover td {
+      background: rgba(41, 181, 232, 0.05);
+    }
+
+    .highlight-box {
+      background: rgba(41, 181, 232, 0.1);
+      border: 1px solid var(--primary);
+      border-radius: 12px;
+      padding: 1.5rem;
+      margin: 1.5rem 0;
+      width: 100%;
+    }
+
+    .highlight-box p, .context-box p, .warning-box p {
+      text-align: left;
+      max-width: none;
+    }
+
+    .context-box {
+      background: rgba(124, 58, 237, 0.1);
+      border: 1px solid var(--accent);
+      border-radius: 12px;
+      padding: 1.5rem;
+      margin: 1.5rem 0;
+      width: 100%;
+    }
+
+    .warning-box {
+      background: rgba(245, 158, 11, 0.1);
+      border: 1px solid var(--orange);
+      border-radius: 12px;
+      padding: 1.5rem;
+      margin: 1.5rem 0;
+      width: 100%;
+    }
+
+    .badge-green { background: rgba(16, 185, 129, 0.15); color: var(--green); padding: 0.25rem 0.75rem; border-radius: 99px; font-size: 0.8rem; font-weight: 500; display: inline-block; }
+    .badge-orange { background: rgba(245, 158, 11, 0.15); color: var(--orange); padding: 0.25rem 0.75rem; border-radius: 99px; font-size: 0.8rem; font-weight: 500; display: inline-block; }
+    .badge-red { background: rgba(239, 68, 68, 0.15); color: var(--red); padding: 0.25rem 0.75rem; border-radius: 99px; font-size: 0.8rem; font-weight: 500; display: inline-block; }
+    .badge-blue { background: rgba(41, 181, 232, 0.15); color: var(--primary); padding: 0.25rem 0.75rem; border-radius: 99px; font-size: 0.8rem; font-weight: 500; display: inline-block; }
+    .badge-purple { background: rgba(124, 58, 237, 0.15); color: var(--accent); padding: 0.25rem 0.75rem; border-radius: 99px; font-size: 0.8rem; font-weight: 500; display: inline-block; }
+
+    .slide ul {
+      list-style: none;
+      width: 100%;
+      max-width: 700px;
+    }
+
+    .slide ul li {
+      padding: 0.75rem 0;
+      padding-left: 1.5rem;
+      position: relative;
+      color: var(--text);
+      font-size: 1.05rem;
+    }
+
+    .slide ul li::before {
+      content: '';
+      position: absolute;
+      left: 0;
+      top: 50%;
+      transform: translateY(-50%);
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: var(--primary);
+    }
+
+    code {
+      background: var(--card-bg);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 0.2rem 0.5rem;
+      font-size: 0.85rem;
+      font-family: 'SF Mono', 'Fira Code', monospace;
+      color: var(--primary);
+    }
+
+    pre {
+      background: var(--card-bg);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 1.5rem;
+      overflow-x: auto;
+      width: 100%;
+      margin: 1.5rem 0;
+      font-size: 0.85rem;
+      line-height: 1.7;
+      font-family: 'SF Mono', 'Fira Code', monospace;
+      color: var(--text);
+    }
+
+    pre .keyword { color: var(--accent); font-weight: 500; }
+    pre .string { color: var(--green); }
+    pre .comment { color: var(--text-muted); font-style: italic; }
+    pre .function { color: var(--primary); }
+
+    .flow-diagram {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.5rem;
+      margin: 2rem 0;
+      flex-wrap: wrap;
+      width: 100%;
+    }
+
+    .flow-step {
+      background: var(--card-bg);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 1rem 1.5rem;
+      text-align: center;
+      min-width: 140px;
+    }
+
+    .flow-step.active {
+      border-color: var(--primary);
+      box-shadow: 0 0 20px rgba(41, 181, 232, 0.2);
+    }
+
+    .flow-step .step-label {
+      font-size: 0.75rem;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+
+    .flow-step .step-title {
+      font-size: 1rem;
+      font-weight: 600;
+      color: var(--text);
+      margin-top: 0.25rem;
+    }
+
+    .flow-arrow {
+      color: var(--primary);
+      font-size: 1.5rem;
+      font-weight: 300;
+    }
+
+    .two-col {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 2rem;
+      width: 100%;
+      margin: 2rem 0;
+    }
+
+    .three-col {
+      display: grid;
+      grid-template-columns: 1fr 1fr 1fr;
+      gap: 1.5rem;
+      width: 100%;
+      margin: 2rem 0;
+    }
+
+    .gpa-diagram {
+      display: grid;
+      grid-template-columns: 1fr 1fr 1fr;
+      gap: 1rem;
+      width: 100%;
+      margin: 2rem 0;
+    }
+
+    .gpa-column {
+      background: var(--card-bg);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 1.5rem;
+      text-align: center;
+    }
+
+    .gpa-column.goal { border-top: 3px solid var(--green); }
+    .gpa-column.plan { border-top: 3px solid var(--primary); }
+    .gpa-column.action { border-top: 3px solid var(--accent); }
+
+    .gpa-column h4 {
+      font-size: 1.1rem;
+      font-weight: 600;
+      margin-bottom: 1rem;
+    }
+
+    .gpa-column.goal h4 { color: var(--green); }
+    .gpa-column.plan h4 { color: var(--primary); }
+    .gpa-column.action h4 { color: var(--accent); }
+
+    .gpa-column p {
+      font-size: 0.85rem;
+      color: var(--text-muted);
+      text-align: left;
+      margin-bottom: 0.75rem;
+    }
+
+    .metric-pill {
+      display: inline-block;
+      padding: 0.3rem 0.7rem;
+      border-radius: 6px;
+      font-size: 0.8rem;
+      font-weight: 500;
+      margin: 0.25rem;
+    }
+
+    .metric-pill.goal { background: rgba(16, 185, 129, 0.15); color: var(--green); }
+    .metric-pill.plan { background: rgba(41, 181, 232, 0.15); color: var(--primary); }
+    .metric-pill.action { background: rgba(124, 58, 237, 0.15); color: var(--accent); }
+    .metric-pill.cross { background: rgba(245, 158, 11, 0.15); color: var(--orange); }
+
+    .anim-fade {
+      opacity: 0;
+      transform: translateY(20px);
+      transition: opacity 0.6s ease, transform 0.6s ease;
+    }
+
+    .anim-fade.visible {
+      opacity: 1;
+      transform: translateY(0);
+    }
+
+    .part-divider {
+      min-height: 40vh;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      padding: 4rem 3rem;
+      max-width: 1200px;
+      margin: 0 auto;
+    }
+
+    .part-divider h2 {
+      font-size: 1rem;
+      font-weight: 600;
+      color: var(--accent);
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      margin-bottom: 0.5rem;
+    }
+
+    .part-divider h1 {
+      font-size: 2rem;
+      font-weight: 700;
+      color: var(--text);
+      background: none;
+      -webkit-text-fill-color: var(--text);
+    }
+
+    @media (max-width: 900px) {
+      .sidebar { display: none; }
+      .main { margin-left: 0; }
+      .stat-grid { grid-template-columns: repeat(2, 1fr); }
+      .slide { padding: 2rem 1.5rem; }
+      .two-col { grid-template-columns: 1fr; }
+      .three-col { grid-template-columns: 1fr; }
+      .gpa-diagram { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+  <div class="progress-bar"></div>
+
+  <nav class="sidebar">
+    <h2>Agent Evaluation</h2>
+    <a href="#hero">Overview</a>
+    <div class="section-label">Theory</div>
+    <a href="#trust-problem">The Trust Problem</a>
+    <a href="#gpa-framework">Agent GPA Framework</a>
+    <a href="#agent-tools">Agent Tools & Skills</a>
+    <a href="#eval-datasets">Evaluation Datasets</a>
+    <a href="#metrics">Rubrics & Metrics</a>
+    <a href="#llm-judge">LLM-as-a-Judge</a>
+    <div class="section-label">Practice</div>
+    <a href="#why-evals">Why Not Skip Evals?</a>
+    <a href="#versioning">Agent Versioning</a>
+    <a href="#running-evals">Running Evaluations</a>
+    <a href="#iterating">Iterating on Agents</a>
+    <a href="#cicd">CI/CD Quality Gates</a>
+    <a href="#production">Production & Monitoring</a>
+    <a href="#closing">Key Takeaways</a>
+  </nav>
+
+  <main class="main">
+
+    <!-- Slide 1: Hero -->
+    <section class="slide" id="hero">
+      <h1>Evaluating Cortex Agents</h1>
+      <p>A comprehensive guide to measuring, improving, and trusting your AI agents in production &mdash; from evaluation theory through deployment best practices.</p>
+      <div class="stat-grid anim-fade" style="margin-top: 2rem;">
+        <div class="stat-card">
+          <div class="value">Full Trace</div>
+          <div class="label">Not Just Final Answers</div>
+        </div>
+        <div class="stat-card">
+          <div class="value">Versioned</div>
+          <div class="label">Safe Iteration & Rollback</div>
+        </div>
+        <div class="stat-card">
+          <div class="value">Automated</div>
+          <div class="label">CI/CD Quality Gates</div>
+        </div>
+        <div class="stat-card">
+          <div class="value">Native</div>
+          <div class="label">Snowflake Integration</div>
+        </div>
+      </div>
+      <div class="context-box anim-fade" style="margin-top: 1rem; text-align: center;">
+        <p style="text-align: center;"><strong>Two parts:</strong> Theory (why and what to evaluate) + Practice (how to evaluate and iterate in Snowflake)</p>
+      </div>
+    </section>
+
+    <!-- Part 1 Divider -->
+    <section class="part-divider" id="part1">
+      <h2>Part 1</h2>
+      <h1>Theory: Why and What to Evaluate</h1>
+    </section>
+
+    <!-- Slide 2: The Trust Problem -->
+    <section class="slide" id="trust-problem">
+      <h2>The Trust Problem</h2>
+      <p style="margin-bottom: 2rem;">An agent's answer may appear successful, but the path it took to get there may not be.</p>
+      <div class="card-grid anim-fade" style="grid-template-columns: 1fr 1fr;">
+        <div class="card">
+          <h4>Hidden Failures</h4>
+          <p>Agents can produce correct-looking answers through incorrect reasoning, wrong tool usage, or hallucinated intermediate steps that happen to reach the right conclusion.</p>
+        </div>
+        <div class="card">
+          <h4>Wasted Compute</h4>
+          <p>Inefficient tool calling, redundant steps, and poor planning inflate latency and cost without any visible signal to end users or operators.</p>
+        </div>
+        <div class="card">
+          <h4>Wrong Decisions</h4>
+          <p>Enterprise agents power business workflows serving thousands of users. Inaccurate outputs lead to incorrect business decisions at scale.</p>
+        </div>
+        <div class="card">
+          <h4>Eroded Trust</h4>
+          <p>Without visibility into agent behavior, teams lose confidence in deployments. One undetected regression can undermine months of adoption progress.</p>
+        </div>
+      </div>
+      <div class="highlight-box anim-fade">
+        <p><strong>The core challenge:</strong> Outcome-focused evaluation confirms whether an agent succeeded, but provides little insight into <em>why</em> it failed or <em>how</em> to fix it. We need evaluation that covers the full reasoning pipeline.</p>
+      </div>
+    </section>
+
+    <!-- Slide 3: Agent GPA Framework -->
+    <section class="slide" id="gpa-framework">
+      <h2>The Agent GPA Framework</h2>
+      <p style="margin-bottom: 1rem;">Snowflake AI Research's <strong>Goal-Plan-Action</strong> framework evaluates agents across three critical phases of reasoning and execution.</p>
+
+      <div class="gpa-diagram anim-fade">
+        <div class="gpa-column goal">
+          <h4>Goal</h4>
+          <p>Was the response relevant, grounded, and accurate from the user's perspective?</p>
+          <span class="metric-pill goal">Answer Correctness</span>
+          <span class="metric-pill goal">Answer Relevance</span>
+          <span class="metric-pill goal">Groundedness</span>
+        </div>
+        <div class="gpa-column plan">
+          <h4>Plan</h4>
+          <p>Did the agent design a sound roadmap, selecting appropriate tools for each step?</p>
+          <span class="metric-pill plan">Plan Quality</span>
+          <span class="metric-pill plan">Tool Selection</span>
+        </div>
+        <div class="gpa-column action">
+          <h4>Action</h4>
+          <p>Were tools executed effectively with correct parameters and appropriate use of outputs?</p>
+          <span class="metric-pill action">Plan Adherence</span>
+          <span class="metric-pill action">Tool Calling</span>
+        </div>
+      </div>
+
+      <div class="two-col anim-fade">
+        <div class="card">
+          <h4>Cross-Cutting Metrics</h4>
+          <p style="margin-bottom: 0.75rem;">These span the full Goal-Plan-Action chain:</p>
+          <span class="metric-pill cross">Logical Consistency</span>
+          <span class="metric-pill cross">Execution Efficiency</span>
+          <p style="margin-top: 0.75rem;">Checks for contradictions, ignored instructions, redundant steps, and wasted resources across the entire trace.</p>
+        </div>
+        <div class="card">
+          <h4>Benchmark Results (TRAIL/GAIA)</h4>
+          <p style="margin-bottom: 0.5rem;">Tested against 570 human-annotated agent errors:</p>
+          <ul>
+            <li><strong>95% error detection</strong> (vs. 55% baseline)</li>
+            <li><strong>86% error localization</strong> (vs. 49% baseline)</li>
+            <li>Coverage across low, medium, and high-impact failures</li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="context-box anim-fade">
+        <p><strong>Key insight:</strong> Agent GPA makes agent behavior observable and debuggable. Instead of treating agents as black boxes, you can pinpoint exactly where in the reasoning chain quality degrades.</p>
+      </div>
+    </section>
+
+    <!-- Slide: Evaluating Agent Tools & Skills -->
+    <section class="slide" id="agent-tools">
+      <h2>Evaluating Agent Tools & Skills</h2>
+      <p style="margin-bottom: 2rem;">Cortex Agents compose multiple tool types to answer queries. Each tool introduces distinct failure modes that require targeted evaluation strategies.</p>
+
+      <div class="card-grid anim-fade" style="grid-template-columns: 1fr 1fr;">
+        <div class="card" style="border-top: 3px solid var(--primary);">
+          <h4>Cortex Search</h4>
+          <p style="margin-bottom: 0.75rem;">RAG-based retrieval over unstructured data (documents, knowledge bases, support articles).</p>
+          <p><strong>Evaluate:</strong></p>
+          <ul>
+            <li>Was the right context retrieved? (retrieval relevance)</li>
+            <li>Did the agent ground its answer in retrieved content? (groundedness)</li>
+            <li>Were irrelevant passages filtered out? (precision)</li>
+          </ul>
+        </div>
+        <div class="card" style="border-top: 3px solid var(--green);">
+          <h4>Cortex Analyst (Semantic Views)</h4>
+          <p style="margin-bottom: 0.75rem;">Structured data access via natural language to SQL generation over semantic models.</p>
+          <p><strong>Evaluate:</strong></p>
+          <ul>
+            <li>Was the correct semantic view selected?</li>
+            <li>Did the generated SQL produce accurate results? (answer correctness)</li>
+            <li>Were verified queries leveraged when available?</li>
+          </ul>
+        </div>
+        <div class="card" style="border-top: 3px solid var(--accent);">
+          <h4>Agent Skills</h4>
+          <p style="margin-bottom: 0.75rem;">Custom tools defined via markdown or code that extend the agent with domain-specific capabilities.</p>
+          <p><strong>Evaluate:</strong></p>
+          <ul>
+            <li>Was the correct skill invoked for the task?</li>
+            <li>Were parameters passed correctly?</li>
+            <li>Did the skill output get interpreted and communicated accurately?</li>
+          </ul>
+        </div>
+        <div class="card" style="border-top: 3px solid var(--orange);">
+          <h4>Tool Orchestration</h4>
+          <p style="margin-bottom: 0.75rem;">The agent's planning layer decides which tools to invoke, in what order, and how to combine their outputs.</p>
+          <p><strong>Evaluate:</strong></p>
+          <ul>
+            <li>Did the agent choose the right tool for the query intent?</li>
+            <li>Were multi-tool queries decomposed correctly?</li>
+            <li>Was the orchestration efficient (no redundant calls)?</li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="highlight-box anim-fade">
+        <p><strong>Implication for evaluation datasets:</strong> Your eval set should include queries that exercise each tool type individually AND queries that require multi-tool coordination. A dataset focused only on search queries won't catch failures in SQL generation or skill invocation.</p>
+      </div>
+
+      <div class="context-box anim-fade">
+        <p><strong>Semantic View quality matters:</strong> If your semantic view has poor descriptions, ambiguous metrics, or missing verified queries, the agent will generate incorrect SQL regardless of how good the orchestration LLM is. Evaluate your semantic view quality independently using description audits and verified query coverage.</p>
+      </div>
+    </section>
+
+    <!-- Slide 4: Evaluation Datasets -->
+    <section class="slide" id="eval-datasets">
+      <h2>Designing Evaluation Datasets</h2>
+      <p style="margin-bottom: 2rem;">Your evaluation is only as good as the data it tests against. Build datasets that reflect real-world usage distribution.</p>
+
+      <div class="card-grid anim-fade">
+        <div class="card">
+          <h4>Represent All Intent Types</h4>
+          <ul>
+            <li>Happy paths (common, expected usage)</li>
+            <li>Edge cases and bad paths</li>
+            <li>High-risk queries (financial, compliance)</li>
+            <li>Out-of-scope / refusal scenarios</li>
+          </ul>
+        </div>
+        <div class="card">
+          <h4>Prioritize High-Stakes Areas</h4>
+          <p>Measure not only macro correctness but also intent-level performance. You need confidence that the agent behaves correctly in high-value, high-stakes scenarios &mdash; not just on average.</p>
+        </div>
+        <div class="card">
+          <h4>Source Questions Strategically</h4>
+          <p>Curate questions from SMEs who know the business domain, use synthetic generation to cover edge cases, or mine production logs if available. All three approaches are valid &mdash; the key is covering the full intent distribution, not where the questions originated.</p>
+        </div>
+      </div>
+
+      <div class="two-col anim-fade">
+        <div class="card">
+          <h4>Ground Truth Best Practices</h4>
+          <ul>
+            <li>Specific enough to validate, not so specific that non-determinism causes false negatives</li>
+            <li>Anchor to fixed time periods to avoid staleness</li>
+            <li>Describe what correct looks like, not just a single "right answer"</li>
+            <li>Include what the response should NOT contain</li>
+          </ul>
+        </div>
+        <div class="card">
+          <h4>Dataset Format (Snowflake)</h4>
+          <pre style="font-size: 0.8rem; margin: 0.5rem 0;"><span class="keyword">CREATE TABLE</span> eval_data (
+  input_query <span class="function">VARCHAR</span>,
+  ground_truth <span class="function">VARIANT</span>
+);
+
+<span class="keyword">INSERT INTO</span> eval_data <span class="keyword">SELECT</span>
+  <span class="string">'How many active customers?'</span>,
+  <span class="function">PARSE_JSON</span>(<span class="string">'{
+    "ground_truth_output": "1,000 active
+     customers as of Dec 31, 2025..."
+  }'</span>);</pre>
+        </div>
+      </div>
+    </section>
+
+    <!-- Slide 5: Rubrics & Metrics -->
+    <section class="slide" id="metrics">
+      <h2>Evaluation Rubrics & Metrics</h2>
+      <p style="margin-bottom: 2rem;">A rubric is a collection of metrics that score the agent's performance. Choose metrics aligned with your specific business requirements.</p>
+
+      <div class="two-col anim-fade">
+        <div>
+          <h3>Built-in System Metrics</h3>
+          <table>
+            <thead><tr><th>Metric</th><th>Type</th><th>Requires</th></tr></thead>
+            <tbody>
+              <tr>
+                <td><strong>Answer Correctness</strong></td>
+                <td><span class="badge-blue">Ground truth</span></td>
+                <td>Expected output</td>
+              </tr>
+              <tr>
+                <td><strong>Logical Consistency</strong></td>
+                <td><span class="badge-purple">Reference-free</span></td>
+                <td>Nothing extra</td>
+              </tr>
+            </tbody>
+          </table>
+          <p style="text-align: left; margin-top: 1rem; font-size: 0.9rem; color: var(--text-muted);">Logical consistency evaluates the full execution trace: instructions, planning, and tool calls for internal coherence &mdash; no ground truth needed.</p>
+        </div>
+        <div>
+          <h3>Custom Metric Examples</h3>
+          <div class="card" style="margin-top: 0.5rem;">
+            <ul>
+              <li><strong>Brand compliance</strong> &mdash; speaking in voice, no competitor mentions</li>
+              <li><strong>Context relevance</strong> &mdash; did RAG retrieve correct documents</li>
+              <li><strong>Groundedness</strong> &mdash; claims supported by retrieved context</li>
+              <li><strong>Tool selection accuracy</strong> &mdash; chose the right tool for the task</li>
+              <li><strong>Response completeness</strong> &mdash; addressed all parts of the query</li>
+              <li><strong>Citation quality</strong> &mdash; references point to real sources</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+
+      <pre class="anim-fade"><span class="comment"># Custom metric YAML configuration</span>
+<span class="keyword">metrics:</span>
+  - <span class="keyword">name:</span> <span class="string">"groundedness"</span>
+    <span class="keyword">score_ranges:</span>
+      <span class="keyword">min_score:</span> [0, 0.33]
+      <span class="keyword">median_score:</span> [0.34, 0.66]
+      <span class="keyword">max_score:</span> [0.67, 1]
+    <span class="keyword">prompt:</span> |
+      You are evaluating the groundedness of an AI agent's response.
+      User Query: <span class="function">{{input}}</span>
+      Agent Response: <span class="function">{{output}}</span>
+      Expected Answer: <span class="function">{{ground_truth}}</span>
+
+      Rate whether each statement in the response is supported
+      by the tool outputs and retrieved data in the execution trace...</pre>
+
+      <div class="highlight-box anim-fade">
+        <p><strong>Template variables available:</strong> <code>{{input}}</code>, <code>{{output}}</code>, <code>{{ground_truth}}</code>, <code>{{tool_info}}</code>, <code>{{duration}}</code>, <code>{{span_type}}</code>, <code>{{llm_model}}</code>, <code>{{error}}</code>, <code>{{status}}</code> &mdash; the full agent execution trace is always provided to the LLM judge as context.</p>
+      </div>
+    </section>
+
+    <!-- Slide 6: LLM-as-a-Judge -->
+    <section class="slide" id="llm-judge">
+      <h2>LLM-as-a-Judge Methodology</h2>
+      <p style="margin-bottom: 2rem;">Evaluation at scale requires automated scoring. LLM judges grade agent responses against your rubric &mdash; but they must be calibrated to match human judgment.</p>
+
+      <div class="two-col anim-fade">
+        <div>
+          <h3>Trace-Level vs. Step-Level</h3>
+          <div class="card" style="margin-top: 0.5rem;">
+            <h4>Trace-Level Evaluation</h4>
+            <p>Did the agent produce the correct final output? Evaluates the end-to-end result against ground truth.</p>
+          </div>
+          <div class="card" style="margin-top: 1rem;">
+            <h4>Step-Level Evaluation</h4>
+            <p>Did the agent use the correct tools with the correct parameters at each step? Evaluates intermediate reasoning and execution decisions.</p>
+          </div>
+          <p style="text-align: left; margin-top: 1rem; font-size: 0.9rem; color: var(--text-muted);"><strong>Both are necessary:</strong> An agent can reach the right answer through wrong steps, or take all the right steps but produce a poor final answer.</p>
+        </div>
+        <div>
+          <h3>Judge Calibration Process</h3>
+          <div class="card" style="margin-top: 0.5rem;">
+            <h4>The LLMAJ Tuning Loop</h4>
+            <ol style="padding-left: 1.25rem; color: var(--text-muted); font-size: 0.9rem;">
+              <li style="padding: 0.4rem 0;">Collect agent traces (question + trace + response triples)</li>
+              <li style="padding: 0.4rem 0;">Have human SMEs grade them across your rubric</li>
+              <li style="padding: 0.4rem 0;">Run LLM judges with initial prompts on the same data</li>
+              <li style="padding: 0.4rem 0;">Measure correlation using Cohen's Kappa</li>
+              <li style="padding: 0.4rem 0;">Iterate judge prompts until 80%+ correlation on dev/test splits</li>
+            </ol>
+          </div>
+        </div>
+      </div>
+
+      <div class="highlight-box anim-fade">
+        <p><strong>Why calibration matters:</strong> An uncalibrated LLM judge introduces uncertainty into your metrics. By achieving 80%+ Cohen's Kappa correlation with human annotators, you reduce the error bars on scores and can trust automated evaluations to approximate expert judgment.</p>
+      </div>
+
+    </section>
+
+    <!-- Part 2 Divider -->
+    <section class="part-divider" id="part2">
+      <h2>Part 2</h2>
+      <h1>Practice: How to Evaluate and Iterate</h1>
+    </section>
+
+    <!-- Slide: Monitoring is Not Evaluation -->
+    <section class="slide" id="why-evals">
+      <h2>Monitoring is Not Evaluation</h2>
+      <p style="margin-bottom: 2rem;">Teams often delay or skip evaluation for reasons that don't hold up under scrutiny. If your agent is critical enough to deploy, it's critical enough to evaluate.</p>
+
+      <div class="card-grid anim-fade" style="grid-template-columns: 1fr 1fr 1fr;">
+        <div class="card">
+          <h4 style="color: var(--red);">"It costs too much"</h4>
+          <p style="margin-bottom: 0.75rem; font-style: italic;">"We paused evals because of the cost of LLM judge calls."</p>
+          <p><strong>Reality:</strong> A 50-question eval with 3 metrics = ~150 judge calls. That's a fraction of a cent per question. Compare this to the cost of a wrong business decision delivered confidently to thousands of users. If the agent is business-critical, the cost of NOT evaluating is orders of magnitude higher.</p>
+        </div>
+        <div class="card">
+          <h4 style="color: var(--red);">"VQRs make evals redundant"</h4>
+          <p style="margin-bottom: 0.75rem; font-style: italic;">"Once we add verified queries, the eval dataset is just testing cached answers."</p>
+          <p><strong>Reality:</strong> VQRs are a <em>production guardrail</em> that ensures determinism on known high-value queries. Evaluations measure <em>reasoning quality</em> on novel queries, tool selection across the long tail, multi-step coordination, and behavior on inputs your VQRs don't cover. They serve fundamentally different purposes.</p>
+        </div>
+        <div class="card">
+          <h4 style="color: var(--red);">"Our monitoring dashboard is enough"</h4>
+          <p style="margin-bottom: 0.75rem; font-style: italic;">"We track latency, SQL failure rates, and tool distribution."</p>
+          <p><strong>Reality:</strong> Monitoring measures <em>operational health</em> &mdash; did the SQL execute? How long did it take? Evaluation measures <em>correctness</em> &mdash; did the SQL return the right answer? A query that executes successfully but returns wrong results is invisible to monitoring. Only evaluation catches it.</p>
+        </div>
+      </div>
+
+      <div class="two-col anim-fade">
+        <div class="highlight-box">
+          <p><strong>What monitoring tells you</strong></p>
+          <ul style="font-size: 0.9rem; margin-top: 0.5rem;">
+            <li>SQL execution success/failure rates</li>
+            <li>Latency and token consumption</li>
+            <li>Tool call distribution and frequency</li>
+            <li>Error rates and availability</li>
+          </ul>
+        </div>
+        <div class="context-box">
+          <p><strong>What only evaluation tells you</strong></p>
+          <ul style="font-size: 0.9rem; margin-top: 0.5rem;">
+            <li>Was the answer actually correct?</li>
+            <li>Did the agent select the right tool for this query?</li>
+            <li>Was the reasoning path sound or did it get lucky?</li>
+            <li>How does behavior change on novel inputs outside VQR coverage?</li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="warning-box anim-fade">
+        <p><strong>The real question isn't "can we afford to evaluate?"</strong> &mdash; it's "can we afford to serve business users with an agent whose correctness we haven't measured?" Every agent that's worth deploying is worth evaluating.</p>
+      </div>
+    </section>
+
+    <!-- Slide 7: Agent Versioning -->
+    <section class="slide" id="versioning">
+      <h2>Agent Versioning for Safe Iteration</h2>
+      <p style="margin-bottom: 1.5rem;">Evaluation without version control is like testing without source control. Versioning gives you immutable checkpoints to compare, promote, and rollback.</p>
+
+      <div class="anim-fade" style="width: 100%; overflow-x: auto;">
+        <table>
+          <thead>
+            <tr><th>Concept</th><th>Mutability</th><th>Purpose</th><th>Example</th></tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><strong>Live Version</strong></td>
+              <td><span class="badge-orange">Mutable</span></td>
+              <td>Active development & iteration</td>
+              <td><code>LIVE</code></td>
+            </tr>
+            <tr>
+              <td><strong>Named Version</strong></td>
+              <td><span class="badge-green">Immutable</span></td>
+              <td>Stable deployment snapshot</td>
+              <td><code>VERSION$3</code></td>
+            </tr>
+            <tr>
+              <td><strong>Alias</strong></td>
+              <td><span class="badge-blue">Pointer</span></td>
+              <td>Human-readable routing label</td>
+              <td><code>production</code></td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="flow-diagram anim-fade">
+        <div class="flow-step">
+          <div class="step-label">Develop</div>
+          <div class="step-title">ALTER AGENT</div>
+        </div>
+        <div class="flow-arrow">&rarr;</div>
+        <div class="flow-step">
+          <div class="step-label">Snapshot</div>
+          <div class="step-title">COMMIT</div>
+        </div>
+        <div class="flow-arrow">&rarr;</div>
+        <div class="flow-step active">
+          <div class="step-label">Evaluate</div>
+          <div class="step-title">Run Evals</div>
+        </div>
+        <div class="flow-arrow">&rarr;</div>
+        <div class="flow-step">
+          <div class="step-label">Promote</div>
+          <div class="step-title">SET ALIAS</div>
+        </div>
+      </div>
+
+      <pre class="anim-fade"><span class="comment">-- Make changes on the live version</span>
+<span class="keyword">ALTER AGENT</span> my_agent <span class="keyword">SET</span>
+  <span class="keyword">INSTRUCTIONS</span> = <span class="string">'Updated system prompt...'</span>;
+
+<span class="comment">-- Commit to create an immutable snapshot for evaluation</span>
+<span class="keyword">ALTER AGENT</span> my_agent <span class="keyword">COMMIT</span>
+  <span class="keyword">COMMENT</span> = <span class="string">'Improved tool selection logic'</span>;
+
+<span class="comment">-- Promote after evaluation passes</span>
+<span class="keyword">ALTER AGENT</span> my_agent
+  <span class="keyword">MODIFY VERSION</span> VERSION$4 <span class="keyword">SET ALIAS</span> = <span class="string">production</span>;</pre>
+
+      <div class="warning-box anim-fade">
+        <p><strong>Important:</strong> Always use <code>ALTER AGENT</code> to iterate. <code>CREATE OR REPLACE AGENT</code> is destructive &mdash; it deletes all past evaluation runs, monitoring traces, and version history.</p>
+      </div>
+    </section>
+
+    <!-- Slide 8: Running Evaluations -->
+    <section class="slide" id="running-evals">
+      <h2>Running Evaluations in Snowflake</h2>
+      <p style="margin-bottom: 2rem;">Three paths to run evaluations: Snowsight UI, SQL, or Cortex Code. All produce the same results.</p>
+
+      <div class="three-col anim-fade">
+        <div class="card">
+          <h4>Snowsight UI</h4>
+          <p>AI & ML &rarr; Agents &rarr; Select agent &rarr; Evaluations tab &rarr; New evaluation run. Visual interface for selecting datasets, metrics, and viewing results.</p>
+        </div>
+        <div class="card">
+          <h4>SQL</h4>
+          <p>Programmatic via <code>EXECUTE_AI_EVALUATION</code>. Best for CI/CD pipelines and scheduled evaluation tasks. Uses a YAML config file on a stage.</p>
+        </div>
+        <div class="card">
+          <h4>Cortex Code</h4>
+          <p>"Help me evaluate my agent DB.SCHEMA.AGENT" &mdash; generates datasets, runs evals, and suggests optimizations in one flow.</p>
+        </div>
+      </div>
+
+      <pre class="anim-fade"><span class="comment"># Full evaluation YAML configuration</span>
+<span class="keyword">dataset:</span>
+  <span class="keyword">dataset_type:</span> <span class="string">"CORTEX AGENT"</span>
+  <span class="keyword">table_name:</span> <span class="string">"EVALS_DB.EVALS_SCHEMA.EVALUATION_DATA"</span>
+  <span class="keyword">dataset_name:</span> <span class="string">"MY_EVAL_DATASET"</span>
+  <span class="keyword">column_mapping:</span>
+    <span class="keyword">query_text:</span> <span class="string">"input_query"</span>
+    <span class="keyword">ground_truth:</span> <span class="string">"expected_output"</span>
+
+<span class="keyword">evaluation:</span>
+  <span class="keyword">agent_params:</span>
+    <span class="keyword">agent_name:</span> <span class="string">"my_agent"</span>
+    <span class="keyword">agent_type:</span> <span class="string">"CORTEX AGENT"</span>
+  <span class="keyword">source_metadata:</span>
+    <span class="keyword">type:</span> <span class="string">"dataset"</span>
+    <span class="keyword">dataset_name:</span> <span class="string">"MY_EVAL_DATASET"</span>
+
+<span class="keyword">metrics:</span>
+  - <span class="string">"answer_correctness"</span>
+  - <span class="string">"logical_consistency"</span>
+  - <span class="keyword">name:</span> <span class="string">"groundedness"</span>
+    <span class="keyword">score_ranges:</span>
+      <span class="keyword">min_score:</span> [0, 0.33]
+      <span class="keyword">median_score:</span> [0.34, 0.66]
+      <span class="keyword">max_score:</span> [0.67, 1]
+    <span class="keyword">prompt:</span> |
+      Evaluate whether each claim is supported by context...</pre>
+
+      <pre class="anim-fade"><span class="comment">-- Start the evaluation run via SQL</span>
+<span class="keyword">CALL</span> <span class="function">EXECUTE_AI_EVALUATION</span>(
+  <span class="string">'START'</span>,
+  <span class="function">OBJECT_CONSTRUCT</span>(<span class="string">'run_name'</span>, <span class="string">'v4-candidate-run'</span>),
+  <span class="string">'@evals_db.evals_schema.config/eval_config.yaml'</span>
+);
+
+<span class="comment">-- Check evaluation status</span>
+<span class="keyword">CALL</span> <span class="function">EXECUTE_AI_EVALUATION</span>(
+  <span class="string">'STATUS'</span>,
+  <span class="function">OBJECT_CONSTRUCT</span>(<span class="string">'run_name'</span>, <span class="string">'v4-candidate-run'</span>),
+  <span class="string">'@evals_db.evals_schema.config/eval_config.yaml'</span>
+);</pre>
+    </section>
+
+    <!-- Slide 9: Iterating -->
+    <section class="slide" id="iterating">
+      <h2>Iterating on Your Agent</h2>
+      <p style="margin-bottom: 2rem;">Once evaluation metrics are aligned with human judgment, you can iterate quickly with automated feedback for each change.</p>
+
+      <div class="card-grid anim-fade">
+        <div class="card">
+          <h4>One Change at a Time</h4>
+          <p>Isolate the effect of each change. Run an evaluation after every modification. Use version comments to document what changed.</p>
+          <pre style="font-size: 0.8rem; margin-top: 0.75rem;"><span class="keyword">ALTER AGENT</span> my_agent <span class="keyword">COMMIT</span>
+  <span class="keyword">COMMENT</span> = <span class="string">'Added explicit tool
+  selection instructions'</span>;</pre>
+        </div>
+        <div class="card">
+          <h4>Choosing the Orchestration LLM</h4>
+          <p>Start with a powerful SOTA model (e.g., Claude Opus) to determine maximum performance. Then benchmark cheaper models against that ceiling. Pin a specific model for reproducibility &mdash; avoid <code>auto</code>.</p>
+        </div>
+        <div class="card">
+          <h4>Reading Evaluation Explanations</h4>
+          <p>LLM judges produce explanations for each score. Use these to understand <em>what went wrong</em> and determine targeted fixes rather than guessing at improvements.</p>
+        </div>
+      </div>
+
+      <div class="two-col anim-fade">
+        <div class="highlight-box">
+          <p><strong>Goal Setting: Consistency Over Perfection</strong></p>
+          <p style="margin-top: 0.5rem; font-size: 0.9rem;">A score of 100% typically signals your dataset is too easy. An unstable score (80% &rarr; 65% &rarr; 90%) suggests the agent lacks consistency &mdash; add more explicit instructions or verified queries. A stable score is more meaningful than a high one.</p>
+        </div>
+        <div class="context-box">
+          <p><strong>What to Change (Investigation Signals)</strong></p>
+          <ul style="font-size: 0.9rem; margin-top: 0.5rem;">
+            <li>Low answer correctness &rarr; improve instructions/tools</li>
+            <li>Low logical consistency &rarr; simplify system prompt</li>
+            <li>Low groundedness &rarr; improve search/retrieval</li>
+            <li>Low tool selection &rarr; better tool descriptions</li>
+            <li>Production failures &rarr; add those queries to eval set</li>
+          </ul>
+        </div>
+      </div>
+    </section>
+
+    <!-- Slide 10: CI/CD Quality Gates -->
+    <section class="slide" id="cicd">
+      <h2>CI/CD Quality Gates</h2>
+      <p style="margin-bottom: 2rem;">Integrate agent evaluations into your development pipeline. Treat agent quality like code quality &mdash; with automated gates that prevent regressions.</p>
+
+      <div class="flow-diagram anim-fade">
+        <div class="flow-step">
+          <div class="step-label">1</div>
+          <div class="step-title">PR Opened</div>
+        </div>
+        <div class="flow-arrow">&rarr;</div>
+        <div class="flow-step">
+          <div class="step-label">2</div>
+          <div class="step-title">Deploy Candidate</div>
+        </div>
+        <div class="flow-arrow">&rarr;</div>
+        <div class="flow-step active">
+          <div class="step-label">3</div>
+          <div class="step-title">Run Evals</div>
+        </div>
+        <div class="flow-arrow">&rarr;</div>
+        <div class="flow-step">
+          <div class="step-label">4</div>
+          <div class="step-title">Quality Gate</div>
+        </div>
+        <div class="flow-arrow">&rarr;</div>
+        <div class="flow-step">
+          <div class="step-label">5</div>
+          <div class="step-title">Merge/Block</div>
+        </div>
+      </div>
+
+      <div class="two-col anim-fade">
+        <div>
+          <h3>Source-Control Your Agent</h3>
+          <div class="card" style="margin-top: 0.5rem;">
+            <ul>
+              <li>Agent specification YAML</li>
+              <li>Semantic View definitions</li>
+              <li>Evaluation configuration YAML</li>
+              <li>Evaluation dataset definitions</li>
+              <li>Custom metric prompts</li>
+            </ul>
+            <p style="margin-top: 0.75rem;">Git history provides an audit trail. PRs provide review before any modification reaches shared environments.</p>
+          </div>
+        </div>
+        <div>
+          <h3>Progressive Thresholds</h3>
+          <table style="margin-top: 0.5rem;">
+            <thead><tr><th>Environment</th><th>Gate</th><th>Threshold</th></tr></thead>
+            <tbody>
+              <tr><td>Dev</td><td><span class="badge-green">Advisory</span></td><td>Lenient &mdash; warn only</td></tr>
+              <tr><td>QA / UAT</td><td><span class="badge-orange">Hard gate</span></td><td>e.g., correctness &ge; 0.70</td></tr>
+              <tr><td>Production</td><td><span class="badge-red">Strict</span></td><td>e.g., correctness &ge; 0.80</td></tr>
+            </tbody>
+          </table>
+          <p style="text-align: left; margin-top: 0.75rem; font-size: 0.85rem; color: var(--text-muted);">Set thresholds based on observed baselines from multiple eval runs, not aspirational targets.</p>
+        </div>
+      </div>
+
+      <div class="two-col anim-fade">
+        <div class="card">
+          <h4>CI/CD Tips</h4>
+          <ul>
+            <li><strong>Pin the LLM</strong> &mdash; use a specific model for reproducibility</li>
+            <li><strong>Dedicated warehouse</strong> &mdash; avoid contention, simplify cost tracking</li>
+            <li><strong>Version datasets</strong> &mdash; same dataset across all pipeline runs</li>
+            <li><strong>Budget for judge costs</strong> &mdash; 20 questions x 3 metrics = 60 judge calls/run</li>
+          </ul>
+        </div>
+        <div class="card">
+          <h4>Scheduled Cadence Testing</h4>
+          <p>CI/CD catches regressions from agent config changes. Scheduled testing catches regressions from <em>external</em> factors:</p>
+          <ul>
+            <li>Model updates/rotation</li>
+            <li>Underlying data changes</li>
+            <li>Tool configuration drift</li>
+          </ul>
+          <pre style="font-size: 0.75rem; margin-top: 0.75rem;"><span class="keyword">CREATE TASK</span> daily_eval_run
+  <span class="keyword">WAREHOUSE</span> = COMPUTE_WH
+  <span class="keyword">SCHEDULE</span> = <span class="string">'1440 MINUTE'</span>
+<span class="keyword">AS CALL</span> <span class="function">EXECUTE_AI_EVALUATION</span>(...);</pre>
+        </div>
+      </div>
+    </section>
+
+    <!-- Slide 11: Production & Monitoring -->
+    <section class="slide" id="production">
+      <h2>Production Deployment & Monitoring</h2>
+      <p style="margin-bottom: 2rem;">Evaluations don't stop at deployment. Production monitoring closes the loop between real-world usage and your evaluation suite.</p>
+
+      <div class="flow-diagram anim-fade">
+        <div class="flow-step">
+          <div class="step-label">Deploy</div>
+          <div class="step-title">Alias Promotion</div>
+        </div>
+        <div class="flow-arrow">&rarr;</div>
+        <div class="flow-step">
+          <div class="step-label">Observe</div>
+          <div class="step-title">Monitor Metrics</div>
+        </div>
+        <div class="flow-arrow">&rarr;</div>
+        <div class="flow-step active">
+          <div class="step-label">Alert</div>
+          <div class="step-title">Detect Regression</div>
+        </div>
+        <div class="flow-arrow">&rarr;</div>
+        <div class="flow-step">
+          <div class="step-label">Act</div>
+          <div class="step-title">Rollback / Fix</div>
+        </div>
+      </div>
+
+      <div class="card-grid anim-fade">
+        <div class="card">
+          <h4>Deployment Strategies</h4>
+          <ul>
+            <li><strong>Alias promotion</strong> &mdash; single command, zero client changes</li>
+            <li><strong>Shadow testing</strong> &mdash; run candidate alongside production, compare offline</li>
+            <li><strong>A/B split</strong> &mdash; cohort-based routing via app layer</li>
+            <li><strong>Instant rollback</strong> &mdash; reassign alias to prior version</li>
+          </ul>
+        </div>
+        <div class="card">
+          <h4>What to Monitor</h4>
+          <ul>
+            <li>Usage and adoption patterns</li>
+            <li>Latency percentiles (P50, P95, P99)</li>
+            <li>Token cost per conversation</li>
+            <li>Reliability (error rate)</li>
+            <li>Tool execution patterns</li>
+            <li>User feedback (thumbs up/down)</li>
+            <li>Conversation completion rate</li>
+          </ul>
+        </div>
+        <div class="card">
+          <h4>Observability Infrastructure</h4>
+          <p>All agent activity is captured in:</p>
+          <p style="margin-top: 0.5rem;"><code>SNOWFLAKE.LOCAL.AI_OBSERVABILITY_EVENTS</code></p>
+          <p style="margin-top: 0.75rem;">Query with SQL for custom dashboards. Data includes execution traces, user feedback, planning steps, and tool outputs.</p>
+        </div>
+      </div>
+
+      <div class="two-col anim-fade">
+        <div class="card">
+          <h4>Production Alerts</h4>
+          <pre style="font-size: 0.75rem;"><span class="comment">-- Alert on eval accuracy drop</span>
+<span class="keyword">CREATE ALERT</span> eval_threshold_alert
+  <span class="keyword">WAREHOUSE</span> = my_wh
+  <span class="keyword">SCHEDULE</span> = <span class="string">'1 HOUR'</span>
+  <span class="keyword">IF</span> (<span class="keyword">EXISTS</span> (
+    <span class="keyword">SELECT</span> * <span class="keyword">FROM TABLE</span>(
+      <span class="function">SNOWFLAKE.LOCAL.GET_AI_EVALUATION_DATA</span>(
+        <span class="string">'db'</span>,<span class="string">'schema'</span>,<span class="string">'agent'</span>,
+        <span class="string">'CORTEX AGENT'</span>,<span class="string">'prod-run'</span>))
+    <span class="keyword">WHERE</span> METRIC_NAME = <span class="string">'answer_correctness'</span>
+      <span class="keyword">AND</span> EVAL_AGG_SCORE < 0.7
+  ))
+  <span class="keyword">THEN CALL</span> <span class="function">SYSTEM$SEND_SNOWFLAKE_NOTIFICATION</span>(...);</pre>
+        </div>
+        <div class="card">
+          <h4>From Evaluations to Guardrails</h4>
+          <p>Once LLM judges are aligned to expert judgment, extend their use beyond offline evaluation:</p>
+          <ul>
+            <li><strong>Offline monitoring</strong> &mdash; sample production traffic, score with judges, track trends</li>
+            <li><strong>Real-time guardrails</strong> &mdash; distill critical judges into smaller, faster ML models</li>
+            <li><strong>Feedback prioritization</strong> &mdash; focus review on negative feedback + low-scoring traces</li>
+          </ul>
+          <p style="margin-top: 0.75rem;">Production failures become new evaluation dataset entries, completing the improvement cycle.</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- Slide 12: Closing -->
+    <section class="slide" id="closing">
+      <h2>The Evaluation Lifecycle</h2>
+
+      <div class="anim-fade" style="display: grid; grid-template-columns: repeat(6, 1fr); gap: 0.75rem; width: 100%; margin: 2rem 0;">
+        <div class="flow-step">
+          <div class="step-label">1</div>
+          <div class="step-title">Build Dataset</div>
+        </div>
+        <div class="flow-step">
+          <div class="step-label">2</div>
+          <div class="step-title">Define Metrics</div>
+        </div>
+        <div class="flow-step">
+          <div class="step-label">3</div>
+          <div class="step-title">Run Evals</div>
+        </div>
+        <div class="flow-step">
+          <div class="step-label">4</div>
+          <div class="step-title">Iterate Agent</div>
+        </div>
+        <div class="flow-step active">
+          <div class="step-label">5</div>
+          <div class="step-title">Deploy & Monitor</div>
+        </div>
+        <div class="flow-step">
+          <div class="step-label">6</div>
+          <div class="step-title">Feedback</div>
+        </div>
+      </div>
+
+      <div class="card-grid anim-fade" style="margin-top: 2rem;">
+        <div class="card">
+          <h4>Key Takeaways</h4>
+          <ul>
+            <li>Evaluate the <strong>full reasoning chain</strong>, not just the final answer</li>
+            <li>Use the GPA framework: Goal, Plan, Action alignment</li>
+            <li>Start with real user queries &mdash; synthetic data is a fallback</li>
+            <li>Calibrate LLM judges to 80%+ correlation with human experts</li>
+            <li>One change at a time; evaluate after each change</li>
+            <li>Combine CI/CD gates with scheduled cadence testing</li>
+          </ul>
+        </div>
+        <div class="card">
+          <h4>Getting Started</h4>
+          <ul>
+            <li><strong>Step 1:</strong> Build 50-100 representative Q&A pairs from user logs</li>
+            <li><strong>Step 2:</strong> Run your first evaluation with built-in metrics</li>
+            <li><strong>Step 3:</strong> Set up agent versioning with aliases (dev/uat/prod)</li>
+            <li><strong>Step 4:</strong> Add a custom metric for your domain</li>
+            <li><strong>Step 5:</strong> Integrate evaluations into your CI/CD pipeline</li>
+            <li><strong>Step 6:</strong> Set up production alerts and scheduled testing</li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="highlight-box anim-fade" style="text-align: center;">
+        <p style="text-align: center;"><strong>Evaluation is not a one-time gate &mdash; it's a continuous improvement loop.</strong> Every production failure becomes a new test case. Every iteration builds on versioned, measurable progress.</p>
+      </div>
+
+
+    </section>
+
+  </main>
+
+  <script>
+    // Progress bar
+    const progressBar = document.querySelector('.progress-bar');
+    window.addEventListener('scroll', () => {
+      const scrollTop = window.scrollY;
+      const docHeight = document.documentElement.scrollHeight - window.innerHeight;
+      progressBar.style.width = (scrollTop / docHeight * 100) + '%';
+    });
+
+    // Scroll animations
+    const observer = new IntersectionObserver((entries) => {
+      entries.forEach(entry => {
+        if (entry.isIntersecting) {
+          entry.target.classList.add('visible');
+        }
+      });
+    }, { threshold: 0.1 });
+
+    document.querySelectorAll('.anim-fade').forEach(el => observer.observe(el));
+
+    // Active nav tracking
+    const sections = document.querySelectorAll('.slide, .part-divider');
+    const navLinks = document.querySelectorAll('.sidebar a');
+
+    window.addEventListener('scroll', () => {
+      let current = '';
+      sections.forEach(section => {
+        const sectionTop = section.offsetTop - 200;
+        if (window.scrollY >= sectionTop) {
+          current = section.getAttribute('id');
+        }
+      });
+      navLinks.forEach(link => {
+        link.classList.remove('active');
+        if (link.getAttribute('href') === '#' + current) {
+          link.classList.add('active');
+        }
+      });
+    });
+  </script>
+</body>
+</html>

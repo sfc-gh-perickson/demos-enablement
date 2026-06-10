@@ -1,0 +1,885 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Versioning & A/B Testing Cortex Agents in Snowflake</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+
+    :root {
+      --bg: #0F1B2D;
+      --sidebar-bg: #1B2A4A;
+      --primary: #29B5E8;
+      --accent: #7C3AED;
+      --text: #E2E8F0;
+      --text-muted: #94A3B8;
+      --card-bg: #162236;
+      --border: #2D4A6F;
+      --green: #10B981;
+      --orange: #F59E0B;
+      --red: #EF4444;
+    }
+
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      font-family: 'Inter', sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.6;
+      overflow-x: hidden;
+    }
+
+    .progress-bar {
+      position: fixed;
+      top: 0;
+      left: 0;
+      height: 3px;
+      background: linear-gradient(90deg, var(--primary), var(--accent));
+      z-index: 1000;
+      transition: width 0.1s;
+    }
+
+    .sidebar {
+      position: fixed;
+      left: 0;
+      top: 0;
+      width: 260px;
+      height: 100vh;
+      background: var(--sidebar-bg);
+      padding: 2rem 1.5rem;
+      overflow-y: auto;
+      border-right: 1px solid var(--border);
+      z-index: 100;
+    }
+
+    .sidebar h2 {
+      font-size: 1rem;
+      font-weight: 600;
+      color: var(--primary);
+      margin-bottom: 1.5rem;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+
+    .sidebar a {
+      display: block;
+      color: var(--text-muted);
+      text-decoration: none;
+      padding: 0.5rem 0.75rem;
+      border-radius: 6px;
+      font-size: 0.85rem;
+      margin-bottom: 0.25rem;
+      transition: all 0.2s;
+    }
+
+    .sidebar a:hover,
+    .sidebar a.active {
+      color: var(--text);
+      background: rgba(41, 181, 232, 0.1);
+    }
+
+    .sidebar a.active {
+      border-left: 3px solid var(--primary);
+      padding-left: calc(0.75rem - 3px);
+    }
+
+    .main {
+      margin-left: 260px;
+      padding: 0;
+    }
+
+    .slide {
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      padding: 4rem 3rem;
+      max-width: 1200px;
+      margin: 0 auto;
+    }
+
+    .slide h1 {
+      font-size: 2.5rem;
+      font-weight: 700;
+      margin-bottom: 1rem;
+      background: linear-gradient(135deg, var(--primary), var(--accent));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+
+    .slide h2 {
+      font-size: 1.75rem;
+      font-weight: 600;
+      color: var(--text);
+      margin-bottom: 1.5rem;
+    }
+
+    .slide h3 {
+      font-size: 1.25rem;
+      font-weight: 500;
+      color: var(--text-muted);
+      margin-bottom: 1rem;
+    }
+
+    .slide p {
+      font-size: 1.1rem;
+      color: var(--text-muted);
+      max-width: 700px;
+      text-align: center;
+    }
+
+    .stat-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 1.5rem;
+      width: 100%;
+      margin: 2rem 0;
+    }
+
+    .stat-card {
+      background: var(--card-bg);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 1.5rem;
+      text-align: center;
+    }
+
+    .stat-card .value {
+      font-size: 2rem;
+      font-weight: 700;
+      color: var(--primary);
+    }
+
+    .stat-card .label {
+      font-size: 0.85rem;
+      color: var(--text-muted);
+      margin-top: 0.5rem;
+    }
+
+    .card-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+      gap: 1.5rem;
+      width: 100%;
+      margin: 2rem 0;
+    }
+
+    .card {
+      background: var(--card-bg);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 1.5rem;
+    }
+
+    .card h4 {
+      font-size: 1rem;
+      font-weight: 600;
+      color: var(--text);
+      margin-bottom: 0.75rem;
+    }
+
+    .card p {
+      font-size: 0.9rem;
+      color: var(--text-muted);
+      text-align: left;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 2rem 0;
+      font-size: 0.9rem;
+    }
+
+    th {
+      background: var(--card-bg);
+      color: var(--primary);
+      font-weight: 600;
+      padding: 0.75rem 1rem;
+      text-align: left;
+      border-bottom: 2px solid var(--border);
+    }
+
+    td {
+      padding: 0.75rem 1rem;
+      border-bottom: 1px solid var(--border);
+      color: var(--text);
+    }
+
+    tr:hover td {
+      background: rgba(41, 181, 232, 0.05);
+    }
+
+    .highlight-box {
+      background: rgba(41, 181, 232, 0.1);
+      border: 1px solid var(--primary);
+      border-radius: 12px;
+      padding: 1.5rem;
+      margin: 1.5rem 0;
+      width: 100%;
+    }
+
+    .context-box {
+      background: rgba(124, 58, 237, 0.1);
+      border: 1px solid var(--accent);
+      border-radius: 12px;
+      padding: 1.5rem;
+      margin: 1.5rem 0;
+      width: 100%;
+    }
+
+    .warning-box {
+      background: rgba(245, 158, 11, 0.1);
+      border: 1px solid var(--orange);
+      border-radius: 12px;
+      padding: 1.5rem;
+      margin: 1.5rem 0;
+      width: 100%;
+    }
+
+    .badge-green { background: rgba(16, 185, 129, 0.15); color: var(--green); padding: 0.25rem 0.75rem; border-radius: 99px; font-size: 0.8rem; font-weight: 500; display: inline-block; }
+    .badge-orange { background: rgba(245, 158, 11, 0.15); color: var(--orange); padding: 0.25rem 0.75rem; border-radius: 99px; font-size: 0.8rem; font-weight: 500; display: inline-block; }
+    .badge-red { background: rgba(239, 68, 68, 0.15); color: var(--red); padding: 0.25rem 0.75rem; border-radius: 99px; font-size: 0.8rem; font-weight: 500; display: inline-block; }
+    .badge-blue { background: rgba(41, 181, 232, 0.15); color: var(--primary); padding: 0.25rem 0.75rem; border-radius: 99px; font-size: 0.8rem; font-weight: 500; display: inline-block; }
+    .badge-purple { background: rgba(124, 58, 237, 0.15); color: var(--accent); padding: 0.25rem 0.75rem; border-radius: 99px; font-size: 0.8rem; font-weight: 500; display: inline-block; }
+
+    .slide ul {
+      list-style: none;
+      width: 100%;
+      max-width: 700px;
+    }
+
+    .slide ul li {
+      padding: 0.75rem 0;
+      padding-left: 1.5rem;
+      position: relative;
+      color: var(--text);
+      font-size: 1.05rem;
+    }
+
+    .slide ul li::before {
+      content: '';
+      position: absolute;
+      left: 0;
+      top: 50%;
+      transform: translateY(-50%);
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: var(--primary);
+    }
+
+    code {
+      background: var(--card-bg);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 0.2rem 0.5rem;
+      font-size: 0.85rem;
+      font-family: 'SF Mono', 'Fira Code', monospace;
+      color: var(--primary);
+    }
+
+    pre {
+      background: var(--card-bg);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 1.5rem;
+      overflow-x: auto;
+      width: 100%;
+      margin: 1.5rem 0;
+      font-size: 0.85rem;
+      line-height: 1.7;
+      font-family: 'SF Mono', 'Fira Code', monospace;
+      color: var(--text);
+    }
+
+    pre .keyword { color: var(--accent); font-weight: 500; }
+    pre .string { color: var(--green); }
+    pre .comment { color: var(--text-muted); font-style: italic; }
+    pre .function { color: var(--primary); }
+
+    .flow-diagram {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.5rem;
+      margin: 2rem 0;
+      flex-wrap: wrap;
+      width: 100%;
+    }
+
+    .flow-step {
+      background: var(--card-bg);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 1rem 1.5rem;
+      text-align: center;
+      min-width: 140px;
+    }
+
+    .flow-step.active {
+      border-color: var(--primary);
+      box-shadow: 0 0 20px rgba(41, 181, 232, 0.2);
+    }
+
+    .flow-step .step-label {
+      font-size: 0.75rem;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+
+    .flow-step .step-title {
+      font-size: 1rem;
+      font-weight: 600;
+      color: var(--text);
+      margin-top: 0.25rem;
+    }
+
+    .flow-arrow {
+      color: var(--primary);
+      font-size: 1.5rem;
+      font-weight: 300;
+    }
+
+    .two-col {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 2rem;
+      width: 100%;
+      margin: 2rem 0;
+    }
+
+    .anim-fade {
+      opacity: 0;
+      transform: translateY(20px);
+      transition: opacity 0.6s ease, transform 0.6s ease;
+    }
+
+    .anim-fade.visible {
+      opacity: 1;
+      transform: translateY(0);
+    }
+
+    @media (max-width: 900px) {
+      .sidebar { display: none; }
+      .main { margin-left: 0; }
+      .stat-grid { grid-template-columns: repeat(2, 1fr); }
+      .slide { padding: 2rem 1.5rem; }
+      .two-col { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+  <div class="progress-bar"></div>
+
+  <nav class="sidebar">
+    <h2>Agent Versioning</h2>
+    <a href="#hero">Overview</a>
+    <a href="#problem">The Problem</a>
+    <a href="#versioning-model">Versioning Model</a>
+    <a href="#lifecycle">Version Lifecycle</a>
+    <a href="#aliases">Aliases & Shortcuts</a>
+    <a href="#promotion">Promotion Pipeline</a>
+    <a href="#cicd">CI/CD Integration</a>
+    <a href="#ab-testing">A/B Testing</a>
+    <a href="#ab-implementation">A/B Implementation</a>
+    <a href="#monitoring">Monitoring</a>
+    <a href="#evaluations">Evaluations</a>
+    <a href="#rollback">Rollback</a>
+    <a href="#reference">SQL Reference</a>
+    <a href="#closing">Next Steps</a>
+  </nav>
+
+  <main class="main">
+
+    <!-- Slide 1: Hero -->
+    <section class="slide" id="hero">
+      <h1>Versioning & A/B Testing Cortex Agents</h1>
+      <p>A guide to building a production-grade agent lifecycle in Snowflake — from development through promotion, testing, and monitoring.</p>
+      <div class="stat-grid anim-fade" style="margin-top: 2rem;">
+        <div class="stat-card">
+          <div class="value">3</div>
+          <div class="label">Version Types</div>
+        </div>
+        <div class="stat-card">
+          <div class="value">1 cmd</div>
+          <div class="label">Rollback Speed</div>
+        </div>
+        <div class="stat-card">
+          <div class="value">0</div>
+          <div class="label">Client Changes to Promote</div>
+        </div>
+        <div class="stat-card">
+          <div class="value">Native</div>
+          <div class="label">Observability</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Slide 2: The Problem -->
+    <section class="slide" id="problem">
+      <h2>The Problem</h2>
+      <div class="card-grid anim-fade">
+        <div class="card">
+          <h4>Mutable = Risky</h4>
+          <p>Without versioning, every edit to an agent immediately affects production users. One bad instruction change can degrade all responses.</p>
+        </div>
+        <div class="card">
+          <h4>No Rollback Path</h4>
+          <p>If something breaks, you're scrambling to remember what the configuration looked like before. No snapshots, no history.</p>
+        </div>
+        <div class="card">
+          <h4>No Testing Gate</h4>
+          <p>Changes go live without passing through UAT. You can't validate agent behavior against a test suite before deployment.</p>
+        </div>
+        <div class="card">
+          <h4>Blind in Production</h4>
+          <p>Without monitoring, you don't know if your agent is hallucinating, selecting wrong tools, or degrading over time.</p>
+        </div>
+      </div>
+      <div class="highlight-box anim-fade" style="margin-top: 1.5rem;">
+        <strong>Cortex Agent Versioning solves all of these</strong> with a commit-based model that separates development from production.
+      </div>
+    </section>
+
+    <!-- Slide 3: Versioning Model -->
+    <section class="slide" id="versioning-model">
+      <h2>The Versioning Model</h2>
+      <div class="anim-fade" style="width: 100%; overflow-x: auto;">
+        <table>
+          <thead>
+            <tr>
+              <th>Concept</th>
+              <th>Mutability</th>
+              <th>Purpose</th>
+              <th>Example</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><strong>Live Version</strong></td>
+              <td><span class="badge-orange">Mutable</span></td>
+              <td>Active development & iteration</td>
+              <td><code>LIVE</code></td>
+            </tr>
+            <tr>
+              <td><strong>Named Version</strong></td>
+              <td><span class="badge-green">Immutable</span></td>
+              <td>Stable deployment snapshot</td>
+              <td><code>VERSION$3</code></td>
+            </tr>
+            <tr>
+              <td><strong>Alias</strong></td>
+              <td><span class="badge-blue">Pointer</span></td>
+              <td>Human-readable routing label</td>
+              <td><code>production</code></td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="context-box anim-fade">
+        <strong>Key insight:</strong> Named versions are immutable snapshots. Aliases are reassignable pointers. Your application targets aliases — you promote by moving the pointer, not changing code.
+      </div>
+    </section>
+
+    <!-- Slide 4: Version Lifecycle -->
+    <section class="slide" id="lifecycle">
+      <h2>Version Lifecycle</h2>
+      <div class="flow-diagram anim-fade">
+        <div class="flow-step">
+          <div class="step-label">Step 1</div>
+          <div class="step-title">Create Agent</div>
+        </div>
+        <div class="flow-arrow">&rarr;</div>
+        <div class="flow-step">
+          <div class="step-label">Step 2</div>
+          <div class="step-title">Iterate on LIVE</div>
+        </div>
+        <div class="flow-arrow">&rarr;</div>
+        <div class="flow-step active">
+          <div class="step-label">Step 3</div>
+          <div class="step-title">Commit</div>
+        </div>
+        <div class="flow-arrow">&rarr;</div>
+        <div class="flow-step">
+          <div class="step-label">Step 4</div>
+          <div class="step-title">Assign Alias</div>
+        </div>
+        <div class="flow-arrow">&rarr;</div>
+        <div class="flow-step">
+          <div class="step-label">Step 5</div>
+          <div class="step-title">Route Traffic</div>
+        </div>
+      </div>
+      <div class="two-col anim-fade">
+        <div class="card">
+          <h4>On Create</h4>
+          <p>Agent automatically gets <code>VERSION$1</code> (committed) + a <code>LIVE</code> version (mutable copy).</p>
+        </div>
+        <div class="card">
+          <h4>On Commit</h4>
+          <p>LIVE is frozen into <code>VERSION$N</code>. A new LIVE version must be explicitly created to resume development.</p>
+        </div>
+      </div>
+      <pre class="anim-fade"><span class="comment">-- Commit the live version to create an immutable snapshot</span>
+<span class="keyword">ALTER AGENT</span> my_agent <span class="keyword">COMMIT</span>
+  <span class="keyword">COMMENT</span> = <span class="string">'Ready for UAT testing'</span>;
+
+<span class="comment">-- Resume development from the last committed version</span>
+<span class="keyword">ALTER AGENT</span> my_agent <span class="keyword">ADD LIVE VERSION FROM LAST</span>
+  <span class="keyword">COMMENT</span> = <span class="string">'Starting next iteration'</span>;</pre>
+    </section>
+
+    <!-- Slide 5: Aliases & Shortcuts -->
+    <section class="slide" id="aliases">
+      <h2>Aliases & Shortcuts</h2>
+      <div class="two-col anim-fade">
+        <div>
+          <h3>Aliases</h3>
+          <p style="text-align: left; margin-bottom: 1rem;">Human-readable labels you assign to versions. Reassign to redirect traffic without client changes.</p>
+          <pre><span class="comment">-- Assign alias</span>
+<span class="keyword">ALTER AGENT</span> my_agent
+  <span class="keyword">MODIFY VERSION</span> VERSION$3
+  <span class="keyword">SET ALIAS</span> = <span class="string">production</span>;
+
+<span class="comment">-- Promote new version</span>
+<span class="keyword">ALTER AGENT</span> my_agent
+  <span class="keyword">MODIFY VERSION</span> VERSION$4
+  <span class="keyword">SET ALIAS</span> = <span class="string">production</span>;</pre>
+        </div>
+        <div>
+          <h3>Built-in Shortcuts</h3>
+          <table>
+            <thead>
+              <tr><th>Shortcut</th><th>Resolves To</th></tr>
+            </thead>
+            <tbody>
+              <tr><td><code>LIVE</code></td><td>Current live version</td></tr>
+              <tr><td><code>FIRST</code></td><td>First committed version</td></tr>
+              <tr><td><code>LAST</code></td><td>Most recent commit</td></tr>
+              <tr><td><code>DEFAULT</code></td><td>Designated default version</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+      <div class="highlight-box anim-fade">
+        <strong>API endpoint pattern:</strong> <code>POST /api/v2/databases/{db}/schemas/{schema}/agents/{name}/versions/{version}:run</code><br>
+        The <code>{version}</code> accepts a system name, alias, or shortcut.
+      </div>
+    </section>
+
+    <!-- Slide 6: Promotion Pipeline -->
+    <section class="slide" id="promotion">
+      <h2>Promotion Pipeline: Dev &rarr; UAT &rarr; Prod</h2>
+      <div class="flow-diagram anim-fade">
+        <div class="flow-step">
+          <div class="step-label">Environment</div>
+          <div class="step-title">Dev</div>
+        </div>
+        <div class="flow-arrow">&rarr;</div>
+        <div class="flow-step">
+          <div class="step-label">Environment</div>
+          <div class="step-title">UAT</div>
+        </div>
+        <div class="flow-arrow">&rarr;</div>
+        <div class="flow-step active">
+          <div class="step-label">Environment</div>
+          <div class="step-title">Production</div>
+        </div>
+      </div>
+      <pre class="anim-fade"><span class="comment">-- DEV: Iterate on live version with dev alias</span>
+<span class="keyword">ALTER AGENT</span> my_agent <span class="keyword">MODIFY LIVE VERSION SET ALIAS</span> = <span class="string">dev</span>;
+
+<span class="comment">-- UAT: Commit and assign uat alias</span>
+<span class="keyword">ALTER AGENT</span> my_agent <span class="keyword">COMMIT</span>
+  <span class="keyword">COMMENT</span> = <span class="string">'Candidate for UAT'</span>;
+<span class="keyword">ALTER AGENT</span> my_agent
+  <span class="keyword">MODIFY VERSION LAST SET ALIAS</span> = <span class="string">uat</span>;
+
+<span class="comment">-- Run evaluations against 'uat' alias...</span>
+
+<span class="comment">-- PROD: Promote after UAT passes</span>
+<span class="keyword">ALTER AGENT</span> my_agent
+  <span class="keyword">MODIFY VERSION</span> VERSION$3 <span class="keyword">SET ALIAS</span> = <span class="string">production</span>;</pre>
+      <div class="highlight-box anim-fade">
+        <strong>Zero client changes:</strong> All API calls targeting the <code>production</code> alias automatically route to the new version.
+      </div>
+    </section>
+
+    <!-- Slide 7: CI/CD Integration -->
+    <section class="slide" id="cicd">
+      <h2>CI/CD Integration</h2>
+      <div class="two-col anim-fade">
+        <div>
+          <h3>Git-Connected Workflow</h3>
+          <ul>
+            <li>Edit agent YAML in Git</li>
+            <li>Review via pull request</li>
+            <li>CI imports version from stage</li>
+            <li>Assign alias to deploy</li>
+          </ul>
+        </div>
+        <div>
+          <h3>Key Benefit</h3>
+          <p style="text-align: left;">Bypasses the live version entirely. Changes are merged offline and imported as a new named version directly from Git.</p>
+        </div>
+      </div>
+      <pre class="anim-fade"><span class="comment">-- Import version from a Git-connected stage after merge</span>
+<span class="keyword">ALTER AGENT</span> my_agent <span class="keyword">ADD VERSION FROM</span> @my_repo/tags/v2.1/agents/my_agent
+  <span class="keyword">COMMENT</span> = <span class="string">'Automated deploy from CI pipeline'</span>;
+
+<span class="comment">-- Or create a brand new agent from a stage (infrastructure-as-code)</span>
+<span class="keyword">CREATE AGENT</span> my_agent
+  <span class="keyword">COMMENT</span> = <span class="string">'Deployed by CI pipeline'</span>
+  <span class="keyword">FROM</span> @my_stage/agents/my_agent;</pre>
+      <div class="context-box anim-fade">
+        <strong>Tip:</strong> Use the <code>LAST</code> shortcut in CI scripts when you don't know the version number ahead of time.
+      </div>
+    </section>
+
+    <!-- Slide 8: A/B Testing -->
+    <section class="slide" id="ab-testing">
+      <h2>A/B Testing Approaches</h2>
+      <div class="card-grid anim-fade">
+        <div class="card">
+          <h4>Application-Layer Routing</h4>
+          <p>Assign two aliases (<code>production</code> + <code>canary</code>). Route a percentage of traffic to the canary in your app code. Correlate version with feedback/metrics.</p>
+        </div>
+        <div class="card">
+          <h4>Shadow Testing</h4>
+          <p>Run both versions on the same input. Serve production response to the user, log the candidate response for offline comparison and evaluation.</p>
+        </div>
+        <div class="card">
+          <h4>Cohort-Based Split</h4>
+          <p>Use user attributes (user ID hash, region, role) to deterministically route users to version A or B. Ensures consistent experience per user.</p>
+        </div>
+      </div>
+      <div class="warning-box anim-fade">
+        <strong>Note:</strong> Snowflake does not have native traffic splitting for agents. A/B testing is implemented at the application layer using versioned endpoints and aliases.
+      </div>
+    </section>
+
+    <!-- Slide 9: A/B Implementation -->
+    <section class="slide" id="ab-implementation">
+      <h2>A/B Testing: Implementation</h2>
+      <pre class="anim-fade"><span class="comment"># Setup: assign aliases to the two versions under test</span>
+<span class="comment"># ALTER AGENT my_agent MODIFY VERSION VERSION$3 SET ALIAS = production;</span>
+<span class="comment"># ALTER AGENT my_agent MODIFY VERSION VERSION$4 SET ALIAS = canary;</span>
+
+<span class="keyword">import</span> random
+<span class="keyword">import</span> hashlib
+
+<span class="keyword">def</span> <span class="function">get_agent_version</span>(user_id, canary_pct=10):
+    <span class="string">"""Deterministic routing based on user ID."""</span>
+    bucket = int(hashlib.md5(user_id.encode()).hexdigest(), 16) % 100
+    <span class="keyword">return</span> <span class="string">"canary"</span> <span class="keyword">if</span> bucket < canary_pct <span class="keyword">else</span> <span class="string">"production"</span>
+
+<span class="keyword">def</span> <span class="function">call_agent</span>(user_id, query):
+    version = get_agent_version(user_id)
+    endpoint = (
+        f<span class="string">"/api/v2/databases/{db}/schemas/{schema}"</span>
+        f<span class="string">"/agents/my_agent/versions/{version}:run"</span>
+    )
+
+    response = requests.post(endpoint, json={<span class="string">"query"</span>: query})
+
+    <span class="comment"># Log for A/B analysis</span>
+    log_experiment(user_id, version, query, response)
+    <span class="keyword">return</span> response</pre>
+      <div class="highlight-box anim-fade">
+        <strong>Key pattern:</strong> Always log which version served each request. This lets you correlate user feedback, evaluation scores, and latency with specific versions.
+      </div>
+    </section>
+
+    <!-- Slide 10: Monitoring -->
+    <section class="slide" id="monitoring">
+      <h2>Production Monitoring</h2>
+      <div class="card-grid anim-fade">
+        <div class="card">
+          <h4>Conversation History</h4>
+          <p>Full thread-level conversation logs stored automatically. View in Snowsight under AI & ML &rarr; Agents &rarr; Monitoring.</p>
+        </div>
+        <div class="card">
+          <h4>Execution Traces</h4>
+          <p>Spans for LLM planning, tool execution (Search, Analyst, web), SQL execution, chart generation, and response generation.</p>
+        </div>
+        <div class="card">
+          <h4>Inputs & Outputs</h4>
+          <p>Each span captures its inputs and outputs for debugging. See exactly what the agent planned, what tools returned, and how it responded.</p>
+        </div>
+        <div class="card">
+          <h4>User Feedback</h4>
+          <p>Thumbs up/down ratings and free-text feedback captured per response. Use to identify degradation patterns.</p>
+        </div>
+      </div>
+      <div class="highlight-box anim-fade">
+        <strong>Storage:</strong> All observability data is stored in <code>SNOWFLAKE.LOCAL.AI_OBSERVABILITY_EVENTS</code>. Query with the <code>SNOWFLAKE.AI_OBSERVABILITY_READER</code> role. Entries cannot be modified (append-only).
+      </div>
+    </section>
+
+    <!-- Slide 11: Evaluations -->
+    <section class="slide" id="evaluations">
+      <h2>Agent Evaluations</h2>
+      <div class="two-col anim-fade">
+        <div>
+          <h3>Built-in Metrics</h3>
+          <table>
+            <thead><tr><th>Metric</th><th>Type</th></tr></thead>
+            <tbody>
+              <tr>
+                <td><strong>Answer Correctness</strong></td>
+                <td><span class="badge-blue">Ground truth</span></td>
+              </tr>
+              <tr>
+                <td><strong>Logical Consistency</strong></td>
+                <td><span class="badge-purple">Reference-free</span></td>
+              </tr>
+            </tbody>
+          </table>
+          <p style="text-align: left; margin-top: 1rem; font-size: 0.9rem; color: var(--text-muted);">Answer correctness compares agent output to expected answers. Logical consistency evaluates coherence across instructions, planning, and tool calls without ground truth.</p>
+        </div>
+        <div>
+          <h3>Custom Metrics</h3>
+          <p style="text-align: left; margin-bottom: 1rem;">Define domain-specific evaluation criteria using LLM-judged prompts:</p>
+          <ul>
+            <li>Tone & brand adherence</li>
+            <li>Tool selection accuracy</li>
+            <li>Citation quality</li>
+            <li>Response completeness</li>
+          </ul>
+        </div>
+      </div>
+      <div class="context-box anim-fade">
+        <strong>Evaluation traces the full pipeline:</strong> planning, tool selection, execution results, and response generation. Identify exactly where quality degrades.
+      </div>
+    </section>
+
+    <!-- Slide 12: Rollback -->
+    <section class="slide" id="rollback">
+      <h2>Rollback Strategy</h2>
+      <div class="flow-diagram anim-fade">
+        <div class="flow-step" style="border-color: var(--red);">
+          <div class="step-label">Issue Detected</div>
+          <div class="step-title">VERSION$4</div>
+        </div>
+        <div class="flow-arrow">&rarr;</div>
+        <div class="flow-step active">
+          <div class="step-label">Rollback To</div>
+          <div class="step-title">VERSION$3</div>
+        </div>
+      </div>
+      <pre class="anim-fade"><span class="comment">-- One command to rollback: reassign the production alias</span>
+<span class="keyword">ALTER AGENT</span> my_agent
+  <span class="keyword">MODIFY VERSION</span> VERSION$3 <span class="keyword">SET ALIAS</span> = <span class="string">production</span>;
+
+<span class="comment">-- All traffic immediately routes to the previous stable version</span>
+<span class="comment">-- No client changes, no redeployment, no downtime</span></pre>
+      <div class="card-grid anim-fade">
+        <div class="card">
+          <h4>Why This Works</h4>
+          <p>Named versions are immutable. VERSION$3 is exactly the same configuration that was working before. No drift, no surprises.</p>
+        </div>
+        <div class="card">
+          <h4>Best Practice</h4>
+          <p>Always keep at least 2-3 previous named versions available. Only drop versions you're certain you'll never need to roll back to.</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- Slide 13: SQL Reference -->
+    <section class="slide" id="reference">
+      <h2>SQL Quick Reference</h2>
+      <div class="anim-fade" style="width: 100%; overflow-x: auto;">
+        <table>
+          <thead>
+            <tr><th>Action</th><th>SQL</th></tr>
+          </thead>
+          <tbody>
+            <tr><td>View all versions</td><td><code>SHOW VERSIONS IN AGENT my_agent;</code></td></tr>
+            <tr><td>Commit live version</td><td><code>ALTER AGENT my_agent COMMIT;</code></td></tr>
+            <tr><td>Resume development</td><td><code>ALTER AGENT my_agent ADD LIVE VERSION FROM LAST;</code></td></tr>
+            <tr><td>Assign alias</td><td><code>ALTER AGENT my_agent MODIFY VERSION VERSION$N SET ALIAS = prod;</code></td></tr>
+            <tr><td>Set default version</td><td><code>ALTER AGENT my_agent SET DEFAULT_VERSION = LAST;</code></td></tr>
+            <tr><td>Import from Git</td><td><code>ALTER AGENT my_agent ADD VERSION FROM @stage/path;</code></td></tr>
+            <tr><td>Inspect version files</td><td><code>LIST snow://agent/my_agent/versions/production/;</code></td></tr>
+            <tr><td>Drop old version</td><td><code>ALTER AGENT my_agent DROP VERSION VERSION$1;</code></td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- Slide 14: Closing -->
+    <section class="slide" id="closing">
+      <h2>Next Steps</h2>
+      <div class="card-grid anim-fade">
+        <div class="card">
+          <h4>1. Set Up Aliases</h4>
+          <p>Establish <code>dev</code>, <code>uat</code>, and <code>production</code> aliases on your existing agents. Update application code to target aliases instead of hardcoded versions.</p>
+        </div>
+        <div class="card">
+          <h4>2. Build Evaluation Suite</h4>
+          <p>Create a ground-truth dataset of question/answer pairs. Define custom metrics for your domain. Run evaluations against UAT before promoting.</p>
+        </div>
+        <div class="card">
+          <h4>3. Implement A/B Routing</h4>
+          <p>Add version routing logic to your application layer. Start with a 90/10 split. Log version per request for correlation with feedback.</p>
+        </div>
+        <div class="card">
+          <h4>4. Monitor & Iterate</h4>
+          <p>Query <code>AI_OBSERVABILITY_EVENTS</code> for trace analysis. Set up alerts on feedback score degradation. Continuously refine based on evaluation results.</p>
+        </div>
+      </div>
+      <div class="highlight-box anim-fade" style="text-align: center;">
+        <strong>Remember:</strong> Aliases are your environment abstraction. Your app targets an alias — you promote and rollback by moving the pointer.
+      </div>
+    </section>
+
+  </main>
+
+  <script>
+    // Progress bar
+    const progressBar = document.querySelector('.progress-bar');
+    window.addEventListener('scroll', () => {
+      const scrollTop = window.scrollY;
+      const docHeight = document.documentElement.scrollHeight - window.innerHeight;
+      progressBar.style.width = (scrollTop / docHeight * 100) + '%';
+    });
+
+    // Scroll animations
+    const observer = new IntersectionObserver((entries) => {
+      entries.forEach(entry => {
+        if (entry.isIntersecting) {
+          entry.target.classList.add('visible');
+        }
+      });
+    }, { threshold: 0.1 });
+
+    document.querySelectorAll('.anim-fade').forEach(el => observer.observe(el));
+
+    // Active nav tracking
+    const sections = document.querySelectorAll('.slide');
+    const navLinks = document.querySelectorAll('.sidebar a');
+
+    window.addEventListener('scroll', () => {
+      let current = '';
+      sections.forEach(section => {
+        const sectionTop = section.offsetTop - 200;
+        if (window.scrollY >= sectionTop) {
+          current = section.getAttribute('id');
+        }
+      });
+      navLinks.forEach(link => {
+        link.classList.remove('active');
+        if (link.getAttribute('href') === '#' + current) {
+          link.classList.add('active');
+        }
+      });
+    });
+  </script>
+</body>
+</html>
