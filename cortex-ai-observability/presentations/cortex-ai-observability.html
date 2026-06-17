@@ -444,6 +444,21 @@
       font-weight: 600;
     }
 
+    .badge-blue {
+      display: inline-block;
+      background: var(--accent);
+      color: #fff;
+      padding: 0.2rem 0.6rem;
+      border-radius: 99px;
+      font-size: 0.7rem;
+      font-weight: 600;
+      letter-spacing: 0.02em;
+      text-decoration: none;
+    }
+    .badge-blue:hover {
+      opacity: 0.85;
+    }
+
     /* Part Divider */
     .part-divider {
       display: flex;
@@ -513,6 +528,7 @@
       <div class="nav-section-title">Surfaces</div>
       <a href="#cortex-agents">Cortex Agents</a>
       <a href="#cowork-rest">CoWork & REST</a>
+      <a href="#ai-functions">AI Functions</a>
       <a href="#mcp-identification">MCP Identification</a>
     </div>
 
@@ -614,32 +630,37 @@
         <tbody>
           <tr>
             <td>Cortex Agents (all interfaces)</td>
-            <td><code>CORTEX_AGENT_USAGE_HISTORY</code></td>
+            <td style="display: flex; align-items: center; justify-content: space-between;"><code>CORTEX_AGENT_USAGE_HISTORY</code> <a href="https://docs.snowflake.com/en/sql-reference/account-usage/cortex_agent_usage_history" target="_blank" class="badge-blue">Docs</a></td>
             <td>METADATA, TOKENS_GRANULAR, CREDITS_GRANULAR</td>
           </tr>
           <tr>
             <td>CoWork / Intelligence</td>
-            <td><code>SNOWFLAKE_INTELLIGENCE_USAGE_HISTORY</code></td>
+            <td style="display: flex; align-items: center; justify-content: space-between;"><code>SNOWFLAKE_INTELLIGENCE_USAGE_HISTORY</code> <a href="https://docs.snowflake.com/en/sql-reference/account-usage/snowflake_intelligence_usage_history_view" target="_blank" class="badge-blue">Docs</a></td>
             <td>SNOWFLAKE_INTELLIGENCE_NAME, USER_NAME</td>
           </tr>
           <tr>
             <td>Direct REST API (Complete, Embed)</td>
-            <td><code>CORTEX_REST_API_USAGE_HISTORY</code></td>
+            <td style="display: flex; align-items: center; justify-content: space-between;"><code>CORTEX_REST_API_USAGE_HISTORY</code> <a href="https://docs.snowflake.com/en/sql-reference/account-usage/cortex_rest_api_usage_history" target="_blank" class="badge-blue">Docs</a></td>
             <td>MODEL_NAME, REQUEST_ID, TOKENS</td>
           </tr>
           <tr>
+            <td>Cortex AI Functions (SQL)</td>
+            <td style="display: flex; align-items: center; justify-content: space-between;"><code>CORTEX_AI_FUNCTIONS_USAGE_HISTORY</code> <a href="https://docs.snowflake.com/en/sql-reference/account-usage/cortex_ai_functions_usage_history" target="_blank" class="badge-blue">Docs</a></td>
+            <td>FUNCTION_NAME, MODEL_NAME, METRICS, CREDITS</td>
+          </tr>
+          <tr>
             <td>Cortex Analyst</td>
-            <td><code>CORTEX_ANALYST_USAGE_HISTORY</code></td>
+            <td style="display: flex; align-items: center; justify-content: space-between;"><code>CORTEX_ANALYST_USAGE_HISTORY</code> <a href="https://docs.snowflake.com/en/sql-reference/account-usage/cortex_analyst_usage_history" target="_blank" class="badge-blue">Docs</a></td>
             <td>SEMANTIC_VIEW_NAME, TOKENS_GRANULAR</td>
           </tr>
           <tr>
             <td>Cortex Code CLI</td>
-            <td><code>CORTEX_CODE_CLI_USAGE_HISTORY</code></td>
+            <td style="display: flex; align-items: center; justify-content: space-between;"><code>CORTEX_CODE_CLI_USAGE_HISTORY</code> <a href="https://docs.snowflake.com/en/sql-reference/account-usage/cortex_code_cli_usage_history" target="_blank" class="badge-blue">Docs</a></td>
             <td>USER_NAME, MODEL_NAME, TOKENS</td>
           </tr>
           <tr>
             <td>Query-level compute</td>
-            <td><code>QUERY_ATTRIBUTION_HISTORY</code></td>
+            <td style="display: flex; align-items: center; justify-content: space-between;"><code>QUERY_ATTRIBUTION_HISTORY</code> <a href="https://docs.snowflake.com/en/sql-reference/organization-usage/query_attribution_history" target="_blank" class="badge-blue">Docs</a></td>
             <td>CREDITS_ATTRIBUTED_COMPUTE, QUERY_TAG</td>
           </tr>
         </tbody>
@@ -687,6 +708,7 @@
 
       <div class="context-box anim-fade">
         <p><strong>Key detail:</strong> MCP traffic (Claude Desktop, ChatGPT, etc.) and direct REST API calls both appear as <code>external</code>. There is no finer-grained distinction at the <code>interaction_interface</code> level today.</p>
+        <p style="margin-top: 0.5rem;"><a href="https://docs.snowflake.com/en/sql-reference/account-usage/cortex_agent_usage_history" target="_blank" class="badge-blue">Docs</a></p>
       </div>
     </section>
 
@@ -710,6 +732,7 @@
   <span class="function">CURRENT_TIMESTAMP</span>())
 <span class="keyword">GROUP BY</span> <span class="number">1</span>, <span class="number">2</span>;</pre>
           <p style="margin-top: 0.5rem;">Identifies traffic by <code>SNOWFLAKE_INTELLIGENCE_NAME</code> and <code>SNOWFLAKE_INTELLIGENCE_ID</code>. Each CoWork instance is a distinct object.</p>
+          <p style="margin-top: 0.25rem;"><a href="https://docs.snowflake.com/en/sql-reference/account-usage/snowflake_intelligence_usage_history_view" target="_blank" class="badge-blue">Docs</a></p>
         </div>
         <div>
           <h3>Direct REST API</h3>
@@ -726,7 +749,71 @@
   <span class="function">CURRENT_TIMESTAMP</span>())
 <span class="keyword">GROUP BY</span> <span class="number">1</span>, <span class="number">2</span>;</pre>
           <p style="margin-top: 0.5rem;">Captures direct <code>CORTEX.COMPLETE()</code>, <code>CORTEX.EMBED()</code>, and other LLM endpoint calls with <code>MODEL_NAME</code> and <code>REQUEST_ID</code>.</p>
+          <p style="margin-top: 0.25rem;"><a href="https://docs.snowflake.com/en/sql-reference/account-usage/cortex_rest_api_usage_history" target="_blank" class="badge-blue">Docs</a></p>
         </div>
+      </div>
+    </section>
+
+    <!-- Slide: AI Functions Observability -->
+    <section class="slide" id="ai-functions">
+      <h2>Surface Identification: AI Functions</h2>
+      <p style="margin-bottom: 2rem;"><code>CORTEX_AI_FUNCTIONS_USAGE_HISTORY</code> tracks every SQL-invoked AI function call &mdash; the most granular per-query, per-function view available.</p>
+
+      <div class="card-grid anim-fade" style="grid-template-columns: 1fr 1fr 1fr;">
+        <div class="card">
+          <h4>What It Tracks</h4>
+          <ul>
+            <li><code>AI_COMPLETE()</code></li>
+            <li><code>AI_EMBED()</code></li>
+            <li><code>AI_SENTIMENT()</code></li>
+            <li><code>AI_PARSE_DOCUMENT()</code></li>
+            <li><code>AI_TRANSLATE()</code></li>
+            <li><code>AI_EXTRACT()</code></li>
+          </ul>
+        </div>
+        <div class="card">
+          <h4>Key Columns</h4>
+          <ul>
+            <li><code>FUNCTION_NAME</code></li>
+            <li><code>MODEL_NAME</code></li>
+            <li><code>QUERY_ID</code></li>
+            <li><code>WAREHOUSE_ID</code></li>
+            <li><code>ROLE_NAMES</code></li>
+            <li><code>QUERY_TAG</code></li>
+            <li><code>CREDITS</code></li>
+          </ul>
+        </div>
+        <div class="card">
+          <h4>METRICS Array</h4>
+          <p style="font-size: 0.85rem;">Token-based metering:</p>
+          <pre style="font-size: 0.75rem; margin-top: 0.5rem;">[{<span class="string">"key"</span>:{<span class="string">"metric"</span>:<span class="string">"input"</span>,
+   <span class="string">"unit"</span>:<span class="string">"tokens"</span>},
+  <span class="string">"value"</span>:<span class="number">17</span>},
+ {<span class="string">"key"</span>:{<span class="string">"metric"</span>:<span class="string">"output"</span>,
+   <span class="string">"unit"</span>:<span class="string">"tokens"</span>},
+  <span class="string">"value"</span>:<span class="number">65</span>}]</pre>
+          <p style="font-size: 0.85rem; margin-top: 0.5rem;">Page-based (AI_PARSE_DOCUMENT):</p>
+          <pre style="font-size: 0.75rem; margin-top: 0.25rem;">[{<span class="string">"key"</span>:{<span class="string">"metric"</span>:<span class="string">"total"</span>,
+   <span class="string">"unit"</span>:<span class="string">"pages"</span>},
+  <span class="string">"value"</span>:<span class="number">3</span>}]</pre>
+        </div>
+      </div>
+
+      <pre class="anim-fade"><span class="comment">-- Top AI Function consumers by cost (last 7 days)</span>
+<span class="keyword">SELECT</span>
+  FUNCTION_NAME,
+  MODEL_NAME,
+  <span class="function">COUNT</span>(*) <span class="keyword">AS</span> calls,
+  <span class="function">SUM</span>(CREDITS) <span class="keyword">AS</span> total_credits
+<span class="keyword">FROM</span> SNOWFLAKE.ACCOUNT_USAGE.CORTEX_AI_FUNCTIONS_USAGE_HISTORY
+<span class="keyword">WHERE</span> START_TIME >= <span class="function">DATEADD</span>(<span class="string">'day'</span>, <span class="number">-7</span>, <span class="function">CURRENT_TIMESTAMP</span>())
+<span class="keyword">GROUP BY</span> <span class="number">1</span>, <span class="number">2</span>
+<span class="keyword">ORDER BY</span> total_credits <span class="keyword">DESC</span>
+<span class="keyword">LIMIT</span> <span class="number">10</span>;</pre>
+
+      <div class="context-box anim-fade">
+        <p><strong>When to use this vs. other views:</strong> Use <code>CORTEX_AI_FUNCTIONS_USAGE_HISTORY</code> when you need per-query attribution for AI functions called directly in SQL. Agent-orchestrated AI calls are already captured in <code>CORTEX_AGENT_USAGE_HISTORY</code> &mdash; don't double-count.</p>
+        <p style="margin-top: 0.5rem;"><a href="https://docs.snowflake.com/en/user-guide/snowflake-cortex/ai-func-cost-management" target="_blank" class="badge-blue">Docs</a></p>
       </div>
     </section>
 
@@ -759,6 +846,7 @@
 
       <div class="context-box anim-fade">
         <p><strong>Recommendation:</strong> If you control the MCP server or client integration, set <code>QUERY_TAG</code> as a JSON object at session start. This gives you client-level attribution via <code>QUERY_ATTRIBUTION_HISTORY</code> even without platform-native support.</p>
+        <p style="margin-top: 0.5rem;"><a href="https://docs.snowflake.com/en/sql-reference/organization-usage/query_attribution_history" target="_blank" class="badge-blue">Docs</a></p>
       </div>
     </section>
 
@@ -798,6 +886,7 @@
 
       <div class="highlight-box anim-fade">
         <p><strong>Cache economics:</strong> <code>cache_read_input</code> tokens are significantly cheaper than fresh <code>input</code> tokens. Monitor your cache hit ratio &mdash; a high ratio means your prompt prefix caching is working effectively and reducing per-request cost.</p>
+        <p style="margin-top: 0.5rem;"><a href="https://docs.snowflake.com/en/user-guide/snowflake-cortex/governance-and-availability/ai-cost-management-and-governance" target="_blank" class="badge-blue">Docs</a></p>
       </div>
     </section>
 
@@ -893,7 +982,20 @@
   TOKENS <span class="keyword">AS</span> tokens,
   CREDITS_USED <span class="keyword">AS</span> credits,
   START_TIME <span class="keyword">AS</span> ts
-<span class="keyword">FROM</span> SNOWFLAKE.ACCOUNT_USAGE.CORTEX_CODE_CLI_USAGE_HISTORY;</pre>
+<span class="keyword">FROM</span> SNOWFLAKE.ACCOUNT_USAGE.CORTEX_CODE_CLI_USAGE_HISTORY
+
+<span class="keyword">UNION ALL</span>
+
+<span class="comment">-- Cortex AI Functions (SQL-invoked)</span>
+<span class="keyword">SELECT</span>
+  <span class="string">'ai_function'</span> <span class="keyword">AS</span> surface,
+  USER_ID <span class="keyword">AS</span> user_name,
+  FUNCTION_NAME <span class="keyword">AS</span> agent_name,
+  <span class="string">'sql'</span> <span class="keyword">AS</span> interface,
+  <span class="keyword">NULL</span> <span class="keyword">AS</span> tokens,
+  CREDITS <span class="keyword">AS</span> credits,
+  START_TIME <span class="keyword">AS</span> ts
+<span class="keyword">FROM</span> SNOWFLAKE.ACCOUNT_USAGE.CORTEX_AI_FUNCTIONS_USAGE_HISTORY;</pre>
 
       <pre class="anim-fade"><span class="comment">-- Query the unified view: top consumers last 7 days</span>
 <span class="keyword">SELECT</span>
@@ -975,6 +1077,7 @@
             <li><strong>Carry-over</strong> &mdash; unused budget rolls to next period (shared budgets)</li>
           </ul>
           <p style="margin-top: 0.75rem; font-size: 0.85rem; color: var(--text-muted);">Resource budgets enforce hard limits. Shared budgets provide pool-based governance with softer controls.</p>
+          <p style="margin-top: 0.5rem;"><a href="https://docs.snowflake.com/en/user-guide/snowflake-cortex/governance-and-availability/ai-cost-management-and-governance" target="_blank" class="badge-blue">Docs</a></p>
         </div>
       </div>
     </section>
@@ -1030,6 +1133,7 @@
             <li><strong>+</strong> Storage (Cortex Search indexes, if applicable)</li>
           </ul>
           <p style="margin-top: 0.5rem;">Link them via <code>QUERY_TAG</code> JSON or correlation on user + time window.</p>
+          <p style="margin-top: 0.25rem;"><a href="https://docs.snowflake.com/en/sql-reference/organization-usage/query_attribution_history" target="_blank" class="badge-blue">Docs</a></p>
         </div>
         <div class="card">
           <h4>QUERY_TAG as the Link</h4>
@@ -1095,12 +1199,24 @@
         </div>
       </div>
 
-      <div class="context-box anim-fade" style="margin-top: 1.5rem;">
-        <p><strong>Feature to watch:</strong> Finer-grained MCP client identification is a known gap. Today all external API access is one bucket. Expect future <code>interaction_interface</code> values or metadata fields that distinguish between MCP client types (Claude, ChatGPT, Cursor, custom).</p>
+      <div class="highlight-box anim-fade" style="text-align: center; margin-top: 1.5rem;">
+        <p style="text-align: center;"><strong>Observability is not optional for production AI.</strong> Surface identification answers "who's using it?" Cost attribution answers "what does it cost?" Together they enable informed governance decisions.</p>
       </div>
 
-      <div class="highlight-box anim-fade" style="text-align: center; margin-top: 1rem;">
-        <p style="text-align: center;"><strong>Observability is not optional for production AI.</strong> Surface identification answers "who's using it?" Cost attribution answers "what does it cost?" Together they enable informed governance decisions.</p>
+      <div class="card anim-fade" style="margin-top: 1.5rem; width: 100%;">
+        <h4>Documentation Quick Reference</h4>
+        <ul>
+          <li><a href="https://docs.snowflake.com/en/user-guide/snowflake-cortex/governance-and-availability/ai-cost-management-and-governance" target="_blank" class="badge-blue">AI Cost Management &amp; Governance</a> &mdash; comprehensive cost overview, usage views, budgets</li>
+          <li><a href="https://docs.snowflake.com/en/sql-reference/account-usage/cortex_agent_usage_history" target="_blank" class="badge-blue">CORTEX_AGENT_USAGE_HISTORY</a> &mdash; agent traffic with interaction_interface</li>
+          <li><a href="https://docs.snowflake.com/en/sql-reference/account-usage/snowflake_intelligence_usage_history_view" target="_blank" class="badge-blue">SNOWFLAKE_INTELLIGENCE_USAGE_HISTORY</a> &mdash; CoWork traffic</li>
+          <li><a href="https://docs.snowflake.com/en/sql-reference/account-usage/cortex_rest_api_usage_history" target="_blank" class="badge-blue">CORTEX_REST_API_USAGE_HISTORY</a> &mdash; direct LLM API calls</li>
+          <li><a href="https://docs.snowflake.com/en/sql-reference/account-usage/cortex_ai_functions_usage_history" target="_blank" class="badge-blue">CORTEX_AI_FUNCTIONS_USAGE_HISTORY</a> &mdash; per-query AI function usage (Complete, Embed, etc.)</li>
+          <li><a href="https://docs.snowflake.com/en/user-guide/snowflake-cortex/ai-func-cost-management" target="_blank" class="badge-blue">Managing AI Function Costs</a> &mdash; cost management patterns for SQL-invoked functions</li>
+          <li><a href="https://docs.snowflake.com/en/sql-reference/account-usage/cortex_analyst_usage_history" target="_blank" class="badge-blue">CORTEX_ANALYST_USAGE_HISTORY</a> &mdash; Cortex Analyst message credits</li>
+          <li><a href="https://docs.snowflake.com/en/sql-reference/account-usage/cortex_code_cli_usage_history" target="_blank" class="badge-blue">CORTEX_CODE_CLI_USAGE_HISTORY</a> &mdash; Cortex Code CLI tokens</li>
+          <li><a href="https://docs.snowflake.com/en/sql-reference/organization-usage/query_attribution_history" target="_blank" class="badge-blue">QUERY_ATTRIBUTION_HISTORY</a> &mdash; warehouse compute per query</li>
+          <li><a href="https://docs.snowflake.com/en/user-guide/snowflake-cortex/cortex-analyst/admin-observability" target="_blank" class="badge-blue">Cortex Analyst Admin Monitoring</a> &mdash; request logs, questions, generated SQL</li>
+        </ul>
       </div>
     </section>
 
