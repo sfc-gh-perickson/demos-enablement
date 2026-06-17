@@ -356,7 +356,125 @@ CREATE OR REPLACE TABLE MMT_DEMO.FORECASTING.AGENT_INSIGHTS (
 );
 
 -- ─────────────────────────────────────────────────────────────────────────────
--- 7. VERIFICATION
+-- 7. CORTEX AGENT: Semantic View + Search Service + Agent
+-- ─────────────────────────────────────────────────────────────────────────────
+
+-- Semantic view for Cortex Analyst — allows the agent to query telemetry,
+-- model catalog, and experiment data via natural language.
+CREATE OR REPLACE SEMANTIC VIEW MMT_DEMO.FORECASTING.MMT_TELEMETRY_VIEW
+  COMMENT = 'Semantic view for ML model monitoring — telemetry, catalog, and experiments'
+AS
+  SELECT * FROM MMT_DEMO.FORECASTING.FORECAST_TELEMETRY
+  UNION ALL SELECT NULL, NULL, NULL, NULL, NULL, NULL, NULL WHERE 1=0
+COLUMNS (
+  STORE_ITEM_ID COMMENT 'Partition identifier: store ID + item code (e.g., S001_PIZZA). This is the grain of all forecasting models.',
+  TS COMMENT 'Timestamp of the forecast period (hourly granularity).',
+  ACTUAL COMMENT 'Actual observed demand (units sold) for this store-item in this hour.',
+  PREDICTED COMMENT 'Model predicted demand (units) for this store-item in this hour.',
+  ERROR COMMENT 'Prediction error: PREDICTED minus ACTUAL. Positive means over-prediction (waste risk), negative means under-prediction (lost sales risk).',
+  ROLLING_7D_MAPE COMMENT 'Rolling 7-day Mean Absolute Percentage Error for this partition. Values above 0.25 (25%) trigger a drift flag.',
+  DRIFT_FLAG COMMENT 'Boolean: TRUE when ROLLING_7D_MAPE exceeds the configured threshold (default 25%). Indicates the model needs attention.'
+)
+TABLES (
+  MMT_DEMO.FORECASTING.FORECAST_TELEMETRY
+    COMMENT 'Hourly forecast telemetry with actuals vs predictions, error metrics, and drift flags per store-item partition.',
+  MMT_DEMO.FORECASTING.MODEL_CATALOG
+    COMMENT 'Model training catalog — one row per trained partition model. Contains training date, hyperparameters, feature metadata, validation metrics (MAE, RMSE, MAPE), stage paths, and active/inactive status.',
+  MMT_DEMO.FORECASTING.EXPERIMENT_RESULTS
+    COMMENT 'Champion vs challenger experiment results — per-partition MAPE comparison showing which model version won for each store-item.'
+)
+RELATIONSHIPS (
+  MMT_DEMO.FORECASTING.MODEL_CATALOG (PARTITION_ID) REFERENCES MMT_DEMO.FORECASTING.FORECAST_TELEMETRY (STORE_ITEM_ID),
+  MMT_DEMO.FORECASTING.EXPERIMENT_RESULTS (PARTITION_ID) REFERENCES MMT_DEMO.FORECASTING.FORECAST_TELEMETRY (STORE_ITEM_ID)
+);
+
+-- Cortex Search service over past insights — enables the agent to find
+-- historical patterns and past recommendations.
+CREATE OR REPLACE CORTEX SEARCH SERVICE MMT_DEMO.FORECASTING.INSIGHTS_SEARCH_SVC
+  ON SUMMARY
+  ATTRIBUTES CATEGORY, STORE_ITEM_ID, STATUS
+  WAREHOUSE = MMT_DEMO_WH
+  TARGET_LAG = '1 hour'
+  COMMENT = 'Search service for historical ML monitoring insights and recommendations'
+AS (
+  SELECT
+    INSIGHT_ID,
+    SUMMARY,
+    DETAIL,
+    RECOMMENDATION,
+    CATEGORY,
+    STORE_ITEM_ID,
+    STATUS,
+    CREATED_AT
+  FROM MMT_DEMO.FORECASTING.AGENT_INSIGHTS
+);
+
+-- The monitoring agent itself — with Cortex Analyst (structured data queries)
+-- and Cortex Search (historical insights retrieval) tools.
+CREATE OR REPLACE AGENT MMT_DEMO.FORECASTING.MMT_MONITORING_AGENT
+  COMMENT = 'ML model monitoring agent for demand forecasting MMT deployment'
+  FROM SPECIFICATION
+$$
+models:
+  orchestration: auto
+
+orchestration:
+  budget:
+    seconds: 45
+    tokens: 16000
+
+instructions:
+  response: |
+    You are an ML operations monitoring agent for a retail demand forecasting system
+    with 200 store-item partition-level models. When analyzing drift, always:
+    1. Identify WHICH partitions are affected (cite specific store-item IDs)
+    2. Quantify HOW BAD the degradation is (MAPE values, error magnitudes)
+    3. Explain WHY it likely happened (feature shifts, seasonal changes, data issues)
+    4. Recommend WHAT TO DO (retrain, investigate, add features, wait)
+    Be specific and data-driven. Reference actual numbers from the telemetry data.
+  orchestration: |
+    For questions about model performance, drift, predictions, or experiments, use the
+    telemetry_analyst tool to query the underlying data.
+    For questions about past recommendations, historical patterns, or previous analyses,
+    use the insights_search tool to find relevant past insights.
+    Always check telemetry data before making recommendations.
+  sample_questions:
+    - question: "Which models are currently drifting and why?"
+    - question: "What is the average MAPE across all partitions this week?"
+    - question: "Which partitions should we retrain and what features should we add?"
+    - question: "Are there any systematic over-prediction or under-prediction patterns?"
+
+tools:
+  - tool_spec:
+      type: "cortex_analyst_text_to_sql"
+      name: "telemetry_analyst"
+      description: >
+        Queries ML model telemetry data including: forecast accuracy (MAPE, MAE) per
+        store-item partition, drift flags, prediction errors, model catalog metadata
+        (training dates, hyperparameters, feature versions), and experiment results
+        (champion vs challenger comparisons). Use this tool to answer any quantitative
+        question about model performance, drift detection, or experiment outcomes.
+  - tool_spec:
+      type: "cortex_search"
+      name: "insights_search"
+      description: >
+        Searches historical monitoring insights and recommendations. Contains past
+        drift analyses, root cause explanations, and action items generated by
+        previous monitoring cycles. Use this tool to find context about recurring
+        issues, past recommendations for specific partitions, or historical patterns.
+
+tool_resources:
+  telemetry_analyst:
+    semantic_view: "MMT_DEMO.FORECASTING.MMT_TELEMETRY_VIEW"
+  insights_search:
+    name: "MMT_DEMO.FORECASTING.INSIGHTS_SEARCH_SVC"
+    max_results: "10"
+    title_column: "SUMMARY"
+    id_column: "INSIGHT_ID"
+$$;
+
+-- ─────────────────────────────────────────────────────────────────────────────
+-- 8. VERIFICATION
 -- ─────────────────────────────────────────────────────────────────────────────
 
 -- Verify row count in feature table

@@ -18,7 +18,7 @@ Data scientists, ML engineers, solutions architects, and technical leaders evalu
 - Inference: batch scoring via `mv.run()` with `partition_column`
 - Telemetry & Drift: rolling MAPE, drift flags, selective retraining
 - Experiments: champion vs challenger per-partition comparison, ExperimentTracking API
-- Agent Monitoring: Cortex COMPLETE for root cause analysis and recommendations
+- Agent Monitoring: Cortex Agent with Analyst + Search tools for root cause analysis
 - Scaling: compute pools, partition counts, production patterns
 
 ## Contents
@@ -47,7 +47,7 @@ The lab walks participants through the full ML lifecycle: Feature Store setup, d
 - A Snowflake account with ML features enabled (Feature Store, Model Registry, ML Jobs)
 - A role with CREATE DATABASE, CREATE WAREHOUSE, CREATE COMPUTE POOL privileges
 - Python environment with `snowflake-ml-python >= 1.29.0`, `xgboost`, `shap`
-- For agent monitoring: cross-region inference enabled (for Cortex COMPLETE)
+- For agent monitoring: cross-region inference enabled (for Cortex Agent)
 
 ### Setup
 
@@ -69,7 +69,7 @@ Run `lab/setup.sql` in your Snowflake account. This creates:
 5. Register to Model Registry as partitioned CustomModel
 6. Run batch inference, populate telemetry with drift flags
 7. Train challenger with weather features, run experiment, compare per-partition
-8. (Optional) Run agent-powered monitoring with Cortex COMPLETE
+8. (Optional) Run agent-powered monitoring via Cortex Agent
 
 ## Key Concepts
 
@@ -84,4 +84,4 @@ Run `lab/setup.sql` in your Snowflake account. This creates:
 - [Snowflake Model Registry](https://docs.snowflake.com/en/developer-guide/snowflake-ml/model-registry/overview)
 - [Many-Model Training (ML Jobs)](https://docs.snowflake.com/en/developer-guide/snowflake-ml/modeling/many-model-training)
 - [Experiment Tracking](https://docs.snowflake.com/en/developer-guide/snowflake-ml/experiment-tracking/overview)
-- [Cortex COMPLETE](https://docs.snowflake.com/en/sql-reference/functions/complete-snowflake-cortex)
+- [Cortex Agents](https://docs.snowflake.com/en/user-guide/snowflake-cortex/cortex-agents)

@@ -190,17 +190,23 @@ This presentation is an internal enablement session covering the Many-Model Trai
 ## Slide 11: Agent-Powered Monitoring
 
 **Talking Points:**
-- This is the "future state" slide: using a Cortex Agent to monitor model health, surface anomalies in natural language, and recommend actions.
-- Instead of a data scientist checking dashboards daily, the agent proactively reports: "3 models in the dairy category showed >15% prediction drift this week. Recommend retraining with last 90 days of data."
-- The agent can query the telemetry tables, the registry, and the experiment history to provide contextualized recommendations.
+- This slide shows the full production monitoring story: a Cortex Agent with real tools, not just a raw LLM call.
+- The architecture has two layers: (1) a statistical pipeline that detects drift via SQL (no LLM cost), then (2) a Cortex Agent that synthesizes findings using Cortex Analyst and Cortex Search.
+- Walk through the CREATE AGENT code: it has a `cortex_analyst_text_to_sql` tool pointing at a semantic view over telemetry data, and a `cortex_search` tool over historical insights.
+- The agent can answer questions like "Which models are drifting?", "What caused the drift in store S005?", and "Has this partition drifted before?" — all grounded in actual data queries.
+- Instead of a data scientist checking dashboards daily, the agent proactively reports: "3 models in the snack category showed >15% prediction drift this week. Weather temperature shifted 20F — recommend retraining with last 90 days."
 
 **Internal Context:**
-- This connects the MMT story to the Cortex Agent story. It's a natural upsell from "we have telemetry" to "we have intelligent telemetry interpretation."
+- This connects the MMT story directly to the Cortex Agent story. It's a natural upsell from "we have telemetry" to "we have intelligent telemetry interpretation via an agent."
+- The agent is NOT calling AI_COMPLETE with a big prompt. It's using Cortex Analyst to write SQL and query the actual telemetry tables, then Cortex Search to find past recommendations. This is grounded, not hallucinated.
+- If someone asks "why not just use AI_COMPLETE?" — AI_COMPLETE doesn't have access to your data. The agent does, via its tools. It can write and execute SQL, search documents, and combine findings. Much more powerful.
+- If someone asks "is this built-in?" — the agent is custom (you define it via CREATE AGENT), but all the infrastructure it needs (semantic views, search services, telemetry tables) exists natively in Snowflake.
 - Not all customers will be ready for this — it requires a mature MMT deployment with telemetry already flowing. Position it as the north star, not the starting point.
-- If someone asks "is this built-in?" — the agent itself is custom (you build it using Cortex Agent framework), but all the data it needs (telemetry, registry, experiments) is available as structured tables it can query.
+- The semantic view on telemetry is key — without it, the agent can't query structured data. This is where the Cortex Agent Evaluations and Semantic View Description Quality modules connect.
 
 **References:**
 - https://docs.snowflake.com/en/user-guide/snowflake-cortex/cortex-agents
+- https://docs.snowflake.com/en/user-guide/snowflake-cortex/cortex-agents-manage
 - https://docs.snowflake.com/en/developer-guide/snowflake-ml/experiment-tracking
 
 ---

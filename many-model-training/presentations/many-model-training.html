@@ -808,27 +808,42 @@ experiment.<span class="function">promote_winners</span>(threshold=<span class="
     <!-- Slide 11: Agent Monitoring -->
     <section class="slide" id="agent-monitoring">
       <h2>AI-Powered Model Monitoring</h2>
-      <p style="margin-bottom: 2rem;">Use Cortex COMPLETE to analyze drift causes and generate actionable recommendations automatically.</p>
-      <pre class="anim-fade"><span class="comment"># Feed drift data to Cortex for root cause analysis</span>
-analysis = session.sql(<span class="string">"""
-    SELECT SNOWFLAKE.CORTEX.COMPLETE('llama3.1-70b',
-        CONCAT('Analyze this model drift data and identify root causes: ',
-               TO_VARCHAR(drift_summary)))
-    FROM MMT_DEMO.FORECASTING.DRIFT_SUMMARY
-    WHERE STATUS = 'DRIFTED'
-"""</span>).collect()</pre>
+      <p style="margin-bottom: 2rem;">A Cortex Agent with Analyst + Search tools provides interactive, data-grounded monitoring of the entire model fleet.</p>
+      <pre class="anim-fade"><span class="comment">-- Create a monitoring agent with tools for telemetry and insights</span>
+<span class="keyword">CREATE AGENT</span> MMT_MONITORING_AGENT <span class="keyword">FROM SPECIFICATION</span> $$
+<span class="function">tools:</span>
+  - tool_spec:
+      type: <span class="string">"cortex_analyst_text_to_sql"</span>
+      name: <span class="string">"telemetry_analyst"</span>
+      description: <span class="string">"Queries model telemetry, drift flags, and experiment results"</span>
+  - tool_spec:
+      type: <span class="string">"cortex_search"</span>
+      name: <span class="string">"insights_search"</span>
+      description: <span class="string">"Retrieves past monitoring insights and recommendations"</span>
+<span class="function">tool_resources:</span>
+  telemetry_analyst:
+    semantic_view: <span class="string">"MMT_DEMO.FORECASTING.MMT_TELEMETRY_VIEW"</span>
+  insights_search:
+    name: <span class="string">"MMT_DEMO.FORECASTING.INSIGHTS_SEARCH_SVC"</span>
+$$;
+
+<span class="comment">-- Query the agent naturally</span>
+<span class="keyword">SELECT</span> SNOWFLAKE.CORTEX.AGENT(
+    <span class="string">'MMT_MONITORING_AGENT'</span>,
+    <span class="string">'Which models are drifting and what should we retrain?'</span>
+):content::<span class="keyword">VARCHAR</span>;</pre>
       <div class="card-grid anim-fade">
         <div class="card">
-          <h4>Drift Root Cause</h4>
-          <p>The agent analyzes feature distribution shifts, identifies which input features changed most, and correlates with external events (holidays, promotions, weather).</p>
+          <h4>Cortex Analyst Tool</h4>
+          <p>Queries telemetry data via a semantic view — the agent writes SQL to answer questions about MAPE, drift flags, experiments, and model catalog metadata.</p>
         </div>
         <div class="card">
-          <h4>Waste Detection</h4>
-          <p>Identifies over-forecasted partitions that lead to spoilage or excess inventory. Quantifies potential savings from improved accuracy.</p>
+          <h4>Cortex Search Tool</h4>
+          <p>Retrieves past insights and recommendations. Enables the agent to say "this partition drifted last month too — the fix was adding weather features."</p>
         </div>
         <div class="card">
-          <h4>Lost-Sales Detection</h4>
-          <p>Flags under-forecasted partitions where stockouts likely occurred. Estimates revenue impact from unmet demand.</p>
+          <h4>Statistical Pre-Analysis</h4>
+          <p>SQL-based drift detection and feature distribution analysis runs first (no LLM needed). The agent synthesizes structured findings into actionable reports.</p>
         </div>
       </div>
       <div class="highlight-box anim-fade">
