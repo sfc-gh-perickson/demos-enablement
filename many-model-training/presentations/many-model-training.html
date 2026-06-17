@@ -1,0 +1,1002 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Many-Model Training on Snowflake</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+
+    :root {
+      --bg: #0F1B2D;
+      --sidebar-bg: #1B2A4A;
+      --primary: #29B5E8;
+      --accent: #7C3AED;
+      --text: #E2E8F0;
+      --text-muted: #94A3B8;
+      --card-bg: #162236;
+      --border: #2D4A6F;
+      --green: #10B981;
+      --orange: #F59E0B;
+      --red: #EF4444;
+    }
+
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      font-family: 'Inter', sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.6;
+      overflow-x: hidden;
+    }
+
+    .progress-bar {
+      position: fixed;
+      top: 0;
+      left: 0;
+      height: 3px;
+      background: linear-gradient(90deg, var(--primary), var(--accent));
+      z-index: 1000;
+      transition: width 0.1s;
+    }
+
+    .sidebar {
+      position: fixed;
+      left: 0;
+      top: 0;
+      width: 260px;
+      height: 100vh;
+      background: var(--sidebar-bg);
+      padding: 2rem 1.5rem;
+      overflow-y: auto;
+      border-right: 1px solid var(--border);
+      z-index: 100;
+    }
+
+    .sidebar h2 {
+      font-size: 1rem;
+      font-weight: 600;
+      color: var(--primary);
+      margin-bottom: 1.5rem;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+
+    .sidebar a {
+      display: block;
+      color: var(--text-muted);
+      text-decoration: none;
+      padding: 0.5rem 0.75rem;
+      border-radius: 6px;
+      font-size: 0.85rem;
+      margin-bottom: 0.25rem;
+      transition: all 0.2s;
+    }
+
+    .sidebar a:hover,
+    .sidebar a.active {
+      color: var(--text);
+      background: rgba(41, 181, 232, 0.1);
+    }
+
+    .sidebar a.active {
+      border-left: 3px solid var(--primary);
+      padding-left: calc(0.75rem - 3px);
+    }
+
+    .main {
+      margin-left: 260px;
+      padding: 0;
+    }
+
+    .slide {
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      padding: 4rem 3rem;
+      max-width: 1200px;
+      margin: 0 auto;
+    }
+
+    .slide h1 {
+      font-size: 2.5rem;
+      font-weight: 700;
+      margin-bottom: 1rem;
+      background: linear-gradient(135deg, var(--primary), var(--accent));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+
+    .slide h2 {
+      font-size: 1.75rem;
+      font-weight: 600;
+      color: var(--text);
+      margin-bottom: 1.5rem;
+    }
+
+    .slide h3 {
+      font-size: 1.25rem;
+      font-weight: 500;
+      color: var(--text-muted);
+      margin-bottom: 1rem;
+    }
+
+    .slide p {
+      font-size: 1.1rem;
+      color: var(--text-muted);
+      max-width: 700px;
+      text-align: center;
+    }
+
+    .stat-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 1.5rem;
+      width: 100%;
+      margin: 2rem 0;
+    }
+
+    .stat-card {
+      background: var(--card-bg);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 1.5rem;
+      text-align: center;
+    }
+
+    .stat-card .value {
+      font-size: 2rem;
+      font-weight: 700;
+      color: var(--primary);
+    }
+
+    .stat-card .label {
+      font-size: 0.85rem;
+      color: var(--text-muted);
+      margin-top: 0.5rem;
+    }
+
+    .card-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+      gap: 1.5rem;
+      width: 100%;
+      margin: 2rem 0;
+    }
+
+    .card {
+      background: var(--card-bg);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 1.5rem;
+    }
+
+    .card h4 {
+      font-size: 1rem;
+      font-weight: 600;
+      color: var(--text);
+      margin-bottom: 0.75rem;
+    }
+
+    .card p {
+      font-size: 0.9rem;
+      color: var(--text-muted);
+      text-align: left;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 2rem 0;
+      font-size: 0.9rem;
+    }
+
+    th {
+      background: var(--card-bg);
+      color: var(--primary);
+      font-weight: 600;
+      padding: 0.75rem 1rem;
+      text-align: left;
+      border-bottom: 2px solid var(--border);
+    }
+
+    td {
+      padding: 0.75rem 1rem;
+      border-bottom: 1px solid var(--border);
+      color: var(--text);
+    }
+
+    tr:hover td {
+      background: rgba(41, 181, 232, 0.05);
+    }
+
+    .highlight-box {
+      background: rgba(41, 181, 232, 0.1);
+      border: 1px solid var(--primary);
+      border-radius: 12px;
+      padding: 1.5rem;
+      margin: 1.5rem 0;
+      width: 100%;
+    }
+
+    .context-box {
+      background: rgba(124, 58, 237, 0.1);
+      border: 1px solid var(--accent);
+      border-radius: 12px;
+      padding: 1.5rem;
+      margin: 1.5rem 0;
+      width: 100%;
+    }
+
+    .warning-box {
+      background: rgba(245, 158, 11, 0.1);
+      border: 1px solid var(--orange);
+      border-radius: 12px;
+      padding: 1.5rem;
+      margin: 1.5rem 0;
+      width: 100%;
+    }
+
+    .badge-green { background: rgba(16, 185, 129, 0.15); color: var(--green); padding: 0.25rem 0.75rem; border-radius: 99px; font-size: 0.8rem; font-weight: 500; display: inline-block; }
+    .badge-orange { background: rgba(245, 158, 11, 0.15); color: var(--orange); padding: 0.25rem 0.75rem; border-radius: 99px; font-size: 0.8rem; font-weight: 500; display: inline-block; }
+    .badge-red { background: rgba(239, 68, 68, 0.15); color: var(--red); padding: 0.25rem 0.75rem; border-radius: 99px; font-size: 0.8rem; font-weight: 500; display: inline-block; }
+    .badge-blue { background: rgba(41, 181, 232, 0.15); color: var(--primary); padding: 0.25rem 0.75rem; border-radius: 99px; font-size: 0.8rem; font-weight: 500; display: inline-block; }
+    .badge-purple { background: rgba(124, 58, 237, 0.15); color: var(--accent); padding: 0.25rem 0.75rem; border-radius: 99px; font-size: 0.8rem; font-weight: 500; display: inline-block; }
+
+    .slide ul {
+      list-style: none;
+      width: 100%;
+      max-width: 700px;
+    }
+
+    .slide ul li {
+      padding: 0.75rem 0;
+      padding-left: 1.5rem;
+      position: relative;
+      color: var(--text);
+      font-size: 1.05rem;
+    }
+
+    .slide ul li::before {
+      content: '';
+      position: absolute;
+      left: 0;
+      top: 50%;
+      transform: translateY(-50%);
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: var(--primary);
+    }
+
+    code {
+      background: var(--card-bg);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 0.2rem 0.5rem;
+      font-size: 0.85rem;
+      font-family: 'SF Mono', 'Fira Code', monospace;
+      color: var(--primary);
+    }
+
+    pre {
+      background: var(--card-bg);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 1.5rem;
+      overflow-x: auto;
+      width: 100%;
+      margin: 1.5rem 0;
+      font-size: 0.85rem;
+      line-height: 1.7;
+      font-family: 'SF Mono', 'Fira Code', monospace;
+      color: var(--text);
+    }
+
+    pre .keyword { color: var(--accent); font-weight: 500; }
+    pre .string { color: var(--green); }
+    pre .comment { color: var(--text-muted); font-style: italic; }
+    pre .function { color: var(--primary); }
+
+    .flow-diagram {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.5rem;
+      margin: 2rem 0;
+      flex-wrap: wrap;
+      width: 100%;
+    }
+
+    .flow-step {
+      background: var(--card-bg);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 1rem 1.5rem;
+      text-align: center;
+      min-width: 140px;
+    }
+
+    .flow-step.active {
+      border-color: var(--primary);
+      box-shadow: 0 0 20px rgba(41, 181, 232, 0.2);
+    }
+
+    .flow-step .step-label {
+      font-size: 0.75rem;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+
+    .flow-step .step-title {
+      font-size: 1rem;
+      font-weight: 600;
+      color: var(--text);
+      margin-top: 0.25rem;
+    }
+
+    .flow-arrow {
+      color: var(--primary);
+      font-size: 1.5rem;
+      font-weight: 300;
+    }
+
+    .two-col {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 2rem;
+      width: 100%;
+      margin: 2rem 0;
+    }
+
+    .anim-fade {
+      opacity: 0;
+      transform: translateY(20px);
+      transition: opacity 0.6s ease, transform 0.6s ease;
+    }
+
+    .anim-fade.visible {
+      opacity: 1;
+      transform: translateY(0);
+    }
+
+    @media (max-width: 900px) {
+      .sidebar { display: none; }
+      .main { margin-left: 0; }
+      .stat-grid { grid-template-columns: repeat(2, 1fr); }
+      .slide { padding: 2rem 1.5rem; }
+      .two-col { grid-template-columns: 1fr; }
+    }
+
+    .github-link {
+      position: fixed;
+      top: 1rem;
+      right: 1.5rem;
+      z-index: 1000;
+      color: var(--text-muted);
+      text-decoration: none;
+      font-size: 0.8rem;
+      font-weight: 500;
+      display: flex;
+      align-items: center;
+      gap: 0.4rem;
+      padding: 0.4rem 0.75rem;
+      border-radius: 6px;
+      border: 1px solid var(--border);
+      background: var(--card-bg);
+      transition: all 0.2s;
+    }
+    .github-link:hover {
+      color: var(--text);
+      border-color: var(--primary);
+    }
+    .github-link svg {
+      width: 16px;
+      height: 16px;
+      fill: currentColor;
+    }
+  </style>
+</head>
+<body>
+  <a href="https://github.com/sfc-gh-perickson/demos-enablement/tree/main/many-model-training" class="github-link" target="_blank">
+    <svg viewBox="0 0 16 16"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"/></svg>
+    GitHub
+  </a>
+  <div class="progress-bar"></div>
+
+  <nav class="sidebar">
+    <h2>Many-Model Training</h2>
+    <a href="#hero">Overview</a>
+    <a href="#problem">The Problem</a>
+    <a href="#mental-model">MMT Mental Model</a>
+    <a href="#architecture">Architecture</a>
+    <a href="#feature-store">Feature Store</a>
+    <a href="#training">Training Pipeline</a>
+    <a href="#registry">Model Registry</a>
+    <a href="#inference">Inference</a>
+    <a href="#telemetry">Drift Detection</a>
+    <a href="#experiments">Experiments</a>
+    <a href="#agent-monitoring">Agent Monitoring</a>
+    <a href="#workflow">CLI Workflow</a>
+    <a href="#scaling">Scaling</a>
+    <a href="#closing">Next Steps</a>
+  </nav>
+
+  <main class="main">
+
+    <!-- Slide 1: Hero -->
+    <section class="slide" id="hero">
+      <h1>Many-Model Training on Snowflake</h1>
+      <p>Train thousands of specialized models from a single pipeline — partitioned by entity, managed as one, monitored automatically.</p>
+      <div class="stat-grid anim-fade" style="margin-top: 2rem;">
+        <div class="stat-card">
+          <div class="value">1,000+</div>
+          <div class="label">Specialized Models</div>
+        </div>
+        <div class="stat-card">
+          <div class="value">1</div>
+          <div class="label">Pipeline</div>
+        </div>
+        <div class="stat-card">
+          <div class="value">5</div>
+          <div class="label">ML Components</div>
+        </div>
+        <div class="stat-card">
+          <div class="value">Native</div>
+          <div class="label">Monitoring</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Slide 2: The Problem -->
+    <section class="slide" id="problem">
+      <h2>The Problem</h2>
+      <div class="card-grid anim-fade">
+        <div class="card">
+          <h4>Global Models Miss Local Patterns</h4>
+          <p>One model for all stores averages away store-specific behavior. A downtown express store and a rural highway store have fundamentally different demand curves.</p>
+        </div>
+        <div class="card">
+          <h4>Multi-Tool Pipeline Sprawl</h4>
+          <p>Data moves through 5+ systems: warehouse &rarr; scheduler &rarr; storage &rarr; compute &rarr; event bus. Each hop adds latency, failure points, and security surface.</p>
+        </div>
+        <div class="card">
+          <h4>Manual Retraining</h4>
+          <p>Retrain everything weekly on a schedule, not when models actually degrade. You waste compute on healthy models and miss drift in degraded ones.</p>
+        </div>
+        <div class="card">
+          <h4>No Explainability</h4>
+          <p>Predictions are opaque — can't explain why 10 items were predicted for this hour. Store managers can't trust or override what they don't understand.</p>
+        </div>
+      </div>
+      <div class="highlight-box anim-fade" style="margin-top: 1.5rem;">
+        <strong>Snowflake ML solves these</strong> with native, unified infrastructure — features, training, inference, and monitoring all in one platform with zero data movement.
+      </div>
+    </section>
+
+    <!-- Slide 3: MMT Mental Model -->
+    <section class="slide" id="mental-model">
+      <h2>One Pipeline, Thousands of Specialists</h2>
+      <div class="anim-fade" style="width: 100%; overflow-x: auto;">
+        <table>
+          <thead>
+            <tr>
+              <th>You Write</th>
+              <th>MMT Delivers</th>
+              <th>Scale</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>1 training script</td>
+              <td>1,000 specialized models</td>
+              <td><span class="badge-green">Per partition</span></td>
+            </tr>
+            <tr>
+              <td>1 config file</td>
+              <td>Per-partition hyperparameter tuning</td>
+              <td><span class="badge-green">Per partition</span></td>
+            </tr>
+            <tr>
+              <td>1 Feature Store</td>
+              <td>Reproducible versioned datasets</td>
+              <td><span class="badge-blue">Centralized</span></td>
+            </tr>
+            <tr>
+              <td>1 telemetry pipeline</td>
+              <td>Per-partition drift detection</td>
+              <td><span class="badge-green">Per partition</span></td>
+            </tr>
+            <tr>
+              <td>1 experiment framework</td>
+              <td>Per-partition champion/challenger</td>
+              <td><span class="badge-green">Per partition</span></td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="context-box anim-fade">
+        <strong>Key insight:</strong> Each model learns the unique patterns of its entity (store-item, device, customer segment). MMT makes it feel like training one model — the framework handles the parallelism, metrics, and lifecycle for all partitions.
+      </div>
+    </section>
+
+    <!-- Slide 4: Architecture -->
+    <section class="slide" id="architecture">
+      <h2>End-to-End Architecture</h2>
+      <div class="flow-diagram anim-fade">
+        <div class="flow-step">
+          <div class="step-label">Stage 1</div>
+          <div class="step-title">Feature Store</div>
+        </div>
+        <div class="flow-arrow">&rarr;</div>
+        <div class="flow-step active">
+          <div class="step-label">Stage 2</div>
+          <div class="step-title">ML Jobs (DPF)</div>
+        </div>
+        <div class="flow-arrow">&rarr;</div>
+        <div class="flow-step">
+          <div class="step-label">Stage 3</div>
+          <div class="step-title">Model Registry</div>
+        </div>
+        <div class="flow-arrow">&rarr;</div>
+        <div class="flow-step">
+          <div class="step-label">Stage 4</div>
+          <div class="step-title">Inference</div>
+        </div>
+        <div class="flow-arrow">&rarr;</div>
+        <div class="flow-step">
+          <div class="step-label">Stage 5</div>
+          <div class="step-title">Telemetry</div>
+        </div>
+        <div class="flow-arrow">&rarr;</div>
+        <div class="flow-step">
+          <div class="step-label">Stage 6</div>
+          <div class="step-title">Drift &amp; Retrain</div>
+        </div>
+      </div>
+      <div class="card-grid anim-fade">
+        <div class="card">
+          <h4>Feature Store</h4>
+          <p>Versioned, point-in-time correct features with Entity grain and FeatureView grouping.</p>
+        </div>
+        <div class="card">
+          <h4>Distributed Training</h4>
+          <p>DPF (Distributed Partition Function) parallelizes training across compute pool nodes.</p>
+        </div>
+        <div class="card">
+          <h4>Registry + Inference</h4>
+          <p>Register once, run distributed inference. Partitioned CustomModel routes to the correct sub-model.</p>
+        </div>
+        <div class="card">
+          <h4>Monitoring Loop</h4>
+          <p>Rolling telemetry detects drift per partition. Only degraded models retrain — not the entire fleet.</p>
+        </div>
+      </div>
+      <div class="highlight-box anim-fade">
+        <strong>Zero data movement</strong> — features, training, models, predictions, and monitoring all run inside Snowflake. No external orchestrators, no S3 hops, no credential sprawl.
+      </div>
+    </section>
+
+    <!-- Slide 5: Feature Store -->
+    <section class="slide" id="feature-store">
+      <h2>Feature Store: Versioned, Reproducible Features</h2>
+      <div class="two-col anim-fade">
+        <div>
+          <h3>Concepts</h3>
+          <p style="text-align: left; margin-bottom: 1rem;"><strong>Entity</strong> defines the grain — the unit you're modeling (store-item combination, device, customer segment).</p>
+          <p style="text-align: left; margin-bottom: 1rem;"><strong>FeatureViews</strong> group related features and manage refresh schedules via Dynamic Tables.</p>
+          <p style="text-align: left; margin-bottom: 1rem;"><strong>Versioning</strong> enables safe experimentation — roll back features without breaking production models.</p>
+        </div>
+        <div>
+          <h3>Registration</h3>
+          <pre><span class="keyword">from</span> snowflake.ml.feature_store <span class="keyword">import</span> (
+    FeatureStore, Entity, FeatureView
+)
+
+<span class="comment"># Define the entity grain</span>
+store_item = Entity(
+    name=<span class="string">"STORE_ITEM"</span>,
+    join_keys=[<span class="string">"STORE_ID"</span>, <span class="string">"ITEM_ID"</span>]
+)
+fs.register_entity(store_item)
+
+<span class="comment"># Register a FeatureView from a DT</span>
+fv = FeatureView(
+    name=<span class="string">"DEMAND_FEATURES"</span>,
+    entities=[store_item],
+    feature_df=feature_df,
+    refresh_freq=<span class="string">"60 minutes"</span>
+)
+fs.register_feature_view(fv, version=<span class="string">"v1"</span>)</pre>
+        </div>
+      </div>
+      <div class="highlight-box anim-fade">
+        <strong>Point-in-time correct joins</strong> — the Feature Store automatically handles temporal alignment so training data never leaks future information into historical features.
+      </div>
+    </section>
+
+    <!-- Slide 6: Training Pipeline -->
+    <section class="slide" id="training">
+      <h2>Distributed Partition Training</h2>
+      <pre class="anim-fade"><span class="keyword">from</span> snowflake.ml.modeling.distributedpartitionfunction <span class="keyword">import</span> ManyModelTraining
+
+trainer = ManyModelTraining(
+    session=session,
+    input_table=<span class="string">"MMT_DEMO.FORECASTING.TRAINING_DATA"</span>,
+    partition_column=<span class="string">"STORE_ITEM_KEY"</span>,
+    target_column=<span class="string">"UNITS_SOLD"</span>,
+    feature_columns=[<span class="string">"HOUR_OF_DAY"</span>, <span class="string">"DAY_OF_WEEK"</span>, <span class="string">"IS_HOLIDAY"</span>,
+                     <span class="string">"ROLLING_7D_AVG"</span>, <span class="string">"PROMO_ACTIVE"</span>, <span class="string">"WEATHER_TEMP"</span>],
+    model_type=<span class="string">"xgboost"</span>,
+    compute_pool=<span class="string">"ML_TRAINING_POOL"</span>,
+    experiment_name=<span class="string">"demand_forecast_champion"</span>
+)
+
+<span class="comment"># Train all partitions in parallel</span>
+results = trainer.<span class="function">fit</span>()</pre>
+      <div class="card-grid anim-fade">
+        <div class="card">
+          <h4>DPF Distribution</h4>
+          <p>Distributed Partition Function automatically shards data by partition key and trains models across compute pool nodes in parallel.</p>
+        </div>
+        <div class="card">
+          <h4>XGBoost + SHAP</h4>
+          <p>Each partition gets its own XGBoost model with SHAP feature importances — store managers can see why predictions are what they are.</p>
+        </div>
+        <div class="card">
+          <h4>Train/Val Split</h4>
+          <p>80/20 temporal split per partition. Validation metrics (MAE, RMSE, MAPE) are computed honestly — no leakage across time boundaries.</p>
+        </div>
+        <div class="card">
+          <h4>Per-Partition Metrics</h4>
+          <p>MAE, RMSE, MAPE, and feature importances saved per partition. Identify which store-items train well and which need attention.</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- Slide 7: Model Registry -->
+    <section class="slide" id="registry">
+      <h2>Model Registry: Partitioned Inference</h2>
+      <pre class="anim-fade"><span class="keyword">from</span> snowflake.ml.registry <span class="keyword">import</span> Registry
+<span class="keyword">from</span> snowflake.ml.model <span class="keyword">import</span> CustomModel
+<span class="keyword">from</span> snowflake.ml.model.custom_model <span class="keyword">import</span> partitioned_api
+
+<span class="keyword">class</span> <span class="function">DemandForecastModel</span>(CustomModel):
+    <span class="keyword">@partitioned_api</span>(partition_column=<span class="string">"STORE_ITEM_KEY"</span>)
+    <span class="keyword">def</span> <span class="function">predict</span>(self, input_df):
+        <span class="comment"># Each partition routes to its trained sub-model</span>
+        model = self.context.artifacts[<span class="string">"models"</span>][partition_key]
+        predictions = model.predict(input_df[self.feature_columns])
+        <span class="keyword">return</span> predictions
+
+<span class="comment"># Register in Model Registry</span>
+reg = Registry(session)
+mv = reg.log_model(
+    model=demand_model,
+    model_name=<span class="string">"DEMAND_FORECAST"</span>,
+    version_name=<span class="string">"champion_v1"</span>,
+    target_platforms=[<span class="string">"warehouse"</span>, <span class="string">"spcs"</span>]
+)</pre>
+      <div class="two-col anim-fade">
+        <div class="card">
+          <h4>Register Once</h4>
+          <p>A single model registration encapsulates all 1,000+ partition sub-models. The <code>@partitioned_api</code> decorator handles routing automatically during inference.</p>
+        </div>
+        <div class="card">
+          <h4>Target Platforms</h4>
+          <p>Deploy to warehouse (SQL-callable) or SPCS (container-based) with the same registered model. Switch platforms without retraining.</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- Slide 8: Inference -->
+    <section class="slide" id="inference">
+      <h2>Batch Inference at Scale</h2>
+      <pre class="anim-fade"><span class="comment"># Run distributed inference across all partitions</span>
+predictions = mv.<span class="function">run</span>(
+    input_data=inference_df,
+    partition_column=<span class="string">"STORE_ITEM_KEY"</span>
+)
+
+<span class="comment"># Results include per-partition predictions + SHAP explanations</span>
+predictions.write.save_as_table(
+    <span class="string">"MMT_DEMO.FORECASTING.PREDICTIONS"</span>,
+    mode=<span class="string">"overwrite"</span>
+)</pre>
+      <div class="card-grid anim-fade">
+        <div class="card">
+          <h4>Distributed Scoring</h4>
+          <p>The Model Registry routes each partition's input to its specific trained model. 1,000 partitions score in parallel — no manual fan-out logic needed.</p>
+        </div>
+        <div class="card">
+          <h4>SHAP Explanations</h4>
+          <p>Each prediction includes feature importance scores. Store managers see that temperature and day-of-week drove the forecast, not a black-box number.</p>
+        </div>
+        <div class="card">
+          <h4>Telemetry Integration</h4>
+          <p>Predictions automatically feed the monitoring pipeline. Actuals arrive later and are joined to compute error metrics per partition.</p>
+        </div>
+        <div class="card">
+          <h4>Scheduling</h4>
+          <p>Wrap <code>mv.run()</code> in a Snowflake Task for hourly/daily batch scoring. Dynamic Tables refresh features upstream automatically.</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- Slide 9: Telemetry & Drift -->
+    <section class="slide" id="telemetry">
+      <h2>Automated Drift Detection</h2>
+      <pre class="anim-fade"><span class="comment">-- Rolling MAPE per partition over the last 7 days</span>
+<span class="keyword">SELECT</span>
+    STORE_ITEM_KEY,
+    <span class="function">AVG</span>(<span class="function">ABS</span>(ACTUAL - PREDICTED) / <span class="function">NULLIF</span>(ACTUAL, 0)) <span class="keyword">AS</span> ROLLING_MAPE,
+    <span class="keyword">CASE WHEN</span> ROLLING_MAPE > 0.25 <span class="keyword">THEN</span> <span class="string">'DRIFTED'</span> <span class="keyword">ELSE</span> <span class="string">'HEALTHY'</span> <span class="keyword">END AS</span> STATUS
+<span class="keyword">FROM</span> MMT_DEMO.FORECASTING.TELEMETRY
+<span class="keyword">WHERE</span> PREDICTION_TS > <span class="function">DATEADD</span>(<span class="string">'day'</span>, -7, <span class="function">CURRENT_TIMESTAMP</span>())
+<span class="keyword">GROUP BY</span> STORE_ITEM_KEY;</pre>
+      <div class="two-col anim-fade">
+        <div>
+          <h3>Drift Pipeline</h3>
+          <p style="text-align: left; margin-bottom: 1rem;">1. Predictions land in telemetry table with timestamps</p>
+          <p style="text-align: left; margin-bottom: 1rem;">2. Actuals join when available (hourly for demand)</p>
+          <p style="text-align: left; margin-bottom: 1rem;">3. Rolling error metrics computed per partition</p>
+          <p style="text-align: left; margin-bottom: 1rem;">4. Partitions exceeding threshold flagged for retraining</p>
+          <p style="text-align: left; margin-bottom: 1rem;">5. Only flagged partitions retrain — not the entire fleet</p>
+        </div>
+        <div class="card">
+          <h4>Telemetry Table Schema</h4>
+          <pre><span class="keyword">CREATE TABLE</span> TELEMETRY (
+  STORE_ITEM_KEY <span class="function">VARCHAR</span>,
+  PREDICTION_TS  <span class="function">TIMESTAMP</span>,
+  PREDICTED      <span class="function">FLOAT</span>,
+  ACTUAL         <span class="function">FLOAT</span>,
+  MAPE           <span class="function">FLOAT</span>,
+  MODEL_VERSION  <span class="function">VARCHAR</span>,
+  FEATURE_HASH   <span class="function">VARCHAR</span>
+);</pre>
+        </div>
+      </div>
+      <div class="highlight-box anim-fade">
+        <strong>Retrain only the 5% of models that degrade</strong> — not the entire fleet. Selective retraining saves 95% of compute while keeping every partition accurate.
+      </div>
+    </section>
+
+    <!-- Slide 10: Experiments -->
+    <section class="slide" id="experiments">
+      <h2>Champion vs Challenger</h2>
+      <pre class="anim-fade"><span class="keyword">from</span> snowflake.ml.experiment <span class="keyword">import</span> ExperimentTracking
+
+experiment = ExperimentTracking(
+    session=session,
+    name=<span class="string">"demand_forecast_experiment"</span>,
+    champion_model=<span class="string">"DEMAND_FORECAST/champion_v1"</span>,
+    challenger_model=<span class="string">"DEMAND_FORECAST/challenger_v1"</span>,
+    partition_column=<span class="string">"STORE_ITEM_KEY"</span>,
+    metric=<span class="string">"MAPE"</span>,
+    objective=<span class="string">"minimize"</span>
+)
+
+<span class="comment"># Compare per-partition and promote winners</span>
+results = experiment.<span class="function">evaluate</span>()
+experiment.<span class="function">promote_winners</span>(threshold=<span class="string">"challenger_beats_by_5pct"</span>)</pre>
+      <div class="flow-diagram anim-fade">
+        <div class="flow-step">
+          <div class="step-label">Step 1</div>
+          <div class="step-title">Train Challenger</div>
+        </div>
+        <div class="flow-arrow">&rarr;</div>
+        <div class="flow-step active">
+          <div class="step-label">Step 2</div>
+          <div class="step-title">Compare Per-Partition</div>
+        </div>
+        <div class="flow-arrow">&rarr;</div>
+        <div class="flow-step">
+          <div class="step-label">Step 3</div>
+          <div class="step-title">Promote Winners</div>
+        </div>
+      </div>
+      <div class="context-box anim-fade">
+        <strong>Promote selectively</strong> — if the challenger wins on 300/1,000 partitions, promote just those 300. Keep the champion for partitions where it still performs best. No all-or-nothing deployments.
+      </div>
+    </section>
+
+    <!-- Slide 11: Agent Monitoring -->
+    <section class="slide" id="agent-monitoring">
+      <h2>AI-Powered Model Monitoring</h2>
+      <p style="margin-bottom: 2rem;">Use Cortex COMPLETE to analyze drift causes and generate actionable recommendations automatically.</p>
+      <pre class="anim-fade"><span class="comment"># Feed drift data to Cortex for root cause analysis</span>
+analysis = session.sql(<span class="string">"""
+    SELECT SNOWFLAKE.CORTEX.COMPLETE('llama3.1-70b',
+        CONCAT('Analyze this model drift data and identify root causes: ',
+               TO_VARCHAR(drift_summary)))
+    FROM MMT_DEMO.FORECASTING.DRIFT_SUMMARY
+    WHERE STATUS = 'DRIFTED'
+"""</span>).collect()</pre>
+      <div class="card-grid anim-fade">
+        <div class="card">
+          <h4>Drift Root Cause</h4>
+          <p>The agent analyzes feature distribution shifts, identifies which input features changed most, and correlates with external events (holidays, promotions, weather).</p>
+        </div>
+        <div class="card">
+          <h4>Waste Detection</h4>
+          <p>Identifies over-forecasted partitions that lead to spoilage or excess inventory. Quantifies potential savings from improved accuracy.</p>
+        </div>
+        <div class="card">
+          <h4>Lost-Sales Detection</h4>
+          <p>Flags under-forecasted partitions where stockouts likely occurred. Estimates revenue impact from unmet demand.</p>
+        </div>
+      </div>
+      <div class="highlight-box anim-fade">
+        <strong>From alert to action</strong> — instead of just flagging "MAPE > 25%", the monitoring agent explains <em>why</em> the model drifted and recommends whether to retrain, add features, or investigate upstream data quality.
+      </div>
+    </section>
+
+    <!-- Slide 12: CLI Workflow -->
+    <section class="slide" id="workflow">
+      <h2>Unified Training CLI</h2>
+      <div class="anim-fade" style="width: 100%; overflow-x: auto;">
+        <table>
+          <thead>
+            <tr>
+              <th>Argument</th>
+              <th>Purpose</th>
+              <th>Default</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><code>--mode</code></td>
+              <td>Training mode: <code>champion</code> or <code>challenger</code></td>
+              <td><code>champion</code></td>
+            </tr>
+            <tr>
+              <td><code>--partitions</code></td>
+              <td>Filter to specific partitions (comma-separated)</td>
+              <td>All</td>
+            </tr>
+            <tr>
+              <td><code>--compute-pool</code></td>
+              <td>Compute pool for distributed training</td>
+              <td><code>ML_TRAINING_POOL</code></td>
+            </tr>
+            <tr>
+              <td><code>--experiment</code></td>
+              <td>Experiment name for tracking</td>
+              <td>Auto-generated</td>
+            </tr>
+            <tr>
+              <td><code>--promote</code></td>
+              <td>Auto-promote if challenger wins</td>
+              <td><code>false</code></td>
+            </tr>
+            <tr>
+              <td><code>--drift-only</code></td>
+              <td>Only retrain drifted partitions</td>
+              <td><code>false</code></td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+      <pre class="anim-fade"><span class="comment"># Train champion model across all partitions</span>
+python train.py --mode champion --compute-pool ML_TRAINING_POOL
+
+<span class="comment"># Train challenger with new features, only on drifted partitions</span>
+python train.py --mode challenger --drift-only --experiment exp_new_features
+
+<span class="comment"># Auto-promote winners after comparison</span>
+python train.py --mode challenger --promote --experiment exp_v2</pre>
+      <div class="highlight-box anim-fade">
+        <strong>One script, multiple workflows</strong> — the same <code>train.py</code> handles champion training, challenger experiments, selective retraining, and auto-promotion through CLI flags.
+      </div>
+    </section>
+
+    <!-- Slide 13: Scaling -->
+    <section class="slide" id="scaling">
+      <h2>Scaling to Production</h2>
+      <div class="card-grid anim-fade">
+        <div class="card">
+          <h4>Compute Pool Sizing</h4>
+          <p>Add nodes to the compute pool for more partitions. DPF automatically distributes work across available nodes — linear scaling with no code changes.</p>
+        </div>
+        <div class="card">
+          <h4>Partition Counts</h4>
+          <p>The same code works for 100 or 100,000 partitions. DPF handles the fan-out. Start small, grow to full catalog without refactoring.</p>
+        </div>
+        <div class="card">
+          <h4>Dynamic Table Refresh</h4>
+          <p>Features refresh on a schedule via Dynamic Tables. As source data updates, features recompute incrementally — no manual orchestration.</p>
+        </div>
+        <div class="card">
+          <h4>Snowflake Tasks</h4>
+          <p>Schedule training, inference, and drift detection with native Tasks. CRON expressions, DAG dependencies, and automatic retries built in.</p>
+        </div>
+      </div>
+      <pre class="anim-fade"><span class="comment">-- Schedule daily inference via Snowflake Task</span>
+<span class="keyword">CREATE TASK</span> MMT_DEMO.FORECASTING.DAILY_INFERENCE
+  <span class="keyword">WAREHOUSE</span> = ML_WH
+  <span class="keyword">SCHEDULE</span> = <span class="string">'USING CRON 0 6 * * * America/Chicago'</span>
+<span class="keyword">AS</span>
+  <span class="keyword">CALL</span> MMT_DEMO.FORECASTING.RUN_INFERENCE();
+
+<span class="comment">-- Schedule drift check after inference completes</span>
+<span class="keyword">CREATE TASK</span> MMT_DEMO.FORECASTING.DRIFT_CHECK
+  <span class="keyword">AFTER</span> MMT_DEMO.FORECASTING.DAILY_INFERENCE
+<span class="keyword">AS</span>
+  <span class="keyword">CALL</span> MMT_DEMO.FORECASTING.CHECK_DRIFT();</pre>
+    </section>
+
+    <!-- Slide 14: Next Steps -->
+    <section class="slide" id="closing">
+      <h2>Next Steps</h2>
+      <div class="card-grid anim-fade">
+        <div class="card">
+          <h4>1. Set Up Feature Store</h4>
+          <p>Define your Entity grain, register FeatureViews from Dynamic Tables, and version your first feature set.</p>
+        </div>
+        <div class="card">
+          <h4>2. Train Champion Model</h4>
+          <p>Run your first distributed training job. Start with a subset of partitions, validate metrics, then scale to full catalog.</p>
+        </div>
+        <div class="card">
+          <h4>3. Run Experiment</h4>
+          <p>Train a challenger with new features or hyperparameters. Compare per-partition and promote the winners selectively.</p>
+        </div>
+        <div class="card">
+          <h4>4. Deploy Monitoring</h4>
+          <p>Set up the telemetry pipeline, drift thresholds, and AI-powered root cause analysis. Let the system tell you when to act.</p>
+        </div>
+      </div>
+      <div class="highlight-box anim-fade" style="margin-top: 1.5rem;">
+        <strong>One pipeline, thousands of specialists.</strong> Manage the pipeline — let MMT handle the parallelism. Start with the Feature Store, train your champion, and iterate from there.
+      </div>
+    </section>
+
+  </main>
+
+  <script>
+    // Progress bar
+    const progressBar = document.querySelector('.progress-bar');
+    window.addEventListener('scroll', () => {
+      const scrollTop = window.scrollY;
+      const docHeight = document.documentElement.scrollHeight - window.innerHeight;
+      progressBar.style.width = (scrollTop / docHeight * 100) + '%';
+    });
+
+    // Scroll animations
+    const observer = new IntersectionObserver((entries) => {
+      entries.forEach(entry => {
+        if (entry.isIntersecting) {
+          entry.target.classList.add('visible');
+        }
+      });
+    }, { threshold: 0.1 });
+
+    document.querySelectorAll('.anim-fade').forEach(el => observer.observe(el));
+
+    // Active nav tracking
+    const sections = document.querySelectorAll('.slide');
+    const navLinks = document.querySelectorAll('.sidebar a');
+
+    window.addEventListener('scroll', () => {
+      let current = '';
+      sections.forEach(section => {
+        const sectionTop = section.offsetTop - 200;
+        if (window.scrollY >= sectionTop) {
+          current = section.getAttribute('id');
+        }
+      });
+      navLinks.forEach(link => {
+        link.classList.remove('active');
+        if (link.getAttribute('href') === '#' + current) {
+          link.classList.add('active');
+        }
+      });
+    });
+  </script>
+</body>
+</html>

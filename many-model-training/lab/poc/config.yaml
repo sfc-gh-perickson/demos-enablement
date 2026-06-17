@@ -1,0 +1,126 @@
+# =============================================================================
+# Many Model Training (MMT) Demo Configuration
+# Demand forecasting for retail items across 200 store-item combinations
+# =============================================================================
+
+# -----------------------------------------------------------------------------
+# Database Connection Settings
+# -----------------------------------------------------------------------------
+connection:
+  database: "MMT_DEMO"
+  schema: "FORECASTING"
+  stage_artifacts: "ML_STAGE"
+  warehouse: "MMT_DEMO_WH"
+  tag: "mmt_demo"
+
+# -----------------------------------------------------------------------------
+# Feature Table Configuration
+# The feature table holds hourly demand features per store-item combination
+# -----------------------------------------------------------------------------
+feature_table:
+  name: "FEATURE_TABLE"
+  partition_col: "STORE_ITEM_ID"
+  time_col: "TS"
+  target_col: "DEMAND"
+  test_pct: 0.1
+
+# -----------------------------------------------------------------------------
+# POC Data Generation Settings
+# Generates realistic retail demand data for 20 stores x 10 items
+# -----------------------------------------------------------------------------
+poc_data:
+  generate: True
+  num_stores: 20
+  num_items: 10
+  timestep: "hour"
+  num_timesteps: 2160
+  start_date: "2026-01-01"
+
+  store_archetypes:
+    - urban
+    - suburban
+    - rural
+    - college
+    - highway
+
+  item_categories:
+    SANDWICH_A:  {name: "Sandwich A",         profile: "lunch_dinner", base_demand: 12}
+    SANDWICH_B:  {name: "Sandwich B",         profile: "breakfast",    base_demand: 14}
+    PIZZA:       {name: "Pizza Slice",         profile: "all_day",      base_demand: 15}
+    HOT_DOG:     {name: "Hot Dog",             profile: "all_day",      base_demand: 10}
+    SNACK_A:     {name: "Snack A",             profile: "lunch_dinner", base_demand: 9}
+    SNACK_B:     {name: "Snack B",             profile: "lunch_dinner", base_demand: 7}
+    BEVERAGE_A:  {name: "Beverage A",          profile: "all_day",      base_demand: 12}
+    BEVERAGE_B:  {name: "Beverage B",          profile: "breakfast",    base_demand: 8}
+    SOUP:        {name: "Soup",                profile: "lunch_cold",   base_demand: 6}
+    PASTRY:      {name: "Pastry",              profile: "breakfast",    base_demand: 20}
+
+  features:
+    - HOUR_OF_DAY
+    - DAY_OF_WEEK
+    - IS_WEEKEND
+    - IS_HOLIDAY
+    - SCHOOL_IN_SESSION
+    - WEATHER_TEMP
+    - EVENT_FLAG
+    - ROLLING_7D_AVG
+    - ROLLING_4W_SAME_HOUR
+
+# -----------------------------------------------------------------------------
+# Training Configuration
+# -----------------------------------------------------------------------------
+training:
+  instance_family: "CPU_X64_S"
+  target_cluster_size: 3
+
+# -----------------------------------------------------------------------------
+# Inference Configuration
+# -----------------------------------------------------------------------------
+inference: {}
+
+# -----------------------------------------------------------------------------
+# Telemetry & Drift Detection
+# -----------------------------------------------------------------------------
+telemetry:
+  drift_threshold_mape: 0.25
+  rolling_window_days: 7
+  retrain_trigger: "drift"
+  alert_top_n: 20
+
+# -----------------------------------------------------------------------------
+# Experiment Configuration (Champion vs Challenger)
+# -----------------------------------------------------------------------------
+experiment:
+  max_concurrent_experiments: 3
+  comparison_holdout_days: 14
+  promotion_threshold: 0.05
+
+# -----------------------------------------------------------------------------
+# Feature Store Configuration
+# Versioned feature management for reproducible experiments
+# -----------------------------------------------------------------------------
+feature_store:
+  schema: "FEATURE_STORE"
+  entity_name: "STORE_ITEM"
+  entity_key: "STORE_ITEM_ID"
+  # Feature views define logical groups of features that can be selected independently.
+  # Each view can be versioned and combined in different ways for experimentation.
+  feature_views:
+    base:
+      desc: "Calendar and event features derived from timestamp"
+      columns:
+        - HOUR_OF_DAY
+        - DAY_OF_WEEK
+        - IS_WEEKEND
+        - IS_HOLIDAY
+        - SCHOOL_IN_SESSION
+        - EVENT_FLAG
+    weather:
+      desc: "External weather data (temperature)"
+      columns:
+        - WEATHER_TEMP
+    rolling:
+      desc: "Rolling aggregate features computed from historical demand"
+      columns:
+        - ROLLING_7D_AVG
+        - ROLLING_4W_SAME_HOUR
