@@ -12,6 +12,7 @@ An internal enablement repository for Snowflake sales engineers and account exec
   - [Cortex Agent Versioning](#cortex-agent-versioning)
   - [Semantic View Description Quality](#semantic-view-description-quality)
   - [Many-Model Training](#many-model-training)
+  - [Feature Store](#feature-store)
 - [Repository Structure](#repository-structure)
 - [Getting Started](#getting-started)
 - [Presentation Format](#presentation-format)
@@ -20,7 +21,7 @@ An internal enablement repository for Snowflake sales engineers and account exec
 
 ## Overview
 
-This repository contains four enablement modules covering key Cortex AI and Snowflake ML topics:
+This repository contains five enablement modules covering key Cortex AI and Snowflake ML topics:
 
 | Module | Audience | Format | Slides |
 |--------|----------|--------|--------|
@@ -28,8 +29,9 @@ This repository contains four enablement modules covering key Cortex AI and Snow
 | Agent Versioning | SEs, Customers | Presentation | [View](https://sfc-gh-perickson.github.io/demos-enablement/agent_versioning/presentations/cortex-agent-versioning.html) |
 | Semantic View Description Quality | SEs, AEs | Presentation | [View](https://sfc-gh-perickson.github.io/demos-enablement/semantic-view-description/presentations/semantic-view-description-quality.html) |
 | Many-Model Training | SEs, Data Scientists, ML Engineers | Presentation + Hands-on Lab | [View](https://sfc-gh-perickson.github.io/demos-enablement/many-model-training/presentations/many-model-training.html) |
+| Feature Store | SEs, Data Scientists, ML Engineers | Presentation + Hands-on Lab | [View](https://sfc-gh-perickson.github.io/demos-enablement/feature-store/presentations/feature-store.html) |
 
-Each module includes an HTML slide deck and companion speaker notes. The evaluations and many-model-training modules also provide complete hands-on labs with SQL setup and notebooks.
+Each module includes an HTML slide deck and companion speaker notes. The evaluations, many-model-training, and feature-store modules also provide complete hands-on labs with SQL setup and notebooks.
 
 ---
 
@@ -126,6 +128,31 @@ The lab walks through Feature Store setup, distributed training of 200 XGBoost m
 
 ---
 
+### Feature Store
+
+**Location:** `feature-store/`
+
+Covers the Snowflake Feature Store end-to-end — from entity definition and feature engineering through offline training datasets, online serving with sub-second lookups, and real-time model inference integration. Uses e-commerce personalization (product recommendations) as the example domain.
+
+**Contents:**
+
+| File | Description |
+|------|-------------|
+| [`presentations/feature-store.html`](https://sfc-gh-perickson.github.io/demos-enablement/feature-store/presentations/feature-store.html) | Slide deck (14 slides) |
+| `presentations/feature-store-speaker-notes.md` | Speaker notes with internal context |
+| `lab/setup.sql` | SQL setup script (database, synthetic e-commerce data) |
+| `lab/feature-store-lab.ipynb` | Hands-on lab notebook (45-60 min) |
+
+#### Lab Prerequisites
+
+1. A Snowflake account with ML features enabled (Feature Store, Model Registry, Online Feature Tables)
+2. Run `feature-store/lab/setup.sql` to create the `FEATURE_STORE_DEMO` database and generate synthetic data
+3. Open `feature-store/lab/feature-store-lab.ipynb` in Snowflake Notebooks
+
+The lab walks through Feature Store setup, feature view registration, engineered features, training dataset generation, model training, online serving enablement, real-time retrieval, and model inference integration.
+
+---
+
 ## Repository Structure
 
 ```
@@ -143,6 +170,13 @@ enablement/
 │   └── presentations/
 │       ├── evaluating-cortex-agents.html
 │       └── evaluating-cortex-agents-speaker-notes.md
+├── feature-store/
+│   ├── lab/
+│   │   ├── setup.sql
+│   │   └── feature-store-lab.ipynb
+│   └── presentations/
+│       ├── feature-store.html
+│       └── feature-store-speaker-notes.md
 ├── many-model-training/
 │   ├── lab/
 │   │   ├── setup.sql

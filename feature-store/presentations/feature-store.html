@@ -1,0 +1,1055 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Snowflake Feature Store: Define Once, Serve Everywhere</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    :root {
+      --bg-primary: #0f1724;
+      --bg-secondary: #1a2537;
+      --bg-card: #1e2d42;
+      --accent: #29b5e8;
+      --accent-dim: rgba(41, 181, 232, 0.15);
+      --text-primary: #e8edf5;
+      --text-secondary: #8899aa;
+      --border: rgba(41, 181, 232, 0.2);
+      --gradient-start: #29b5e8;
+      --gradient-end: #a855f7;
+      --success: #4ade80;
+      --warning: #fbbf24;
+      --danger: #f87171;
+    }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: var(--bg-primary);
+      color: var(--text-primary);
+      line-height: 1.6;
+      overflow-x: hidden;
+    }
+    .sidebar {
+      position: fixed;
+      left: 0;
+      top: 0;
+      width: 260px;
+      height: 100vh;
+      background: var(--bg-secondary);
+      border-right: 1px solid var(--border);
+      padding: 24px 0;
+      overflow-y: auto;
+      z-index: 100;
+    }
+    .sidebar-logo {
+      padding: 0 24px 24px;
+      border-bottom: 1px solid var(--border);
+      margin-bottom: 16px;
+    }
+    .sidebar-logo h2 {
+      font-size: 14px;
+      color: var(--accent);
+      text-transform: uppercase;
+      letter-spacing: 1.5px;
+    }
+    .sidebar-logo p {
+      font-size: 11px;
+      color: var(--text-secondary);
+      margin-top: 4px;
+    }
+    .sidebar a {
+      display: block;
+      padding: 10px 24px;
+      color: var(--text-secondary);
+      text-decoration: none;
+      font-size: 13px;
+      border-left: 3px solid transparent;
+      transition: all 0.2s;
+    }
+    .sidebar a:hover, .sidebar a.active {
+      color: var(--accent);
+      background: var(--accent-dim);
+      border-left-color: var(--accent);
+    }
+    .main-content {
+      margin-left: 260px;
+      padding: 0;
+    }
+    .slide {
+      min-height: 100vh;
+      padding: 80px 60px;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+    }
+    .slide-header {
+      margin-bottom: 48px;
+    }
+    .slide-header h1 {
+      font-size: 42px;
+      font-weight: 700;
+      background: linear-gradient(135deg, var(--gradient-start), var(--gradient-end));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+      margin-bottom: 12px;
+    }
+    .slide-header h2 {
+      font-size: 32px;
+      font-weight: 600;
+      color: var(--text-primary);
+      margin-bottom: 8px;
+    }
+    .slide-header p {
+      font-size: 18px;
+      color: var(--text-secondary);
+      max-width: 700px;
+    }
+    .hero-slide {
+      text-align: center;
+      align-items: center;
+    }
+    .hero-slide .slide-header h1 {
+      font-size: 56px;
+    }
+    .hero-slide .slide-header p {
+      font-size: 22px;
+      max-width: 800px;
+      margin: 0 auto;
+    }
+    .stats-row {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+      gap: 24px;
+      margin-top: 48px;
+      width: 100%;
+      max-width: 900px;
+    }
+    .stat-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 24px;
+      text-align: center;
+    }
+    .stat-card .stat-value {
+      font-size: 28px;
+      font-weight: 700;
+      color: var(--accent);
+      margin-bottom: 4px;
+    }
+    .stat-card .stat-label {
+      font-size: 13px;
+      color: var(--text-secondary);
+    }
+    .card-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+      gap: 24px;
+      margin-top: 32px;
+    }
+    .card {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 28px;
+      transition: transform 0.2s, border-color 0.2s;
+    }
+    .card:hover {
+      transform: translateY(-2px);
+      border-color: var(--accent);
+    }
+    .card h3 {
+      color: var(--accent);
+      font-size: 16px;
+      margin-bottom: 8px;
+    }
+    .card p {
+      color: var(--text-secondary);
+      font-size: 14px;
+    }
+    .code-block {
+      background: #0d1117;
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 24px;
+      margin: 24px 0;
+      overflow-x: auto;
+      font-family: 'SF Mono', 'Fira Code', monospace;
+      font-size: 13px;
+      line-height: 1.7;
+      color: #e6edf3;
+    }
+    .code-block .comment { color: #8b949e; }
+    .code-block .keyword { color: #ff7b72; }
+    .code-block .string { color: #a5d6ff; }
+    .code-block .function { color: #d2a8ff; }
+    .code-block .constant { color: #79c0ff; }
+    .flow-diagram {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 32px;
+      margin: 24px 0;
+      text-align: center;
+    }
+    .flow-row {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-wrap: wrap;
+      gap: 12px;
+      margin: 16px 0;
+    }
+    .flow-box {
+      background: var(--bg-secondary);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 12px 20px;
+      font-size: 13px;
+      font-weight: 500;
+    }
+    .flow-box.accent {
+      border-color: var(--accent);
+      color: var(--accent);
+    }
+    .flow-box.purple {
+      border-color: #a855f7;
+      color: #a855f7;
+    }
+    .flow-box.green {
+      border-color: var(--success);
+      color: var(--success);
+    }
+    .flow-arrow {
+      color: var(--text-secondary);
+      font-size: 18px;
+    }
+    .two-col {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 32px;
+      margin-top: 24px;
+    }
+    .highlight-box {
+      background: var(--accent-dim);
+      border: 1px solid var(--accent);
+      border-radius: 10px;
+      padding: 20px;
+      margin: 16px 0;
+    }
+    .highlight-box h4 {
+      color: var(--accent);
+      margin-bottom: 8px;
+      font-size: 14px;
+    }
+    .highlight-box p {
+      color: var(--text-secondary);
+      font-size: 13px;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 24px 0;
+      font-size: 14px;
+    }
+    th, td {
+      padding: 14px 18px;
+      text-align: left;
+      border-bottom: 1px solid var(--border);
+    }
+    th {
+      color: var(--accent);
+      font-weight: 600;
+      font-size: 12px;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+    }
+    td {
+      color: var(--text-secondary);
+    }
+    .badge {
+      display: inline-block;
+      padding: 3px 10px;
+      border-radius: 12px;
+      font-size: 11px;
+      font-weight: 600;
+    }
+    .badge-blue { background: rgba(41, 181, 232, 0.15); color: var(--accent); }
+    .badge-green { background: rgba(74, 222, 128, 0.15); color: var(--success); }
+    .badge-yellow { background: rgba(251, 191, 36, 0.15); color: var(--warning); }
+    .badge-red { background: rgba(248, 113, 113, 0.15); color: var(--danger); }
+    .badge-purple { background: rgba(168, 85, 247, 0.15); color: #a855f7; }
+    .anim-fade {
+      opacity: 0;
+      transform: translateY(20px);
+      transition: opacity 0.6s ease, transform 0.6s ease;
+    }
+    .anim-fade.visible {
+      opacity: 1;
+      transform: translateY(0);
+    }
+    .vs-container {
+      display: grid;
+      grid-template-columns: 1fr auto 1fr;
+      gap: 16px;
+      align-items: center;
+      margin: 24px 0;
+    }
+    .vs-divider {
+      color: var(--text-secondary);
+      font-weight: 700;
+      font-size: 18px;
+    }
+    .vs-box {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 24px;
+    }
+    .vs-box h4 {
+      margin-bottom: 12px;
+      font-size: 14px;
+    }
+    .vs-box.bad { border-color: var(--danger); }
+    .vs-box.bad h4 { color: var(--danger); }
+    .vs-box.good { border-color: var(--success); }
+    .vs-box.good h4 { color: var(--success); }
+    .vs-box p, .vs-box ul {
+      font-size: 13px;
+      color: var(--text-secondary);
+    }
+    .vs-box ul {
+      list-style: none;
+      padding: 0;
+    }
+    .vs-box ul li {
+      padding: 4px 0;
+    }
+    .vs-box ul li::before {
+      content: "→ ";
+      color: var(--text-secondary);
+    }
+    @media (max-width: 900px) {
+      .sidebar { display: none; }
+      .main-content { margin-left: 0; }
+      .slide { padding: 40px 20px; }
+      .two-col { grid-template-columns: 1fr; }
+      .vs-container { grid-template-columns: 1fr; }
+      .vs-divider { text-align: center; }
+    }
+  </style>
+</head>
+<body>
+  <nav class="sidebar">
+    <div class="sidebar-logo">
+      <h2>Feature Store</h2>
+      <p>Enablement Module</p>
+    </div>
+    <a href="#hero" class="active">Overview</a>
+    <a href="#problem">The Problem</a>
+    <a href="#architecture">Architecture</a>
+    <a href="#entities">Entities & Feature Views</a>
+    <a href="#engineering">Feature Engineering</a>
+    <a href="#pit">Point-in-Time Correctness</a>
+    <a href="#datasets">Dataset Generation</a>
+    <a href="#online">Online Feature Store</a>
+    <a href="#serving">Real-Time Serving</a>
+    <a href="#integration">Model Integration</a>
+    <a href="#refresh">Refresh & Monitoring</a>
+    <a href="#governance">Governance & Discovery</a>
+    <a href="#patterns">Production Patterns</a>
+    <a href="#started">Getting Started</a>
+  </nav>
+
+  <main class="main-content">
+    <!-- Slide 1: Hero -->
+    <section class="slide hero-slide" id="hero">
+      <div class="slide-header">
+        <h1>Snowflake Feature Store</h1>
+        <p>Define Once, Serve Everywhere — unify offline training and online serving with a single feature definition layer built natively on Snowflake.</p>
+      </div>
+      <div class="stats-row anim-fade">
+        <div class="stat-card">
+          <div class="stat-value">Define Once</div>
+          <div class="stat-label">Single feature definition</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-value">Serve Both</div>
+          <div class="stat-label">Offline + Online stores</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-value">Sub-Second</div>
+          <div class="stat-label">Online lookups</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-value">Point-in-Time</div>
+          <div class="stat-label">Correct training data</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Slide 2: The Problem -->
+    <section class="slide" id="problem">
+      <div class="slide-header">
+        <h2>The Problem</h2>
+        <p>ML teams waste months rebuilding features across environments while silently introducing training/serving skew.</p>
+      </div>
+      <div class="card-grid anim-fade">
+        <div class="card">
+          <h3>Feature Drift</h3>
+          <p>Training features ≠ serving features. Subtle differences in logic between batch pipelines and real-time services cause model degradation that's nearly impossible to detect.</p>
+        </div>
+        <div class="card">
+          <h3>Pipeline Duplication</h3>
+          <p>The same feature logic reimplemented in Spark for training, Python for serving, and SQL for dashboards — each with its own bugs and versioning.</p>
+        </div>
+        <div class="card">
+          <h3>No Governance</h3>
+          <p>Who changed this feature? When? What models depend on it? Without a centralized registry, feature changes silently break downstream consumers.</p>
+        </div>
+        <div class="card">
+          <h3>Temporal Leakage</h3>
+          <p>Future data leaking into training sets produces artificially high accuracy that evaporates in production. Naive joins don't respect event time.</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- Slide 3: Architecture Overview -->
+    <section class="slide" id="architecture">
+      <div class="slide-header">
+        <h2>Architecture Overview</h2>
+        <p>A unified feature platform built on Snowflake primitives: Dynamic Tables for offline, Hybrid Tables for online.</p>
+      </div>
+      <div class="flow-diagram anim-fade">
+        <div class="flow-row">
+          <div class="flow-box">Source Tables</div>
+          <span class="flow-arrow">→</span>
+          <div class="flow-box accent">Feature Views</div>
+          <span class="flow-arrow">→</span>
+          <div class="flow-box purple">Offline Store (Dynamic Tables)</div>
+        </div>
+        <div class="flow-row" style="margin-top: 8px;">
+          <div class="flow-box" style="visibility: hidden;">Source Tables</div>
+          <span class="flow-arrow" style="visibility: hidden;">→</span>
+          <div class="flow-box accent" style="visibility: hidden;">Feature Views</div>
+          <span class="flow-arrow">→</span>
+          <div class="flow-box green">Online Store (Hybrid Tables)</div>
+        </div>
+        <div style="margin-top: 32px; border-top: 1px solid var(--border); padding-top: 24px;">
+          <div class="flow-row">
+            <div class="flow-box purple">Offline Store</div>
+            <span class="flow-arrow">→</span>
+            <div class="flow-box">Training Datasets</div>
+            <span class="flow-arrow" style="margin-left: 32px;">|</span>
+            <div class="flow-box green">Online Store</div>
+            <span class="flow-arrow">→</span>
+            <div class="flow-box">Real-Time Inference</div>
+          </div>
+        </div>
+      </div>
+      <div class="two-col anim-fade">
+        <div class="highlight-box">
+          <h4>Offline Store — Dynamic Tables</h4>
+          <p>Declarative SQL transformations with configurable target_lag. Snowflake handles incremental refresh, dependency ordering, and compute scaling automatically.</p>
+        </div>
+        <div class="highlight-box">
+          <h4>Online Store — Hybrid Tables</h4>
+          <p>Row-level CRUD with sub-second point lookups. Automatic sync from offline store via incremental pipelines. Built for real-time serving at scale.</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- Slide 4: Entities & Feature Views -->
+    <section class="slide" id="entities">
+      <div class="slide-header">
+        <h2>Entities & Feature Views</h2>
+        <p>Logical building blocks: Entities define the grain, Feature Views define the features computed at that grain.</p>
+      </div>
+      <div class="two-col anim-fade">
+        <div>
+          <h3 style="color: var(--accent); margin-bottom: 16px; font-size: 16px;">Entities</h3>
+          <div class="code-block">
+<span class="keyword">from</span> snowflake.ml.feature_store <span class="keyword">import</span> Entity
+
+<span class="comment"># Define the grain of your features</span>
+customer = Entity(
+    name=<span class="string">"CUSTOMER"</span>,
+    join_keys=[<span class="string">"CUSTOMER_ID"</span>]
+)
+
+product = Entity(
+    name=<span class="string">"PRODUCT"</span>,
+    join_keys=[<span class="string">"PRODUCT_ID"</span>]
+)
+
+fs.register_entity(customer)
+fs.register_entity(product)
+          </div>
+        </div>
+        <div>
+          <h3 style="color: var(--accent); margin-bottom: 16px; font-size: 16px;">Feature Views</h3>
+          <div class="code-block">
+<span class="keyword">from</span> snowflake.ml.feature_store <span class="keyword">import</span> FeatureView
+
+<span class="comment"># Feature view = entity + features + logic</span>
+customer_fv = FeatureView(
+    name=<span class="string">"CUSTOMER_PURCHASE_FEATURES"</span>,
+    entities=[customer],
+    feature_df=customer_features_df,
+    timestamp_col=<span class="string">"EVENT_TIMESTAMP"</span>,
+    refresh_freq=<span class="string">"60 minutes"</span>,
+    desc=<span class="string">"Customer purchase behavior"</span>
+)
+
+fs.register_feature_view(
+    feature_view=customer_fv,
+    version=<span class="string">"v1"</span>
+)
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Slide 5: Feature Engineering -->
+    <section class="slide" id="engineering">
+      <div class="slide-header">
+        <h2>Feature Engineering</h2>
+        <p>Register raw features directly from source tables or build engineered features with Snowpark DataFrame transforms.</p>
+      </div>
+      <div class="anim-fade">
+        <h3 style="color: var(--accent); margin-bottom: 16px; font-size: 16px;">Raw Feature View — Direct from Source</h3>
+        <div class="code-block">
+<span class="comment"># Raw features: select columns directly from source tables</span>
+raw_df = session.sql(<span class="string">"""
+    SELECT
+        CUSTOMER_ID,
+        TOTAL_LIFETIME_SPEND,
+        ACCOUNT_AGE_DAYS,
+        LOYALTY_TIER,
+        EVENT_TIMESTAMP
+    FROM ECOMMERCE.CUSTOMERS
+"""</span>)
+
+raw_fv = FeatureView(
+    name=<span class="string">"CUSTOMER_RAW_FEATURES"</span>,
+    entities=[customer],
+    feature_df=raw_df,
+    timestamp_col=<span class="string">"EVENT_TIMESTAMP"</span>
+)
+        </div>
+      </div>
+      <div class="anim-fade">
+        <h3 style="color: var(--accent); margin-bottom: 16px; font-size: 16px;">Engineered Feature View — Snowpark Transforms</h3>
+        <div class="code-block">
+<span class="comment"># Engineered features: windowed aggregations via Snowpark</span>
+<span class="keyword">from</span> snowflake.snowpark <span class="keyword">import</span> functions <span class="keyword">as</span> F
+<span class="keyword">from</span> snowflake.snowpark.window <span class="keyword">import</span> Window
+
+orders = session.table(<span class="string">"ECOMMERCE.ORDERS"</span>)
+win_7d = Window.partition_by(<span class="string">"CUSTOMER_ID"</span>).order_by(<span class="string">"ORDER_DATE"</span>).range_between(-7*86400, 0)
+
+engineered_df = orders.group_by(<span class="string">"CUSTOMER_ID"</span>).agg(
+    F.count(<span class="string">"ORDER_ID"</span>).alias(<span class="string">"ORDERS_7D"</span>),
+    F.avg(<span class="string">"ORDER_TOTAL"</span>).alias(<span class="string">"AVG_ORDER_VALUE_7D"</span>),
+    F.count_distinct(<span class="string">"PRODUCT_CATEGORY"</span>).alias(<span class="string">"UNIQUE_CATEGORIES_7D"</span>),
+    F.max(<span class="string">"ORDER_DATE"</span>).alias(<span class="string">"EVENT_TIMESTAMP"</span>)
+)
+
+engineered_fv = FeatureView(
+    name=<span class="string">"CUSTOMER_BEHAVIOR_7D"</span>,
+    entities=[customer],
+    feature_df=engineered_df,
+    timestamp_col=<span class="string">"EVENT_TIMESTAMP"</span>,
+    refresh_freq=<span class="string">"30 minutes"</span>
+)
+        </div>
+      </div>
+    </section>
+
+    <!-- Slide 6: Point-in-Time Correctness -->
+    <section class="slide" id="pit">
+      <div class="slide-header">
+        <h2>Point-in-Time Correctness</h2>
+        <p>The feature store performs temporal joins to ensure training data only uses features that were available at prediction time — preventing data leakage.</p>
+      </div>
+      <div class="vs-container anim-fade">
+        <div class="vs-box bad">
+          <h4>❌ Naive Join (Data Leakage)</h4>
+          <ul>
+            <li>JOIN ON customer_id only</li>
+            <li>Training sees future feature values</li>
+            <li>Artificially high offline metrics</li>
+            <li>Model fails in production</li>
+          </ul>
+        </div>
+        <div class="vs-divider">vs</div>
+        <div class="vs-box good">
+          <h4>✓ Point-in-Time Join</h4>
+          <ul>
+            <li>JOIN ON customer_id AND timestamp ≤ event</li>
+            <li>Only features known at prediction time</li>
+            <li>Honest offline metrics</li>
+            <li>Production matches training</li>
+          </ul>
+        </div>
+      </div>
+      <div class="flow-diagram anim-fade">
+        <p style="color: var(--text-secondary); margin-bottom: 16px; font-size: 14px;">Spine-Based Temporal Join</p>
+        <div class="flow-row">
+          <div class="flow-box accent">Spine (entity_id + timestamp)</div>
+          <span class="flow-arrow">+</span>
+          <div class="flow-box purple">Feature View (with event_timestamp)</div>
+          <span class="flow-arrow">→</span>
+          <div class="flow-box green">PIT-Correct Dataset</div>
+        </div>
+        <p style="color: var(--text-secondary); margin-top: 16px; font-size: 13px;">
+          For each spine row, the feature store finds the most recent feature value WHERE feature.timestamp ≤ spine.timestamp
+        </p>
+      </div>
+    </section>
+
+    <!-- Slide 7: Dataset Generation -->
+    <section class="slide" id="datasets">
+      <div class="slide-header">
+        <h2>Dataset Generation</h2>
+        <p>Generate reproducible, point-in-time correct training datasets from registered feature views with a single API call.</p>
+      </div>
+      <div class="anim-fade">
+        <div class="code-block">
+<span class="comment"># 1. Build the spine: entities + timestamps for training events</span>
+spine_df = session.sql(<span class="string">"""
+    SELECT
+        CUSTOMER_ID,
+        PURCHASE_TIMESTAMP AS SPINE_TIMESTAMP,
+        DID_CONVERT AS LABEL
+    FROM ECOMMERCE.TRAINING_EVENTS
+    WHERE PURCHASE_TIMESTAMP BETWEEN '2024-01-01' AND '2024-06-30'
+"""</span>)
+
+<span class="comment"># 2. Retrieve registered feature views</span>
+customer_fv = fs.get_feature_view(<span class="string">"CUSTOMER_PURCHASE_FEATURES"</span>, <span class="string">"v1"</span>)
+behavior_fv = fs.get_feature_view(<span class="string">"CUSTOMER_BEHAVIOR_7D"</span>, <span class="string">"v1"</span>)
+
+<span class="comment"># 3. Generate PIT-correct training set</span>
+training_dataset = fs.generate_training_set(
+    spine_df=spine_df,
+    features=[customer_fv, behavior_fv],
+    spine_timestamp_col=<span class="string">"SPINE_TIMESTAMP"</span>,
+    spine_label_cols=[<span class="string">"LABEL"</span>]
+)
+
+<span class="comment"># 4. Use directly for model training</span>
+train_df = training_dataset.to_pandas()
+        </div>
+      </div>
+      <div class="highlight-box anim-fade">
+        <h4>Reproducibility Guarantee</h4>
+        <p>The same spine + feature view versions always produce the same dataset. Feature views are versioned and immutable — change the logic, register a new version. Prior training runs remain reproducible.</p>
+      </div>
+    </section>
+
+    <!-- Slide 8: Online Feature Store -->
+    <section class="slide" id="online">
+      <div class="slide-header">
+        <h2>Online Feature Store</h2>
+        <p>Enable real-time feature serving with a single configuration flag. Backed by Hybrid Tables with configurable sync latency.</p>
+      </div>
+      <div class="anim-fade">
+        <div class="code-block">
+<span class="keyword">from</span> snowflake.ml.feature_store <span class="keyword">import</span> FeatureView, OnlineConfig
+
+<span class="comment"># Enable online serving with target_lag</span>
+customer_fv = FeatureView(
+    name=<span class="string">"CUSTOMER_REALTIME_FEATURES"</span>,
+    entities=[customer],
+    feature_df=realtime_features_df,
+    timestamp_col=<span class="string">"EVENT_TIMESTAMP"</span>,
+    refresh_freq=<span class="string">"5 minutes"</span>,
+    online_config=OnlineConfig(
+        enable=<span class="constant">True</span>,
+        target_lag=<span class="string">"30 seconds"</span>
+    )
+)
+
+fs.register_feature_view(feature_view=customer_fv, version=<span class="string">"v1"</span>)
+        </div>
+      </div>
+      <div class="stats-row anim-fade">
+        <div class="stat-card">
+          <div class="stat-value">< 100ms</div>
+          <div class="stat-label">Point lookup latency</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-value">Automatic</div>
+          <div class="stat-label">Offline → Online sync</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-value">Incremental</div>
+          <div class="stat-label">Refresh strategy</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-value">Configurable</div>
+          <div class="stat-label">Target lag per view</div>
+        </div>
+      </div>
+      <div class="highlight-box anim-fade" style="margin-top: 32px;">
+        <h4>How It Works</h4>
+        <p>When online_config is enabled, Snowflake materializes the feature view into a Hybrid Table optimized for key-value lookups. A background process syncs changes from the offline Dynamic Table to the online Hybrid Table within the specified target_lag window.</p>
+      </div>
+    </section>
+
+    <!-- Slide 9: Real-Time Serving -->
+    <section class="slide" id="serving">
+      <div class="slide-header">
+        <h2>Real-Time Serving</h2>
+        <p>Retrieve features from the online store for real-time inference with sub-second latency.</p>
+      </div>
+      <div class="anim-fade">
+        <div class="code-block">
+<span class="keyword">from</span> snowflake.ml.feature_store <span class="keyword">import</span> StoreType
+
+<span class="comment"># Retrieve feature view</span>
+customer_fv = fs.get_feature_view(<span class="string">"CUSTOMER_REALTIME_FEATURES"</span>, <span class="string">"v1"</span>)
+
+<span class="comment"># Read from online store (sub-second lookup)</span>
+online_features = fs.read_feature_view(
+    feature_view=customer_fv,
+    entity_rows=session.create_dataframe(
+        [(<span class="string">"CUST_12345"</span>,)],
+        schema=[<span class="string">"CUSTOMER_ID"</span>]
+    ),
+    store_type=StoreType.ONLINE
+)
+
+<span class="comment"># Use features for real-time scoring</span>
+prediction = model.predict(online_features)
+        </div>
+      </div>
+      <div class="flow-diagram anim-fade">
+        <p style="color: var(--text-secondary); margin-bottom: 16px; font-size: 14px;">Real-Time Inference Flow</p>
+        <div class="flow-row">
+          <div class="flow-box">API Request<br><small style="color: var(--text-secondary);">customer_id</small></div>
+          <span class="flow-arrow">→</span>
+          <div class="flow-box green">Online Feature Lookup<br><small style="color: var(--text-secondary);">StoreType.ONLINE</small></div>
+          <span class="flow-arrow">→</span>
+          <div class="flow-box purple">Model Score<br><small style="color: var(--text-secondary);">predict()</small></div>
+          <span class="flow-arrow">→</span>
+          <div class="flow-box accent">Response<br><small style="color: var(--text-secondary);">recommendations[]</small></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Slide 10: Model Integration -->
+    <section class="slide" id="integration">
+      <div class="slide-header">
+        <h2>Model Integration</h2>
+        <p>Bind feature views to model services — features are automatically looked up at inference time using only the entity key.</p>
+      </div>
+      <div class="anim-fade">
+        <div class="code-block">
+<span class="keyword">from</span> snowflake.ml.registry <span class="keyword">import</span> Registry
+
+reg = Registry(session=session)
+
+<span class="comment"># Log the model with feature store lineage</span>
+model_ref = reg.log_model(
+    model=trained_model,
+    model_name=<span class="string">"product_recommender"</span>,
+    version_name=<span class="string">"v1"</span>,
+    sample_input_data=training_features
+)
+
+<span class="comment"># Deploy as a service with auto feature lookup</span>
+customer_fv = fs.get_feature_view(<span class="string">"CUSTOMER_REALTIME_FEATURES"</span>, <span class="string">"v1"</span>)
+product_fv = fs.get_feature_view(<span class="string">"PRODUCT_EMBEDDINGS"</span>, <span class="string">"v1"</span>)
+
+model_ref.create_service(
+    service_name=<span class="string">"recommendation_service"</span>,
+    service_compute_pool=<span class="string">"ML_INFERENCE_POOL"</span>,
+    feature_sources_per_function={
+        <span class="string">"predict"</span>: [customer_fv, product_fv]
+    }
+)
+        </div>
+      </div>
+      <div class="flow-diagram anim-fade">
+        <p style="color: var(--text-secondary); margin-bottom: 16px; font-size: 14px;">Auto Feature Lookup at Inference</p>
+        <div class="flow-row">
+          <div class="flow-box">Request<br><small style="color: var(--text-secondary);">{"customer_id": "C123"}</small></div>
+          <span class="flow-arrow">→</span>
+          <div class="flow-box green">Auto-Fetch Features<br><small style="color: var(--text-secondary);">from online store</small></div>
+          <span class="flow-arrow">→</span>
+          <div class="flow-box purple">Model Prediction<br><small style="color: var(--text-secondary);">recommend(features)</small></div>
+          <span class="flow-arrow">→</span>
+          <div class="flow-box accent">Top-K Products</div>
+        </div>
+      </div>
+      <div class="highlight-box anim-fade">
+        <h4>Zero-Feature Payloads</h4>
+        <p>Callers send only entity keys (e.g., customer_id). The service automatically fetches all required features from the online store, ensuring consistency and eliminating the need for client-side feature construction.</p>
+      </div>
+    </section>
+
+    <!-- Slide 11: Refresh & Monitoring -->
+    <section class="slide" id="refresh">
+      <div class="slide-header">
+        <h2>Refresh & Monitoring</h2>
+        <p>Dynamic Table-powered refresh with full observability — incremental by default, with monitoring and cost tracking built in.</p>
+      </div>
+      <div class="anim-fade">
+        <table>
+          <thead>
+            <tr>
+              <th>Aspect</th>
+              <th>Incremental Refresh</th>
+              <th>Full Refresh</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>Trigger</td>
+              <td>Automatic (on source change)</td>
+              <td>Manual or on schema change</td>
+            </tr>
+            <tr>
+              <td>Compute Cost</td>
+              <td><span class="badge badge-green">Low</span> — processes only deltas</td>
+              <td><span class="badge badge-yellow">High</span> — reprocesses all data</td>
+            </tr>
+            <tr>
+              <td>Latency</td>
+              <td>Governed by target_lag</td>
+              <td>Proportional to data volume</td>
+            </tr>
+            <tr>
+              <td>Use Case</td>
+              <td>Append-heavy, streaming sources</td>
+              <td>Complex transforms, schema migrations</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="anim-fade">
+        <h3 style="color: var(--accent); margin-bottom: 16px; font-size: 16px;">Monitoring Queries</h3>
+        <div class="code-block">
+<span class="comment">-- Check refresh history for a feature view</span>
+<span class="keyword">SELECT</span> *
+<span class="keyword">FROM</span> <span class="function">TABLE</span>(INFORMATION_SCHEMA.DYNAMIC_TABLE_REFRESH_HISTORY(
+    NAME =&gt; <span class="string">'FEATURE_STORE_DB.FS_SCHEMA.CUSTOMER_PURCHASE_FEATURES$V1'</span>
+))
+<span class="keyword">ORDER BY</span> REFRESH_END_TIME <span class="keyword">DESC</span>
+<span class="keyword">LIMIT</span> <span class="constant">10</span>;
+
+<span class="comment">-- Monitor online store sync lag</span>
+<span class="keyword">SHOW</span> DYNAMIC TABLES <span class="keyword">LIKE</span> <span class="string">'%CUSTOMER_REALTIME%'</span>;
+<span class="comment">-- Check DATA_TIMESTAMP vs current time for actual lag</span>
+        </div>
+      </div>
+    </section>
+
+    <!-- Slide 12: Governance & Discovery -->
+    <section class="slide" id="governance">
+      <div class="slide-header">
+        <h2>Governance & Discovery</h2>
+        <p>Enterprise-grade access control, lineage tracking, and feature discoverability built on Snowflake's governance layer.</p>
+      </div>
+      <div class="card-grid anim-fade">
+        <div class="card">
+          <h3>RBAC Integration</h3>
+          <p>Feature views inherit Snowflake's role-based access control. Grant SELECT on specific feature views to specific roles — no separate permission system to manage.</p>
+        </div>
+        <div class="card">
+          <h3>Lineage Tracking</h3>
+          <p>Full lineage from source tables through feature views to models. Understand exactly which source columns feed which features and which models consume them.</p>
+        </div>
+        <div class="card">
+          <h3>Feature Discovery</h3>
+          <p>Search and browse registered features across the organization. Find existing features before building new ones — avoid redundant computation.</p>
+        </div>
+        <div class="card">
+          <h3>Tags & Metadata</h3>
+          <p>Apply Snowflake object tags for data classification, PII tracking, and organizational taxonomy. Features are first-class governed objects.</p>
+        </div>
+      </div>
+      <div class="anim-fade">
+        <div class="code-block">
+<span class="comment"># List all registered feature views</span>
+all_fvs = fs.list_feature_views()
+
+<span class="comment"># Search for features by entity</span>
+customer_features = fs.list_feature_views(entity_name=<span class="string">"CUSTOMER"</span>)
+
+<span class="comment"># Get feature view metadata and lineage</span>
+fv = fs.get_feature_view(<span class="string">"CUSTOMER_PURCHASE_FEATURES"</span>, <span class="string">"v1"</span>)
+<span class="keyword">print</span>(fv.desc)              <span class="comment"># Description</span>
+<span class="keyword">print</span>(fv.feature_names)     <span class="comment"># Column list</span>
+<span class="keyword">print</span>(fv.timestamp_col)     <span class="comment"># Event time column</span>
+<span class="keyword">print</span>(fv.refresh_freq)      <span class="comment"># Refresh schedule</span>
+        </div>
+      </div>
+    </section>
+
+    <!-- Slide 13: Production Patterns -->
+    <section class="slide" id="patterns">
+      <div class="slide-header">
+        <h2>Production Patterns</h2>
+        <p>Single feature definitions serving both batch training and real-time inference — the core value proposition of a unified feature store.</p>
+      </div>
+      <div class="flow-diagram anim-fade">
+        <p style="color: var(--text-secondary); margin-bottom: 20px; font-size: 14px;">Single Definition, Dual Serving</p>
+        <div class="flow-row">
+          <div class="flow-box">Source Tables<br><small style="color: var(--text-secondary);">orders, events, profiles</small></div>
+          <span class="flow-arrow">→</span>
+          <div class="flow-box accent" style="border-width: 2px;">Feature View<br><small style="color: var(--text-secondary);">one definition</small></div>
+        </div>
+        <div style="margin-top: 24px; display: flex; justify-content: center; gap: 48px;">
+          <div style="text-align: center;">
+            <div class="flow-box purple" style="margin-bottom: 12px;">Offline Store (DT)</div>
+            <span class="flow-arrow">↓</span>
+            <div class="flow-box" style="margin-top: 12px;">Batch Training<br><small style="color: var(--text-secondary);">generate_training_set()</small></div>
+          </div>
+          <div style="text-align: center;">
+            <div class="flow-box green" style="margin-bottom: 12px;">Online Store (Hybrid)</div>
+            <span class="flow-arrow">↓</span>
+            <div class="flow-box" style="margin-top: 12px;">Real-Time Serving<br><small style="color: var(--text-secondary);">StoreType.ONLINE</small></div>
+          </div>
+        </div>
+      </div>
+      <div class="card-grid anim-fade">
+        <div class="card">
+          <h3>Cost Optimization</h3>
+          <p>Use refresh_freq to control compute costs. High-frequency for real-time features (minutes), low-frequency for slowly-changing features (hours/days). Only online-enabled views incur Hybrid Table costs.</p>
+        </div>
+        <div class="card">
+          <h3>Feature Reuse</h3>
+          <p>Register once, consume everywhere. Multiple models share the same feature views — no redundant computation. New models get existing features instantly.</p>
+        </div>
+        <div class="card">
+          <h3>Version Management</h3>
+          <p>Register new versions for breaking changes. Old versions remain available for existing models. Migrate consumers gradually without coordinated deployments.</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- Slide 14: Getting Started -->
+    <section class="slide" id="started">
+      <div class="slide-header">
+        <h2>Getting Started</h2>
+        <p>Prerequisites, lab structure, and references for the hands-on Feature Store enablement lab.</p>
+      </div>
+      <div class="anim-fade">
+        <h3 style="color: var(--accent); margin-bottom: 16px; font-size: 16px;">Prerequisites</h3>
+        <table>
+          <thead>
+            <tr>
+              <th>Requirement</th>
+              <th>Details</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>Snowflake Account</td>
+              <td>Enterprise edition or higher (for Dynamic + Hybrid Tables)</td>
+            </tr>
+            <tr>
+              <td>Python Package</td>
+              <td><code>snowflake-ml-python >= 1.6.0</code></td>
+            </tr>
+            <tr>
+              <td>Warehouse</td>
+              <td>MEDIUM or larger recommended for feature materialization</td>
+            </tr>
+            <tr>
+              <td>Database/Schema</td>
+              <td>Dedicated schema for feature store objects</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="anim-fade">
+        <h3 style="color: var(--accent); margin-bottom: 16px; font-size: 16px;">Lab Sections</h3>
+        <table>
+          <thead>
+            <tr>
+              <th>Section</th>
+              <th>Topic</th>
+              <th>Duration</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><span class="badge badge-blue">Lab 1</span></td>
+              <td>Setup & Entity Registration</td>
+              <td>15 min</td>
+            </tr>
+            <tr>
+              <td><span class="badge badge-blue">Lab 2</span></td>
+              <td>Feature Engineering & Registration</td>
+              <td>25 min</td>
+            </tr>
+            <tr>
+              <td><span class="badge badge-purple">Lab 3</span></td>
+              <td>Point-in-Time Dataset Generation</td>
+              <td>20 min</td>
+            </tr>
+            <tr>
+              <td><span class="badge badge-green">Lab 4</span></td>
+              <td>Online Store & Real-Time Serving</td>
+              <td>25 min</td>
+            </tr>
+            <tr>
+              <td><span class="badge badge-yellow">Lab 5</span></td>
+              <td>Model Integration & Production Patterns</td>
+              <td>30 min</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="card-grid anim-fade">
+        <div class="card">
+          <h3>Documentation</h3>
+          <p>Snowflake Feature Store Developer Guide — covers API reference, architecture, and best practices.</p>
+        </div>
+        <div class="card">
+          <h3>Sample Code</h3>
+          <p>E-commerce personalization example: product recommendations with customer behavior features and real-time serving.</p>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <script>
+    // Intersection Observer for fade-in animations
+    const observer = new IntersectionObserver((entries) => {
+      entries.forEach(entry => {
+        if (entry.isIntersecting) {
+          entry.target.classList.add('visible');
+        }
+      });
+    }, { threshold: 0.1 });
+
+    document.querySelectorAll('.anim-fade').forEach(el => observer.observe(el));
+
+    // Active nav tracking
+    const sections = document.querySelectorAll('.slide');
+    const navLinks = document.querySelectorAll('.sidebar a');
+
+    window.addEventListener('scroll', () => {
+      let current = '';
+      sections.forEach(section => {
+        const sectionTop = section.offsetTop - 200;
+        if (window.scrollY >= sectionTop) {
+          current = section.getAttribute('id');
+        }
+      });
+      navLinks.forEach(link => {
+        link.classList.remove('active');
+        if (link.getAttribute('href') === '#' + current) {
+          link.classList.add('active');
+        }
+      });
+    });
+  </script>
+</body>
+</html>
