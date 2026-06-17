@@ -1,0 +1,1150 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Cortex AI Observability: Surface Identification & Cost Attribution</title>
+  <style>
+    :root {
+      --bg: #0f1117;
+      --surface: #1a1d27;
+      --surface-alt: #232733;
+      --border: #2e3345;
+      --text: #e4e7ef;
+      --text-muted: #8b92a8;
+      --accent: #29b5f6;
+      --accent-dim: rgba(41, 181, 246, 0.12);
+      --green: #4caf50;
+      --orange: #ff9800;
+      --red: #f44336;
+      --purple: #ab47bc;
+      --sidebar-width: 240px;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Segoe UI', Roboto, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.6;
+      overflow-x: hidden;
+    }
+
+    /* Progress Bar */
+    .progress-bar {
+      position: fixed;
+      top: 0;
+      left: 0;
+      height: 3px;
+      background: var(--accent);
+      z-index: 1000;
+      transition: width 0.1s;
+    }
+
+    /* Sidebar */
+    .sidebar {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: var(--sidebar-width);
+      height: 100vh;
+      background: var(--surface);
+      border-right: 1px solid var(--border);
+      padding: 2rem 1.25rem;
+      overflow-y: auto;
+      z-index: 100;
+    }
+
+    .sidebar h3 {
+      font-size: 0.75rem;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      color: var(--accent);
+      margin-bottom: 1rem;
+      font-weight: 700;
+    }
+
+    .sidebar .nav-section {
+      margin-bottom: 1.5rem;
+    }
+
+    .sidebar .nav-section-title {
+      font-size: 0.65rem;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--text-muted);
+      margin-bottom: 0.5rem;
+      font-weight: 600;
+    }
+
+    .sidebar a {
+      display: block;
+      padding: 0.35rem 0.75rem;
+      color: var(--text-muted);
+      text-decoration: none;
+      font-size: 0.8rem;
+      border-radius: 4px;
+      margin-bottom: 2px;
+      transition: all 0.2s;
+    }
+
+    .sidebar a:hover {
+      color: var(--text);
+      background: var(--surface-alt);
+    }
+
+    .sidebar a.active {
+      color: var(--accent);
+      background: var(--accent-dim);
+    }
+
+    .sidebar .github-link {
+      position: absolute;
+      bottom: 1.5rem;
+      left: 1.25rem;
+      right: 1.25rem;
+      padding: 0.5rem 0.75rem;
+      background: var(--surface-alt);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      color: var(--text-muted);
+      font-size: 0.75rem;
+      text-align: center;
+    }
+
+    .sidebar .github-link:hover {
+      border-color: var(--accent);
+      color: var(--accent);
+    }
+
+    /* Main Content */
+    .main {
+      margin-left: var(--sidebar-width);
+      min-height: 100vh;
+    }
+
+    .slide {
+      padding: 4rem 3rem;
+      max-width: 1200px;
+      margin: 0 auto;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .slide h2 {
+      font-size: 1.75rem;
+      font-weight: 700;
+      margin-bottom: 0.75rem;
+      background: linear-gradient(135deg, var(--text), var(--accent));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+
+    .slide h3 {
+      font-size: 1.1rem;
+      font-weight: 600;
+      color: var(--text);
+      margin-bottom: 0.5rem;
+    }
+
+    .slide h4 {
+      font-size: 0.95rem;
+      font-weight: 600;
+      color: var(--accent);
+      margin-bottom: 0.5rem;
+    }
+
+    .slide p {
+      color: var(--text-muted);
+      font-size: 0.95rem;
+    }
+
+    .slide ul, .slide ol {
+      color: var(--text-muted);
+      font-size: 0.9rem;
+      padding-left: 1.25rem;
+    }
+
+    .slide li {
+      margin-bottom: 0.35rem;
+    }
+
+    /* Hero */
+    .hero {
+      padding: 6rem 3rem 4rem;
+      text-align: center;
+      max-width: 1200px;
+      margin: 0 auto;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .hero h1 {
+      font-size: 2.5rem;
+      font-weight: 800;
+      background: linear-gradient(135deg, var(--text) 0%, var(--accent) 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+      margin-bottom: 1rem;
+      line-height: 1.2;
+    }
+
+    .hero .subtitle {
+      font-size: 1.1rem;
+      color: var(--text-muted);
+      margin-bottom: 2.5rem;
+    }
+
+    /* Stat Grid */
+    .stat-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 1rem;
+      margin: 2rem 0;
+    }
+
+    .stat-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 1.25rem;
+      text-align: center;
+    }
+
+    .stat-card .stat-value {
+      font-size: 1.5rem;
+      font-weight: 700;
+      color: var(--accent);
+      display: block;
+    }
+
+    .stat-card .stat-label {
+      font-size: 0.8rem;
+      color: var(--text-muted);
+      margin-top: 0.25rem;
+    }
+
+    /* Card Grid */
+    .card-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+      gap: 1rem;
+      margin: 1.5rem 0;
+    }
+
+    .card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 1.25rem;
+    }
+
+    .card:hover {
+      border-color: var(--accent);
+    }
+
+    /* Two Column */
+    .two-col {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 1.5rem;
+      margin: 1.5rem 0;
+    }
+
+    /* Three Column */
+    .three-col {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 1rem;
+      margin: 1.5rem 0;
+    }
+
+    /* Highlight Box */
+    .highlight-box {
+      background: var(--accent-dim);
+      border: 1px solid var(--accent);
+      border-radius: 8px;
+      padding: 1.25rem;
+      margin: 1.5rem 0;
+    }
+
+    .highlight-box p {
+      color: var(--text);
+    }
+
+    /* Context Box */
+    .context-box {
+      background: var(--surface-alt);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 1.25rem;
+      margin: 1.5rem 0;
+    }
+
+    .context-box p {
+      color: var(--text);
+    }
+
+    /* Warning Box */
+    .warning-box {
+      background: rgba(255, 152, 0, 0.08);
+      border: 1px solid var(--orange);
+      border-radius: 8px;
+      padding: 1.25rem;
+      margin: 1.5rem 0;
+    }
+
+    .warning-box p {
+      color: var(--text);
+    }
+
+    /* Info Box */
+    .info-box {
+      background: rgba(171, 71, 188, 0.08);
+      border: 1px solid var(--purple);
+      border-radius: 8px;
+      padding: 1rem;
+      margin: 1.5rem 0;
+    }
+
+    .info-box p {
+      color: var(--text);
+      font-size: 0.85rem;
+    }
+
+    /* Flow Diagram */
+    .flow-diagram {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.5rem;
+      margin: 2rem 0;
+      flex-wrap: wrap;
+    }
+
+    .flow-step {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 1rem 1.25rem;
+      text-align: center;
+      min-width: 100px;
+    }
+
+    .flow-step.active {
+      border-color: var(--accent);
+      background: var(--accent-dim);
+    }
+
+    .flow-step .step-label {
+      font-size: 0.7rem;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: var(--text-muted);
+      margin-bottom: 0.25rem;
+    }
+
+    .flow-step .step-title {
+      font-size: 0.85rem;
+      font-weight: 600;
+      color: var(--text);
+    }
+
+    .flow-arrow {
+      color: var(--text-muted);
+      font-size: 1.25rem;
+    }
+
+    /* Tables */
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 1rem 0;
+      font-size: 0.85rem;
+    }
+
+    th, td {
+      padding: 0.6rem 0.75rem;
+      border: 1px solid var(--border);
+      text-align: left;
+    }
+
+    th {
+      background: var(--surface-alt);
+      font-weight: 600;
+      color: var(--text);
+    }
+
+    td {
+      color: var(--text-muted);
+    }
+
+    /* Code */
+    pre {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 1.25rem;
+      overflow-x: auto;
+      font-family: 'SF Mono', 'Fira Code', 'JetBrains Mono', monospace;
+      font-size: 0.8rem;
+      line-height: 1.7;
+      margin: 1rem 0;
+    }
+
+    code {
+      font-family: 'SF Mono', 'Fira Code', 'JetBrains Mono', monospace;
+      background: var(--surface-alt);
+      padding: 0.15rem 0.4rem;
+      border-radius: 3px;
+      font-size: 0.85rem;
+    }
+
+    .keyword { color: #c792ea; }
+    .string { color: #c3e88d; }
+    .function { color: #82aaff; }
+    .comment { color: #546e7a; }
+    .number { color: #f78c6c; }
+
+    /* Badges */
+    .badge-green {
+      background: rgba(76, 175, 80, 0.15);
+      color: var(--green);
+      padding: 0.15rem 0.5rem;
+      border-radius: 4px;
+      font-size: 0.75rem;
+      font-weight: 600;
+    }
+
+    .badge-orange {
+      background: rgba(255, 152, 0, 0.15);
+      color: var(--orange);
+      padding: 0.15rem 0.5rem;
+      border-radius: 4px;
+      font-size: 0.75rem;
+      font-weight: 600;
+    }
+
+    .badge-red {
+      background: rgba(244, 67, 54, 0.15);
+      color: var(--red);
+      padding: 0.15rem 0.5rem;
+      border-radius: 4px;
+      font-size: 0.75rem;
+      font-weight: 600;
+    }
+
+    .badge-purple {
+      background: rgba(171, 71, 188, 0.15);
+      color: var(--purple);
+      padding: 0.15rem 0.5rem;
+      border-radius: 4px;
+      font-size: 0.75rem;
+      font-weight: 600;
+    }
+
+    /* Part Divider */
+    .part-divider {
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      padding: 4rem 3rem;
+      max-width: 1200px;
+      margin: 0 auto;
+    }
+
+    .part-divider h2 {
+      font-size: 1rem;
+      font-weight: 600;
+      color: var(--accent);
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      margin-bottom: 0.5rem;
+    }
+
+    .part-divider h1 {
+      font-size: 2rem;
+      font-weight: 700;
+      color: var(--text);
+      background: none;
+      -webkit-text-fill-color: var(--text);
+    }
+
+    /* Animations */
+    .anim-fade {
+      opacity: 0;
+      transform: translateY(20px);
+      transition: opacity 0.6s ease, transform 0.6s ease;
+    }
+
+    .anim-fade.visible {
+      opacity: 1;
+      transform: translateY(0);
+    }
+
+    /* Responsive */
+    @media (max-width: 900px) {
+      .sidebar { display: none; }
+      .main { margin-left: 0; }
+      .stat-grid { grid-template-columns: repeat(2, 1fr); }
+      .two-col { grid-template-columns: 1fr; }
+      .three-col { grid-template-columns: 1fr; }
+      .hero h1 { font-size: 1.75rem; }
+    }
+  </style>
+</head>
+<body>
+  <div class="progress-bar"></div>
+
+  <!-- Sidebar -->
+  <nav class="sidebar">
+    <h3>AI Observability</h3>
+
+    <div class="nav-section">
+      <div class="nav-section-title">Concepts</div>
+      <a href="#hero">Overview</a>
+      <a href="#multi-surface">Multi-Surface Challenge</a>
+      <a href="#landscape">Observability Landscape</a>
+    </div>
+
+    <div class="nav-section">
+      <div class="nav-section-title">Surfaces</div>
+      <a href="#cortex-agents">Cortex Agents</a>
+      <a href="#cowork-rest">CoWork & REST</a>
+      <a href="#mcp-identification">MCP Identification</a>
+    </div>
+
+    <div class="nav-section">
+      <div class="nav-section-title">Costs</div>
+      <a href="#token-granularity">Token-Level Costs</a>
+      <a href="#tag-grouping">Tag-Based Grouping</a>
+      <a href="#unified-view">Unified Cost View</a>
+    </div>
+
+    <div class="nav-section">
+      <div class="nav-section-title">Governance</div>
+      <a href="#resource-budgets">Resource Budgets</a>
+      <a href="#query-attribution">Query Attribution</a>
+      <a href="#takeaways">Key Takeaways</a>
+    </div>
+
+    <a href="https://github.com/sfc-gh-perickson/demos-enablement/tree/main/cortex-ai-observability" class="github-link" target="_blank">View on GitHub &rarr;</a>
+  </nav>
+
+  <!-- Main Content -->
+  <main class="main">
+
+    <!-- Slide 1: Hero -->
+    <section class="slide hero" id="hero">
+      <h1>Cortex AI Observability:<br/>Surface Identification & Cost Attribution</h1>
+      <p class="subtitle">Know who's calling, from where, and what it costs &mdash; across every Cortex AI surface.</p>
+
+      <div class="stat-grid anim-fade">
+        <div class="stat-card">
+          <span class="stat-value">5+</span>
+          <span class="stat-label">Surfaces &mdash; MCP, REST, CoWork, Code, Agent API</span>
+        </div>
+        <div class="stat-card">
+          <span class="stat-value">Token-Level</span>
+          <span class="stat-label">Granular cost data per model per request</span>
+        </div>
+        <div class="stat-card">
+          <span class="stat-value">Tag-Based</span>
+          <span class="stat-label">Cost center grouping via user/agent tags</span>
+        </div>
+        <div class="stat-card">
+          <span class="stat-value">Real-Time</span>
+          <span class="stat-label">1&ndash;2 minute observability latency</span>
+        </div>
+      </div>
+
+      <div class="context-box anim-fade">
+        <p><strong>Two parts:</strong> Surface identification (who's asking, from where) + Cost attribution (what does it cost, and who pays)</p>
+      </div>
+    </section>
+
+    <!-- Slide 2: The Multi-Surface Challenge -->
+    <section class="slide" id="multi-surface">
+      <h2>The Multi-Surface Challenge</h2>
+      <p style="margin-bottom: 2rem;">Cortex AI is accessible from many entry points. Each generates usage that must be tracked and attributed.</p>
+
+      <div class="card-grid anim-fade">
+        <div class="card">
+          <h4>MCP Clients</h4>
+          <p>Claude Desktop, ChatGPT, Cursor, and other MCP-compatible clients calling Cortex Agents as tools.</p>
+        </div>
+        <div class="card">
+          <h4>REST API Direct</h4>
+          <p>Programmatic access via <code>/api/v2/cortex/agent:run</code> and <code>/api/v2/cortex/inference:complete</code>.</p>
+        </div>
+        <div class="card">
+          <h4>CoWork / Intelligence</h4>
+          <p>Snowflake's built-in conversational AI interface in Snowsight. Users interact naturally without writing code.</p>
+        </div>
+        <div class="card">
+          <h4>Agent Admin UI</h4>
+          <p>The Snowsight agent playground for testing and iterating on agent configurations.</p>
+        </div>
+        <div class="card">
+          <h4>SQL Function Calls</h4>
+          <p><code>SELECT SNOWFLAKE.CORTEX.AGENT(...)</code> invoked inline within SQL queries and stored procedures.</p>
+        </div>
+        <div class="card">
+          <h4>Cortex Code CLI</h4>
+          <p>The developer CLI that uses Cortex AI for code generation, analysis, and SQL authoring.</p>
+        </div>
+      </div>
+
+      <div class="highlight-box anim-fade">
+        <p><strong>Without unified observability, adoption insights and cost management happen in silos.</strong> You can't answer "how much AI is my team consuming?" without correlating data from multiple views.</p>
+      </div>
+    </section>
+
+    <!-- Slide 3: The Observability Landscape -->
+    <section class="slide" id="landscape">
+      <h2>The Observability Landscape</h2>
+      <p style="margin-bottom: 2rem;">Each surface writes to specific views in <code>SNOWFLAKE.ACCOUNT_USAGE</code>. Knowing which view to query is step one.</p>
+
+      <table class="anim-fade">
+        <thead>
+          <tr><th>Surface / Feature</th><th>Usage View</th><th>Key Columns</th></tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>Cortex Agents (all interfaces)</td>
+            <td><code>CORTEX_AGENT_USAGE_HISTORY</code></td>
+            <td>METADATA, TOKENS_GRANULAR, CREDITS_GRANULAR</td>
+          </tr>
+          <tr>
+            <td>CoWork / Intelligence</td>
+            <td><code>SNOWFLAKE_INTELLIGENCE_USAGE_HISTORY</code></td>
+            <td>SNOWFLAKE_INTELLIGENCE_NAME, USER_NAME</td>
+          </tr>
+          <tr>
+            <td>Direct REST API (Complete, Embed)</td>
+            <td><code>CORTEX_REST_API_USAGE_HISTORY</code></td>
+            <td>MODEL_NAME, REQUEST_ID, TOKENS</td>
+          </tr>
+          <tr>
+            <td>Cortex Analyst</td>
+            <td><code>CORTEX_ANALYST_USAGE_HISTORY</code></td>
+            <td>SEMANTIC_VIEW_NAME, TOKENS_GRANULAR</td>
+          </tr>
+          <tr>
+            <td>Cortex Code CLI</td>
+            <td><code>CORTEX_CODE_CLI_USAGE_HISTORY</code></td>
+            <td>USER_NAME, MODEL_NAME, TOKENS</td>
+          </tr>
+          <tr>
+            <td>Query-level compute</td>
+            <td><code>QUERY_ATTRIBUTION_HISTORY</code></td>
+            <td>CREDITS_ATTRIBUTED_COMPUTE, QUERY_TAG</td>
+          </tr>
+        </tbody>
+      </table>
+
+      <div class="info-box anim-fade">
+        <p><strong>RBAC Prerequisites:</strong> Requires <code>IMPORTED PRIVILEGES</code> on the SNOWFLAKE database. For request-level logs with full token detail, users also need the <code>SNOWFLAKE.CORTEX_GOVERNANCE_VIEWER</code> application role. Org-level views (QUERY_ATTRIBUTION_HISTORY) require <code>ORGANIZATION_USAGE_VIEWER</code>.</p>
+      </div>
+    </section>
+
+    <!-- Slide 4: Surface Identification: Cortex Agents -->
+    <section class="slide" id="cortex-agents">
+      <h2>Surface Identification: Cortex Agents</h2>
+      <p style="margin-bottom: 2rem;"><code>CORTEX_AGENT_USAGE_HISTORY</code> is the primary view for agent traffic. The <code>METADATA</code> column contains <code>interaction_interface</code> to identify the calling surface.</p>
+
+      <pre class="anim-fade"><span class="comment">-- Identify which surfaces are calling your agents</span>
+<span class="keyword">SELECT</span>
+  METADATA:<span class="string">'interaction_interface'</span>::<span class="keyword">STRING</span> <span class="keyword">AS</span> interface,
+  AGENT_NAME,
+  <span class="function">COUNT</span>(*) <span class="keyword">AS</span> requests,
+  <span class="function">SUM</span>(CREDITS_USED) <span class="keyword">AS</span> total_credits
+<span class="keyword">FROM</span> SNOWFLAKE.ACCOUNT_USAGE.CORTEX_AGENT_USAGE_HISTORY
+<span class="keyword">WHERE</span> START_TIME >= <span class="function">DATEADD</span>(<span class="string">'day'</span>, <span class="number">-7</span>, <span class="function">CURRENT_TIMESTAMP</span>())
+<span class="keyword">GROUP BY</span> <span class="number">1</span>, <span class="number">2</span>
+<span class="keyword">ORDER BY</span> total_credits <span class="keyword">DESC</span>;</pre>
+
+      <div class="card-grid anim-fade">
+        <div class="card">
+          <h4><code>external</code></h4>
+          <p>MCP clients (Claude, ChatGPT, Cursor), programmatic REST API calls, and any non-Snowsight interface. This is the catch-all for API-driven access.</p>
+        </div>
+        <div class="card">
+          <h4><code>sql_function</code></h4>
+          <p>Agent invoked via <code>SNOWFLAKE.CORTEX.AGENT()</code> SQL function within queries, stored procedures, or tasks.</p>
+        </div>
+        <div class="card">
+          <h4><code>agent_admin_ui</code></h4>
+          <p>Snowsight's agent playground &mdash; the built-in testing interface where developers iterate on agent configurations.</p>
+        </div>
+        <div class="card">
+          <h4><code>microsoft_teams</code></h4>
+          <p>Agents exposed via the Microsoft Teams integration. Tracks conversational AI usage from collaboration tools.</p>
+        </div>
+      </div>
+
+      <div class="context-box anim-fade">
+        <p><strong>Key detail:</strong> MCP traffic (Claude Desktop, ChatGPT, etc.) and direct REST API calls both appear as <code>external</code>. There is no finer-grained distinction at the <code>interaction_interface</code> level today.</p>
+      </div>
+    </section>
+
+    <!-- Slide 5: Surface Identification: CoWork & REST -->
+    <section class="slide" id="cowork-rest">
+      <h2>Surface Identification: CoWork & REST</h2>
+      <p style="margin-bottom: 2rem;">Separate views capture usage from Snowflake Intelligence (CoWork) and direct REST API calls to LLM endpoints.</p>
+
+      <div class="two-col anim-fade">
+        <div>
+          <h3>CoWork / Intelligence</h3>
+          <pre><span class="comment">-- CoWork usage by intelligence instance</span>
+<span class="keyword">SELECT</span>
+  SNOWFLAKE_INTELLIGENCE_NAME,
+  USER_NAME,
+  <span class="function">COUNT</span>(*) <span class="keyword">AS</span> conversations,
+  <span class="function">SUM</span>(CREDITS_USED) <span class="keyword">AS</span> credits
+<span class="keyword">FROM</span> SNOWFLAKE.ACCOUNT_USAGE
+  .SNOWFLAKE_INTELLIGENCE_USAGE_HISTORY
+<span class="keyword">WHERE</span> START_TIME >= <span class="function">DATEADD</span>(<span class="string">'day'</span>, <span class="number">-7</span>,
+  <span class="function">CURRENT_TIMESTAMP</span>())
+<span class="keyword">GROUP BY</span> <span class="number">1</span>, <span class="number">2</span>;</pre>
+          <p style="margin-top: 0.5rem;">Identifies traffic by <code>SNOWFLAKE_INTELLIGENCE_NAME</code> and <code>SNOWFLAKE_INTELLIGENCE_ID</code>. Each CoWork instance is a distinct object.</p>
+        </div>
+        <div>
+          <h3>Direct REST API</h3>
+          <pre><span class="comment">-- REST API usage by model</span>
+<span class="keyword">SELECT</span>
+  MODEL_NAME,
+  USER_NAME,
+  <span class="function">COUNT</span>(*) <span class="keyword">AS</span> requests,
+  <span class="function">SUM</span>(TOKENS) <span class="keyword">AS</span> total_tokens,
+  <span class="function">SUM</span>(CREDITS_USED) <span class="keyword">AS</span> credits
+<span class="keyword">FROM</span> SNOWFLAKE.ACCOUNT_USAGE
+  .CORTEX_REST_API_USAGE_HISTORY
+<span class="keyword">WHERE</span> START_TIME >= <span class="function">DATEADD</span>(<span class="string">'day'</span>, <span class="number">-7</span>,
+  <span class="function">CURRENT_TIMESTAMP</span>())
+<span class="keyword">GROUP BY</span> <span class="number">1</span>, <span class="number">2</span>;</pre>
+          <p style="margin-top: 0.5rem;">Captures direct <code>CORTEX.COMPLETE()</code>, <code>CORTEX.EMBED()</code>, and other LLM endpoint calls with <code>MODEL_NAME</code> and <code>REQUEST_ID</code>.</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- Slide 6: MCP Client Identification -->
+    <section class="slide" id="mcp-identification">
+      <h2>MCP Client Identification</h2>
+      <p style="margin-bottom: 2rem;">Distinguishing between MCP clients requires a workaround today &mdash; the platform groups all external API access under one label.</p>
+
+      <div class="warning-box anim-fade">
+        <p><strong>Known limitation:</strong> MCP requests from Claude Desktop vs. ChatGPT vs. Cursor vs. other clients all appear as <code>external</code> in <code>interaction_interface</code>. There is no platform-native way to distinguish between MCP client types today.</p>
+      </div>
+
+      <h3 style="margin-top: 1.5rem;">Workaround: QUERY_TAG Pattern</h3>
+      <pre class="anim-fade"><span class="comment">-- Set a session-level query tag to identify the calling application</span>
+<span class="keyword">ALTER SESSION SET</span> QUERY_TAG = <span class="string">'{"app":"my_mcp_client","client":"claude_desktop","team":"data-eng"}'</span>;
+
+<span class="comment">-- This tag propagates to QUERY_ATTRIBUTION_HISTORY</span>
+<span class="comment">-- and can be parsed for attribution</span></pre>
+
+      <h3 style="margin-top: 1.5rem;">Real-World Example: Cortex Code CLI</h3>
+      <pre class="anim-fade"><span class="comment">-- Cortex Code sets its own query tag automatically</span>
+<span class="keyword">SELECT</span>
+  QUERY_TAG,
+  CREDITS_ATTRIBUTED_COMPUTE
+<span class="keyword">FROM</span> SNOWFLAKE.ORGANIZATION_USAGE.QUERY_ATTRIBUTION_HISTORY
+<span class="keyword">WHERE</span> QUERY_TAG <span class="keyword">LIKE</span> <span class="string">'%cortex_code_cli%'</span>
+<span class="keyword">LIMIT</span> <span class="number">5</span>;
+
+<span class="comment">-- Returns: {"app":"cortex_code_cli"}</span></pre>
+
+      <div class="context-box anim-fade">
+        <p><strong>Recommendation:</strong> If you control the MCP server or client integration, set <code>QUERY_TAG</code> as a JSON object at session start. This gives you client-level attribution via <code>QUERY_ATTRIBUTION_HISTORY</code> even without platform-native support.</p>
+      </div>
+    </section>
+
+    <!-- Slide 7: Cost Attribution: Token-Level Granularity -->
+    <section class="slide" id="token-granularity">
+      <h2>Cost Attribution: Token-Level Granularity</h2>
+      <p style="margin-bottom: 2rem;">The <code>TOKENS_GRANULAR</code> and <code>CREDITS_GRANULAR</code> VARIANT columns provide per-model, per-request cost breakdowns including cache economics.</p>
+
+      <pre class="anim-fade"><span class="comment">-- Anatomy of TOKENS_GRANULAR (VARIANT column)</span>
+<span class="comment">-- Each request contains a nested structure:</span>
+{
+  <span class="string">"request_id"</span>: <span class="string">"01bb1234-..."</span>,
+  <span class="string">"service_type"</span>: <span class="string">"cortex_agents"</span>,
+  <span class="string">"model"</span>: <span class="string">"claude-3-5-sonnet"</span>,
+  <span class="string">"tokens"</span>: {
+    <span class="string">"input"</span>: <span class="number">2450</span>,
+    <span class="string">"cache_read_input"</span>: <span class="number">1800</span>,
+    <span class="string">"cache_write_input"</span>: <span class="number">650</span>,
+    <span class="string">"output"</span>: <span class="number">312</span>
+  }
+}</pre>
+
+      <pre class="anim-fade"><span class="comment">-- Parse token-level costs per model from agent usage</span>
+<span class="keyword">SELECT</span>
+  AGENT_NAME,
+  f.value:<span class="string">'model'</span>::<span class="keyword">STRING</span> <span class="keyword">AS</span> model,
+  <span class="function">SUM</span>(f.value:<span class="string">'tokens'</span>:<span class="string">'input'</span>::<span class="keyword">NUMBER</span>) <span class="keyword">AS</span> input_tokens,
+  <span class="function">SUM</span>(f.value:<span class="string">'tokens'</span>:<span class="string">'cache_read_input'</span>::<span class="keyword">NUMBER</span>) <span class="keyword">AS</span> cache_hits,
+  <span class="function">SUM</span>(f.value:<span class="string">'tokens'</span>:<span class="string">'output'</span>::<span class="keyword">NUMBER</span>) <span class="keyword">AS</span> output_tokens,
+  <span class="function">SUM</span>(g.value:<span class="string">'credits'</span>::<span class="keyword">FLOAT</span>) <span class="keyword">AS</span> total_credits
+<span class="keyword">FROM</span> SNOWFLAKE.ACCOUNT_USAGE.CORTEX_AGENT_USAGE_HISTORY,
+  <span class="keyword">LATERAL FLATTEN</span>(TOKENS_GRANULAR) f,
+  <span class="keyword">LATERAL FLATTEN</span>(CREDITS_GRANULAR) g
+<span class="keyword">WHERE</span> f.value:<span class="string">'request_id'</span> = g.value:<span class="string">'request_id'</span>
+  <span class="keyword">AND</span> START_TIME >= <span class="function">DATEADD</span>(<span class="string">'day'</span>, <span class="number">-7</span>, <span class="function">CURRENT_TIMESTAMP</span>())
+<span class="keyword">GROUP BY</span> <span class="number">1</span>, <span class="number">2</span>;</pre>
+
+      <div class="highlight-box anim-fade">
+        <p><strong>Cache economics:</strong> <code>cache_read_input</code> tokens are significantly cheaper than fresh <code>input</code> tokens. Monitor your cache hit ratio &mdash; a high ratio means your prompt prefix caching is working effectively and reducing per-request cost.</p>
+      </div>
+    </section>
+
+    <!-- Slide 8: Cost Attribution: Tag-Based Grouping -->
+    <section class="slide" id="tag-grouping">
+      <h2>Cost Attribution: Tag-Based Grouping</h2>
+      <p style="margin-bottom: 2rem;"><code>USER_TAGS</code> and <code>AGENT_TAGS</code> arrays enable multi-level cost center attribution without modifying application code.</p>
+
+      <pre class="anim-fade"><span class="comment">-- USER_TAGS and AGENT_TAGS are ARRAY columns</span>
+<span class="comment">-- Tags are set at multiple levels and merged at query time:</span>
+<span class="comment">--   ACCOUNT level:  ALTER ACCOUNT SET CORTEX_AGENT_USER_TAGS = [...]</span>
+<span class="comment">--   USER level:     ALTER USER x SET CORTEX_AGENT_USER_TAGS = [...]</span>
+<span class="comment">--   SCHEMA level:   ALTER SCHEMA SET CORTEX_AGENT_TAGS = [...]</span>
+<span class="comment">--   AGENT level:    ALTER AGENT x SET CORTEX_AGENT_TAGS = [...]</span>
+
+<span class="comment">-- Extract cost by tag (cost center attribution)</span>
+<span class="keyword">SELECT</span>
+  t.value::STRING <span class="keyword">AS</span> cost_center_tag,
+  AGENT_NAME,
+  <span class="function">COUNT</span>(*) <span class="keyword">AS</span> requests,
+  <span class="function">SUM</span>(CREDITS_USED) <span class="keyword">AS</span> total_credits
+<span class="keyword">FROM</span> SNOWFLAKE.ACCOUNT_USAGE.CORTEX_AGENT_USAGE_HISTORY,
+  <span class="keyword">LATERAL FLATTEN</span>(USER_TAGS) t
+<span class="keyword">WHERE</span> START_TIME >= <span class="function">DATEADD</span>(<span class="string">'day'</span>, <span class="number">-30</span>, <span class="function">CURRENT_TIMESTAMP</span>())
+<span class="keyword">GROUP BY</span> <span class="number">1</span>, <span class="number">2</span>
+<span class="keyword">ORDER BY</span> total_credits <span class="keyword">DESC</span>;</pre>
+
+      <div class="two-col anim-fade">
+        <div class="card">
+          <h4>Multi-Level Tagging</h4>
+          <table>
+            <thead><tr><th>Level</th><th>Scope</th><th>Example</th></tr></thead>
+            <tbody>
+              <tr><td>Account</td><td>All users in account</td><td><code>["dept:engineering"]</code></td></tr>
+              <tr><td>User</td><td>Individual user</td><td><code>["team:platform","role:admin"]</code></td></tr>
+              <tr><td>Schema</td><td>All agents in schema</td><td><code>["project:analytics"]</code></td></tr>
+              <tr><td>Agent</td><td>Specific agent</td><td><code>["app:sales-copilot"]</code></td></tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="card">
+          <h4>Attribution Strategy</h4>
+          <ul>
+            <li><strong>USER_TAGS</strong> &rarr; Who triggered it (chargeback to team)</li>
+            <li><strong>AGENT_TAGS</strong> &rarr; What product consumed it (cost to project)</li>
+            <li>Combine both for full cost center matrix</li>
+            <li>Tags are inherited: account &rarr; user, schema &rarr; agent</li>
+          </ul>
+        </div>
+      </div>
+    </section>
+
+    <!-- Slide 9: Building a Unified Cost View -->
+    <section class="slide" id="unified-view">
+      <h2>Building a Unified Cost View</h2>
+      <p style="margin-bottom: 2rem;">No single view captures all Cortex AI usage. Build a normalized UNION ALL to create a single pane of glass across all surfaces.</p>
+
+      <pre class="anim-fade"><span class="comment">-- Unified Cortex AI usage view across all surfaces</span>
+<span class="keyword">CREATE OR REPLACE VIEW</span> analytics.cortex_unified_usage <span class="keyword">AS</span>
+
+<span class="comment">-- Cortex Agents (MCP, REST, Snowsight, SQL, Teams)</span>
+<span class="keyword">SELECT</span>
+  <span class="string">'cortex_agent'</span> <span class="keyword">AS</span> surface,
+  USER_NAME,
+  AGENT_NAME,
+  METADATA:<span class="string">'interaction_interface'</span>::<span class="keyword">STRING</span> <span class="keyword">AS</span> interface,
+  TOKENS_USED <span class="keyword">AS</span> tokens,
+  CREDITS_USED <span class="keyword">AS</span> credits,
+  START_TIME <span class="keyword">AS</span> ts
+<span class="keyword">FROM</span> SNOWFLAKE.ACCOUNT_USAGE.CORTEX_AGENT_USAGE_HISTORY
+
+<span class="keyword">UNION ALL</span>
+
+<span class="comment">-- CoWork / Snowflake Intelligence</span>
+<span class="keyword">SELECT</span>
+  <span class="string">'cowork'</span> <span class="keyword">AS</span> surface,
+  USER_NAME,
+  SNOWFLAKE_INTELLIGENCE_NAME <span class="keyword">AS</span> agent_name,
+  <span class="string">'snowsight'</span> <span class="keyword">AS</span> interface,
+  TOKENS_USED <span class="keyword">AS</span> tokens,
+  CREDITS_USED <span class="keyword">AS</span> credits,
+  START_TIME <span class="keyword">AS</span> ts
+<span class="keyword">FROM</span> SNOWFLAKE.ACCOUNT_USAGE.SNOWFLAKE_INTELLIGENCE_USAGE_HISTORY
+
+<span class="keyword">UNION ALL</span>
+
+<span class="comment">-- Cortex Code CLI</span>
+<span class="keyword">SELECT</span>
+  <span class="string">'cortex_code'</span> <span class="keyword">AS</span> surface,
+  USER_NAME,
+  <span class="keyword">NULL</span> <span class="keyword">AS</span> agent_name,
+  <span class="string">'cli'</span> <span class="keyword">AS</span> interface,
+  TOKENS <span class="keyword">AS</span> tokens,
+  CREDITS_USED <span class="keyword">AS</span> credits,
+  START_TIME <span class="keyword">AS</span> ts
+<span class="keyword">FROM</span> SNOWFLAKE.ACCOUNT_USAGE.CORTEX_CODE_CLI_USAGE_HISTORY;</pre>
+
+      <pre class="anim-fade"><span class="comment">-- Query the unified view: top consumers last 7 days</span>
+<span class="keyword">SELECT</span>
+  surface,
+  USER_NAME,
+  <span class="function">COUNT</span>(*) <span class="keyword">AS</span> requests,
+  <span class="function">SUM</span>(tokens) <span class="keyword">AS</span> total_tokens,
+  <span class="function">SUM</span>(credits) <span class="keyword">AS</span> total_credits
+<span class="keyword">FROM</span> analytics.cortex_unified_usage
+<span class="keyword">WHERE</span> ts >= <span class="function">DATEADD</span>(<span class="string">'day'</span>, <span class="number">-7</span>, <span class="function">CURRENT_TIMESTAMP</span>())
+<span class="keyword">GROUP BY</span> <span class="number">1</span>, <span class="number">2</span>
+<span class="keyword">ORDER BY</span> total_credits <span class="keyword">DESC</span>
+<span class="keyword">LIMIT</span> <span class="number">20</span>;</pre>
+    </section>
+
+    <!-- Slide 10: Resource Budgets for AI -->
+    <section class="slide" id="resource-budgets">
+      <h2>Resource Budgets for AI</h2>
+      <p style="margin-bottom: 2rem;">Proactive governance via budgets prevents runaway costs. Different surfaces support different budget mechanisms.</p>
+
+      <table class="anim-fade">
+        <thead>
+          <tr><th>Feature</th><th>Resource Budget</th><th>Shared Budget</th><th>Credit Limits</th><th>Notes</th></tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>Cortex Agents</td>
+            <td><span class="badge-green">Yes</span></td>
+            <td><span class="badge-green">Yes</span></td>
+            <td>&mdash;</td>
+            <td>Per-agent or per-schema budgets</td>
+          </tr>
+          <tr>
+            <td>CoWork / Intelligence</td>
+            <td><span class="badge-green">Yes</span></td>
+            <td><span class="badge-green">Yes</span></td>
+            <td>&mdash;</td>
+            <td>Per-intelligence-object budgets</td>
+          </tr>
+          <tr>
+            <td>Cortex Code CLI</td>
+            <td>&mdash;</td>
+            <td><span class="badge-green">Yes</span></td>
+            <td><span class="badge-green">Yes</span></td>
+            <td>Account-level credit limits</td>
+          </tr>
+          <tr>
+            <td>AI Functions (Complete, etc.)</td>
+            <td>&mdash;</td>
+            <td><span class="badge-green">Yes</span></td>
+            <td>&mdash;</td>
+            <td>Shared budget only</td>
+          </tr>
+          <tr>
+            <td>Cortex Search</td>
+            <td><span class="badge-green">Yes</span></td>
+            <td><span class="badge-green">Yes</span></td>
+            <td>&mdash;</td>
+            <td>Per-service budgets</td>
+          </tr>
+        </tbody>
+      </table>
+
+      <div class="two-col anim-fade">
+        <div class="card">
+          <h4>Threshold Alerts</h4>
+          <p>Budgets support notification thresholds (e.g., alert at 75%, 90%, 100%) via notification integrations (email, Slack, PagerDuty).</p>
+          <pre style="font-size: 0.75rem; margin-top: 0.75rem;"><span class="comment">-- Create a resource budget for an agent</span>
+<span class="keyword">CREATE RESOURCE BUDGET</span> sales_agent_budget
+  <span class="keyword">FOR</span> CORTEX_AGENT my_db.my_schema.sales_agent
+  <span class="keyword">CREDIT_LIMIT</span> = <span class="number">100</span>
+  <span class="keyword">FREQUENCY</span> = <span class="string">'MONTHLY'</span>;</pre>
+        </div>
+        <div class="card">
+          <h4>Automated Actions</h4>
+          <ul>
+            <li><strong>Notify</strong> &mdash; alert admins when thresholds are crossed</li>
+            <li><strong>Suspend</strong> &mdash; automatically block new requests at 100%</li>
+            <li><strong>Carry-over</strong> &mdash; unused budget rolls to next period (shared budgets)</li>
+          </ul>
+          <p style="margin-top: 0.75rem; font-size: 0.85rem; color: var(--text-muted);">Resource budgets enforce hard limits. Shared budgets provide pool-based governance with softer controls.</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- Slide 11: Query-Level Attribution -->
+    <section class="slide" id="query-attribution">
+      <h2>Query-Level Attribution</h2>
+      <p style="margin-bottom: 2rem;"><code>QUERY_ATTRIBUTION_HISTORY</code> captures warehouse compute costs for queries generated by agents &mdash; the "downstream" cost of AI-generated SQL.</p>
+
+      <div class="flow-diagram anim-fade">
+        <div class="flow-step">
+          <div class="step-label">User</div>
+          <div class="step-title">Asks Question</div>
+        </div>
+        <div class="flow-arrow">&rarr;</div>
+        <div class="flow-step">
+          <div class="step-label">Agent</div>
+          <div class="step-title">Generates SQL</div>
+        </div>
+        <div class="flow-arrow">&rarr;</div>
+        <div class="flow-step active">
+          <div class="step-label">Warehouse</div>
+          <div class="step-title">Executes Query</div>
+        </div>
+        <div class="flow-arrow">&rarr;</div>
+        <div class="flow-step">
+          <div class="step-label">Attribution</div>
+          <div class="step-title">Credits Logged</div>
+        </div>
+      </div>
+
+      <pre class="anim-fade"><span class="comment">-- Find warehouse costs generated by agent-driven queries</span>
+<span class="keyword">SELECT</span>
+  <span class="function">PARSE_JSON</span>(QUERY_TAG):<span class="string">'app'</span>::<span class="keyword">STRING</span> <span class="keyword">AS</span> app,
+  WAREHOUSE_NAME,
+  <span class="function">COUNT</span>(*) <span class="keyword">AS</span> queries,
+  <span class="function">SUM</span>(CREDITS_ATTRIBUTED_COMPUTE) <span class="keyword">AS</span> compute_credits,
+  <span class="function">AVG</span>(ELAPSED_TIME_MS) <span class="keyword">AS</span> avg_latency_ms
+<span class="keyword">FROM</span> SNOWFLAKE.ORGANIZATION_USAGE.QUERY_ATTRIBUTION_HISTORY
+<span class="keyword">WHERE</span> QUERY_TAG <span class="keyword">IS NOT NULL</span>
+  <span class="keyword">AND</span> <span class="function">TRY_PARSE_JSON</span>(QUERY_TAG) <span class="keyword">IS NOT NULL</span>
+  <span class="keyword">AND</span> START_TIME >= <span class="function">DATEADD</span>(<span class="string">'day'</span>, <span class="number">-7</span>, <span class="function">CURRENT_TIMESTAMP</span>())
+<span class="keyword">GROUP BY</span> <span class="number">1</span>, <span class="number">2</span>
+<span class="keyword">ORDER BY</span> compute_credits <span class="keyword">DESC</span>;</pre>
+
+      <div class="two-col anim-fade">
+        <div class="card">
+          <h4>Linking AI Cost to Compute Cost</h4>
+          <p>The full cost of an AI interaction is:</p>
+          <ul>
+            <li><strong>AI tokens</strong> (from CORTEX_AGENT_USAGE_HISTORY)</li>
+            <li><strong>+</strong> Warehouse compute (from QUERY_ATTRIBUTION_HISTORY)</li>
+            <li><strong>+</strong> Storage (Cortex Search indexes, if applicable)</li>
+          </ul>
+          <p style="margin-top: 0.5rem;">Link them via <code>QUERY_TAG</code> JSON or correlation on user + time window.</p>
+        </div>
+        <div class="card">
+          <h4>QUERY_TAG as the Link</h4>
+          <p>Cortex services automatically set <code>QUERY_TAG</code> on queries they generate. Parse the JSON to identify the source:</p>
+          <pre style="font-size: 0.75rem; margin-top: 0.5rem;"><span class="comment">-- Example QUERY_TAG values:</span>
+{<span class="string">"app"</span>:<span class="string">"cortex_code_cli"</span>}
+{<span class="string">"app"</span>:<span class="string">"cortex_agent"</span>,
+ <span class="string">"agent"</span>:<span class="string">"sales_agent"</span>}
+{<span class="string">"app"</span>:<span class="string">"my_mcp_client"</span>,
+ <span class="string">"client"</span>:<span class="string">"claude_desktop"</span>}</pre>
+        </div>
+      </div>
+    </section>
+
+    <!-- Slide 12: Key Takeaways -->
+    <section class="slide" id="takeaways">
+      <h2>Key Takeaways</h2>
+
+      <div class="anim-fade" style="display: grid; grid-template-columns: repeat(5, 1fr); gap: 0.75rem; width: 100%; margin: 2rem 0;">
+        <div class="flow-step">
+          <div class="step-label">1</div>
+          <div class="step-title">Surface Routing</div>
+        </div>
+        <div class="flow-step">
+          <div class="step-label">2</div>
+          <div class="step-title">Token Parsing</div>
+        </div>
+        <div class="flow-step">
+          <div class="step-label">3</div>
+          <div class="step-title">Tag Attribution</div>
+        </div>
+        <div class="flow-step active">
+          <div class="step-label">4</div>
+          <div class="step-title">Unified Views</div>
+        </div>
+        <div class="flow-step">
+          <div class="step-label">5</div>
+          <div class="step-title">Budget Governance</div>
+        </div>
+      </div>
+
+      <div class="card-grid anim-fade" style="margin-top: 2rem;">
+        <div class="card">
+          <h4>Summary</h4>
+          <ul>
+            <li>Use <code>interaction_interface</code> for surface routing &mdash; identifies MCP, SQL, UI, and Teams traffic</li>
+            <li>Parse <code>TOKENS_GRANULAR</code> for per-model, per-request cost breakdowns with cache visibility</li>
+            <li>Tag users and agents for cost center attribution across teams and projects</li>
+            <li>Build unified views via <code>UNION ALL</code> across surface-specific usage tables</li>
+            <li>Set resource budgets for proactive governance with threshold alerts</li>
+          </ul>
+        </div>
+        <div class="card">
+          <h4>Getting Started</h4>
+          <ul>
+            <li><strong>Step 1:</strong> Grant IMPORTED PRIVILEGES on SNOWFLAKE DB to your monitoring role</li>
+            <li><strong>Step 2:</strong> Query CORTEX_AGENT_USAGE_HISTORY to understand your current surface mix</li>
+            <li><strong>Step 3:</strong> Set up USER_TAGS for cost center grouping</li>
+            <li><strong>Step 4:</strong> Create the unified usage view</li>
+            <li><strong>Step 5:</strong> Configure resource budgets on high-traffic agents</li>
+            <li><strong>Step 6:</strong> Build a Streamlit dashboard for ongoing visibility</li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="context-box anim-fade" style="margin-top: 1.5rem;">
+        <p><strong>Feature to watch:</strong> Finer-grained MCP client identification is a known gap. Today all external API access is one bucket. Expect future <code>interaction_interface</code> values or metadata fields that distinguish between MCP client types (Claude, ChatGPT, Cursor, custom).</p>
+      </div>
+
+      <div class="highlight-box anim-fade" style="text-align: center; margin-top: 1rem;">
+        <p style="text-align: center;"><strong>Observability is not optional for production AI.</strong> Surface identification answers "who's using it?" Cost attribution answers "what does it cost?" Together they enable informed governance decisions.</p>
+      </div>
+    </section>
+
+  </main>
+
+  <script>
+    // Progress bar
+    const progressBar = document.querySelector('.progress-bar');
+    window.addEventListener('scroll', () => {
+      const scrollTop = window.scrollY;
+      const docHeight = document.documentElement.scrollHeight - window.innerHeight;
+      progressBar.style.width = (scrollTop / docHeight * 100) + '%';
+    });
+
+    // Scroll animations
+    const observer = new IntersectionObserver((entries) => {
+      entries.forEach(entry => {
+        if (entry.isIntersecting) {
+          entry.target.classList.add('visible');
+        }
+      });
+    }, { threshold: 0.1 });
+
+    document.querySelectorAll('.anim-fade').forEach(el => observer.observe(el));
+
+    // Active nav tracking
+    const sections = document.querySelectorAll('.slide, .part-divider');
+    const navLinks = document.querySelectorAll('.sidebar a');
+
+    window.addEventListener('scroll', () => {
+      let current = '';
+      sections.forEach(section => {
+        const sectionTop = section.offsetTop - 200;
+        if (window.scrollY >= sectionTop) {
+          current = section.getAttribute('id');
+        }
+      });
+      navLinks.forEach(link => {
+        link.classList.remove('active');
+        if (link.getAttribute('href') === '#' + current) {
+          link.classList.add('active');
+        }
+      });
+    });
+  </script>
+</body>
+</html>

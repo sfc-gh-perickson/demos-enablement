@@ -13,6 +13,7 @@ An internal enablement repository for Snowflake sales engineers and account exec
   - [Semantic View Description Quality](#semantic-view-description-quality)
   - [Many-Model Training](#many-model-training)
   - [Feature Store](#feature-store)
+  - [Cortex AI Observability](#cortex-ai-observability)
 - [Repository Structure](#repository-structure)
 - [Getting Started](#getting-started)
 - [Presentation Format](#presentation-format)
@@ -21,7 +22,7 @@ An internal enablement repository for Snowflake sales engineers and account exec
 
 ## Overview
 
-This repository contains five enablement modules covering key Cortex AI and Snowflake ML topics:
+This repository contains six enablement modules covering key Cortex AI and Snowflake ML topics:
 
 | Module | Audience | Format | Slides |
 |--------|----------|--------|--------|
@@ -30,8 +31,9 @@ This repository contains five enablement modules covering key Cortex AI and Snow
 | Semantic View Description Quality | SEs, AEs | Presentation | [View](https://sfc-gh-perickson.github.io/demos-enablement/semantic-view-description/presentations/semantic-view-description-quality.html) |
 | Many-Model Training | SEs, Data Scientists, ML Engineers | Presentation + Hands-on Lab | [View](https://sfc-gh-perickson.github.io/demos-enablement/many-model-training/presentations/many-model-training.html) |
 | Feature Store | SEs, Data Scientists, ML Engineers | Presentation + Hands-on Lab | [View](https://sfc-gh-perickson.github.io/demos-enablement/feature-store/presentations/feature-store.html) |
+| Cortex AI Observability | SEs, Platform Admins, Finance | Presentation + Hands-on Lab | [View](https://sfc-gh-perickson.github.io/demos-enablement/cortex-ai-observability/presentations/cortex-ai-observability.html) |
 
-Each module includes an HTML slide deck and companion speaker notes. The evaluations, many-model-training, and feature-store modules also provide complete hands-on labs with SQL setup and notebooks.
+Each module includes an HTML slide deck and companion speaker notes. The evaluations, many-model-training, feature-store, and cortex-ai-observability modules also provide complete hands-on labs with SQL setup and notebooks.
 
 ---
 
@@ -153,11 +155,53 @@ The lab walks through Feature Store setup, feature view registration, engineered
 
 ---
 
+
+### Cortex AI Observability
+
+**Location:** `cortex-ai-observability/`
+
+Covers how to identify which Cortex AI surfaces are driving usage (MCP, REST API, CoWork, Agent API, Cortex Code) and how to attribute costs to teams using built-in observability views.
+
+**Topics covered:**
+- Multi-surface architecture and the observability landscape
+- Surface identification via `interaction_interface` and usage views
+- MCP client identification patterns and limitations
+- Token-level and tag-based cost attribution
+- Resource budgets and governance
+- Query-level compute attribution
+
+**Contents:**
+
+| File | Description |
+|------|-------------|
+| [`presentations/cortex-ai-observability.html`](https://sfc-gh-perickson.github.io/demos-enablement/cortex-ai-observability/presentations/cortex-ai-observability.html) | Slide deck (12 slides) |
+| `presentations/cortex-ai-observability-speaker-notes.md` | Speaker notes with internal context |
+| `lab/setup.sql` | SQL setup script (database, unified view, simulated data) |
+| `lab/cortex-ai-observability-lab.ipynb` | Hands-on lab notebook (30-45 min) |
+
+#### Lab Prerequisites
+
+1. A Snowflake account with Cortex AI features enabled
+2. IMPORTED PRIVILEGES on the SNOWFLAKE database (ACCOUNTADMIN has this by default)
+3. Run `cortex-ai-observability/lab/setup.sql` to create the `OBSERVABILITY_LAB` database
+4. Open `cortex-ai-observability/lab/cortex-ai-observability-lab.ipynb` in Snowflake Notebooks
+
+The lab walks through querying real ACCOUNT_USAGE views to identify adoption patterns across Cortex AI surfaces and attribute costs by user, agent, model, and cost center.
+
+---
+
 ## Repository Structure
 
 ```
 enablement/
 ├── README.md
+├── cortex-ai-observability/
+│   ├── lab/
+│   │   ├── setup.sql
+│   │   └── cortex-ai-observability-lab.ipynb
+│   └── presentations/
+│       ├── cortex-ai-observability.html
+│       └── cortex-ai-observability-speaker-notes.md
 ├── agent_versioning/
 │   └── presentations/
 │       ├── cortex-agent-versioning.html
@@ -209,6 +253,7 @@ enablement/
 4. For hands-on labs:
    - **Evaluations:** Run `evaluations/lab/setup.sql` before starting the notebook
    - **Many-Model Training:** Run `many-model-training/lab/setup.sql` before starting the notebook
+   - **Cortex AI Observability:** Run `cortex-ai-observability/lab/setup.sql` before starting the notebook
 
 ---
 
