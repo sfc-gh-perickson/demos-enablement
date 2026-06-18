@@ -1,0 +1,1182 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Cortex Agent Multi-Tenancy: RBAC for External Users</title>
+  <style>
+    :root {
+      --bg: #0f1117;
+      --surface: #1a1d27;
+      --surface-alt: #232733;
+      --border: #2e3345;
+      --text: #e4e7ef;
+      --text-muted: #8b92a8;
+      --accent: #29b5f6;
+      --accent-dim: rgba(41, 181, 246, 0.12);
+      --green: #4caf50;
+      --orange: #ff9800;
+      --red: #f44336;
+      --purple: #ab47bc;
+      --sidebar-width: 240px;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Segoe UI', Roboto, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.6;
+      overflow-x: hidden;
+    }
+
+    /* Progress Bar */
+    .progress-bar {
+      position: fixed;
+      top: 0;
+      left: 0;
+      height: 3px;
+      background: var(--accent);
+      z-index: 1000;
+      transition: width 0.1s;
+    }
+
+    /* Sidebar */
+    .sidebar {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: var(--sidebar-width);
+      height: 100vh;
+      background: var(--surface);
+      border-right: 1px solid var(--border);
+      padding: 2rem 1.25rem;
+      overflow-y: auto;
+      z-index: 100;
+    }
+
+    .sidebar h3 {
+      font-size: 0.75rem;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      color: var(--accent);
+      margin-bottom: 1rem;
+      font-weight: 700;
+    }
+
+    .sidebar .nav-section {
+      margin-bottom: 1.5rem;
+    }
+
+    .sidebar .nav-section-title {
+      font-size: 0.65rem;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--text-muted);
+      margin-bottom: 0.5rem;
+      font-weight: 600;
+    }
+
+    .sidebar a {
+      display: block;
+      padding: 0.35rem 0.75rem;
+      color: var(--text-muted);
+      text-decoration: none;
+      font-size: 0.8rem;
+      border-radius: 4px;
+      margin-bottom: 2px;
+      transition: all 0.2s;
+    }
+
+    .sidebar a:hover {
+      color: var(--text);
+      background: var(--surface-alt);
+    }
+
+    .sidebar a.active {
+      color: var(--accent);
+      background: var(--accent-dim);
+    }
+
+    .sidebar .github-link {
+      position: absolute;
+      bottom: 1.5rem;
+      left: 1.25rem;
+      right: 1.25rem;
+      padding: 0.5rem 0.75rem;
+      background: var(--surface-alt);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      color: var(--text-muted);
+      font-size: 0.75rem;
+      text-align: center;
+    }
+
+    .sidebar .github-link:hover {
+      border-color: var(--accent);
+      color: var(--accent);
+    }
+
+    /* Main Content */
+    .main {
+      margin-left: var(--sidebar-width);
+      min-height: 100vh;
+    }
+
+    .slide {
+      padding: 4rem 3rem;
+      max-width: 1200px;
+      margin: 0 auto;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .slide h2 {
+      font-size: 1.75rem;
+      font-weight: 700;
+      margin-bottom: 0.75rem;
+      background: linear-gradient(135deg, var(--text), var(--accent));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+
+    .slide h3 {
+      font-size: 1.1rem;
+      font-weight: 600;
+      color: var(--text);
+      margin-bottom: 0.5rem;
+    }
+
+    .slide h4 {
+      font-size: 0.95rem;
+      font-weight: 600;
+      color: var(--accent);
+      margin-bottom: 0.5rem;
+    }
+
+    .slide p {
+      color: var(--text-muted);
+      font-size: 0.95rem;
+    }
+
+    .slide ul, .slide ol {
+      color: var(--text-muted);
+      font-size: 0.9rem;
+      padding-left: 1.25rem;
+    }
+
+    .slide li {
+      margin-bottom: 0.35rem;
+    }
+
+    /* Hero */
+    .hero {
+      padding: 6rem 3rem 4rem;
+      text-align: center;
+      max-width: 1200px;
+      margin: 0 auto;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .hero h1 {
+      font-size: 2.5rem;
+      font-weight: 800;
+      background: linear-gradient(135deg, var(--text) 0%, var(--accent) 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+      margin-bottom: 1rem;
+      line-height: 1.2;
+    }
+
+    .hero .subtitle {
+      font-size: 1.1rem;
+      color: var(--text-muted);
+      margin-bottom: 2.5rem;
+    }
+
+    /* Stat Grid */
+    .stat-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 1rem;
+      margin: 2rem 0;
+    }
+
+    .stat-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 1.25rem;
+      text-align: center;
+    }
+
+    .stat-card .stat-value {
+      font-size: 1.5rem;
+      font-weight: 700;
+      color: var(--accent);
+      display: block;
+    }
+
+    .stat-card .stat-label {
+      font-size: 0.8rem;
+      color: var(--text-muted);
+      margin-top: 0.25rem;
+    }
+
+    /* Card Grid */
+    .card-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+      gap: 1rem;
+      margin: 1.5rem 0;
+    }
+
+    .card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 1.25rem;
+    }
+
+    .card:hover {
+      border-color: var(--accent);
+    }
+
+    /* Two Column */
+    .two-col {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 1.5rem;
+      margin: 1.5rem 0;
+    }
+
+    /* Three Column */
+    .three-col {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 1rem;
+      margin: 1.5rem 0;
+    }
+
+    /* Highlight Box */
+    .highlight-box {
+      background: var(--accent-dim);
+      border: 1px solid var(--accent);
+      border-radius: 8px;
+      padding: 1.25rem;
+      margin: 1.5rem 0;
+    }
+
+    .highlight-box p {
+      color: var(--text);
+    }
+
+    /* Context Box */
+    .context-box {
+      background: var(--surface-alt);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 1.25rem;
+      margin: 1.5rem 0;
+    }
+
+    .context-box p {
+      color: var(--text);
+    }
+
+    /* Warning Box */
+    .warning-box {
+      background: rgba(255, 152, 0, 0.08);
+      border: 1px solid var(--orange);
+      border-radius: 8px;
+      padding: 1.25rem;
+      margin: 1.5rem 0;
+    }
+
+    .warning-box p {
+      color: var(--text);
+    }
+
+    /* Info Box */
+    .info-box {
+      background: rgba(171, 71, 188, 0.08);
+      border: 1px solid var(--purple);
+      border-radius: 8px;
+      padding: 1rem;
+      margin: 1.5rem 0;
+    }
+
+    .info-box p {
+      color: var(--text);
+      font-size: 0.85rem;
+    }
+
+    /* Flow Diagram */
+    .flow-diagram {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.5rem;
+      margin: 2rem 0;
+      flex-wrap: wrap;
+    }
+
+    .flow-step {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 1rem 1.25rem;
+      text-align: center;
+      min-width: 100px;
+    }
+
+    .flow-step.active {
+      border-color: var(--accent);
+      background: var(--accent-dim);
+    }
+
+    .flow-step .step-label {
+      font-size: 0.7rem;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: var(--text-muted);
+      margin-bottom: 0.25rem;
+    }
+
+    .flow-step .step-title {
+      font-size: 0.85rem;
+      font-weight: 600;
+      color: var(--text);
+    }
+
+    .flow-arrow {
+      color: var(--text-muted);
+      font-size: 1.25rem;
+    }
+
+    /* Tables */
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 1rem 0;
+      font-size: 0.85rem;
+    }
+
+    th, td {
+      padding: 0.6rem 0.75rem;
+      border: 1px solid var(--border);
+      text-align: left;
+    }
+
+    th {
+      background: var(--surface-alt);
+      font-weight: 600;
+      color: var(--text);
+    }
+
+    td {
+      color: var(--text-muted);
+    }
+
+    /* Code */
+    pre {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 1.25rem;
+      overflow-x: auto;
+      font-family: 'SF Mono', 'Fira Code', 'JetBrains Mono', monospace;
+      font-size: 0.8rem;
+      line-height: 1.7;
+      margin: 1rem 0;
+    }
+
+    code {
+      font-family: 'SF Mono', 'Fira Code', 'JetBrains Mono', monospace;
+      background: var(--surface-alt);
+      padding: 0.15rem 0.4rem;
+      border-radius: 3px;
+      font-size: 0.85rem;
+    }
+
+    .keyword { color: #c792ea; }
+    .string { color: #c3e88d; }
+    .function { color: #82aaff; }
+    .comment { color: #546e7a; }
+    .number { color: #f78c6c; }
+
+    /* Badges */
+    .badge-green {
+      background: rgba(76, 175, 80, 0.15);
+      color: var(--green);
+      padding: 0.15rem 0.5rem;
+      border-radius: 4px;
+      font-size: 0.75rem;
+      font-weight: 600;
+    }
+
+    .badge-orange {
+      background: rgba(255, 152, 0, 0.15);
+      color: var(--orange);
+      padding: 0.15rem 0.5rem;
+      border-radius: 4px;
+      font-size: 0.75rem;
+      font-weight: 600;
+    }
+
+    .badge-red {
+      background: rgba(244, 67, 54, 0.15);
+      color: var(--red);
+      padding: 0.15rem 0.5rem;
+      border-radius: 4px;
+      font-size: 0.75rem;
+      font-weight: 600;
+    }
+
+    .badge-purple {
+      background: rgba(171, 71, 188, 0.15);
+      color: var(--purple);
+      padding: 0.15rem 0.5rem;
+      border-radius: 4px;
+      font-size: 0.75rem;
+      font-weight: 600;
+    }
+
+    .badge-blue {
+      display: inline-block;
+      background: var(--accent);
+      color: #fff;
+      padding: 0.2rem 0.6rem;
+      border-radius: 99px;
+      font-size: 0.7rem;
+      font-weight: 600;
+      letter-spacing: 0.02em;
+      text-decoration: none;
+    }
+    .badge-blue:hover {
+      opacity: 0.85;
+    }
+
+    /* Part Divider */
+    .part-divider {
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      padding: 4rem 3rem;
+      max-width: 1200px;
+      margin: 0 auto;
+    }
+
+    .part-divider h2 {
+      font-size: 1rem;
+      font-weight: 600;
+      color: var(--accent);
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      margin-bottom: 0.5rem;
+    }
+
+    .part-divider h1 {
+      font-size: 2rem;
+      font-weight: 700;
+      color: var(--text);
+      background: none;
+      -webkit-text-fill-color: var(--text);
+    }
+
+    /* Animations */
+    .anim-fade {
+      opacity: 0;
+      transform: translateY(20px);
+      transition: opacity 0.6s ease, transform 0.6s ease;
+    }
+
+    .anim-fade.visible {
+      opacity: 1;
+      transform: translateY(0);
+    }
+
+    /* Responsive */
+    @media (max-width: 900px) {
+      .sidebar { display: none; }
+      .main { margin-left: 0; }
+      .stat-grid { grid-template-columns: repeat(2, 1fr); }
+      .two-col { grid-template-columns: 1fr; }
+      .three-col { grid-template-columns: 1fr; }
+      .hero h1 { font-size: 1.75rem; }
+    }
+  </style>
+</head>
+<body>
+  <div class="progress-bar"></div>
+
+  <!-- Sidebar -->
+  <nav class="sidebar">
+    <h3>Agent Multi-Tenancy</h3>
+
+    <div class="nav-section">
+      <div class="nav-section-title">Concepts</div>
+      <a href="#hero">Overview</a>
+      <a href="#the-problem">The Problem</a>
+      <a href="#architecture">Architecture</a>
+    </div>
+
+    <div class="nav-section">
+      <div class="nav-section-title">Implementation</div>
+      <a href="#session-attributes">Session Attributes</a>
+      <a href="#row-access-policies">Row Access Policies</a>
+      <a href="#column-masking">Column Masking</a>
+      <a href="#entitlements-table">Entitlements Table</a>
+    </div>
+
+    <div class="nav-section">
+      <div class="nav-section-title">Operations</div>
+      <a href="#scaling-simply">Scaling Simply</a>
+      <a href="#agent-run-api">The agent:run API</a>
+      <a href="#best-practices">Best Practices</a>
+    </div>
+
+    <div class="nav-section">
+      <div class="nav-section-title">Production</div>
+      <a href="#audit-observability">Audit &amp; Observability</a>
+      <a href="#takeaways">Key Takeaways</a>
+    </div>
+
+    <a href="https://github.com/sfc-gh-perickson/demos-enablement/tree/main/cortex-agent-multi-tenancy" class="github-link" target="_blank">View on GitHub &rarr;</a>
+  </nav>
+
+  <!-- Main Content -->
+  <main class="main">
+
+    <!-- Slide 1: Hero -->
+    <section class="slide hero" id="hero">
+      <h1>Cortex Agent Multi-Tenancy:<br/>RBAC for 10,000 Users Without Snowflake Accounts</h1>
+      <p class="subtitle">One agent, one service account, per-user data isolation via session attributes and security policies.</p>
+
+      <div class="stat-grid anim-fade">
+        <div class="stat-card">
+          <span class="stat-value">10K+</span>
+          <span class="stat-label">External users &mdash; zero Snowflake accounts needed</span>
+        </div>
+        <div class="stat-card">
+          <span class="stat-value">Row + Column</span>
+          <span class="stat-label">Granular data filtering per user</span>
+        </div>
+        <div class="stat-card">
+          <span class="stat-value">Immutable</span>
+          <span class="stat-label">Session attributes can't be bypassed</span>
+        </div>
+        <div class="stat-card">
+          <span class="stat-value">No DDL</span>
+          <span class="stat-label">Add users with INSERT, not role grants</span>
+        </div>
+      </div>
+
+      <div class="context-box anim-fade">
+        <p><strong>Core pattern:</strong> One agent, one service account, per-user data isolation via session attributes + row access policies + masking policies. Your application authenticates users, passes identity as immutable variables, and Snowflake policies enforce boundaries on every query the agent generates.</p>
+      </div>
+
+      <p style="margin-top: 1rem;"><a href="https://docs.snowflake.com/en/user-guide/snowflake-cortex/cortex-agents-multi-tenancy" target="_blank" class="badge-blue">Docs</a></p>
+    </section>
+
+    <!-- Slide 2: The Problem -->
+    <section class="slide" id="the-problem">
+      <h2>The Problem</h2>
+      <p style="margin-bottom: 1.5rem;">Why traditional Snowflake RBAC doesn't scale for external-facing AI agents.</p>
+
+      <div class="card-grid anim-fade">
+        <div class="card">
+          <h4>External Users</h4>
+          <p>10K users in your IdP with no Snowflake accounts. They access your agent via your app &mdash; they don't log in to Snowflake directly.</p>
+        </div>
+        <div class="card">
+          <h4>Per-User Filtering</h4>
+          <p>Each user should only see their own data &mdash; rows AND columns. A sales rep sees their deals; a customer sees their invoices.</p>
+        </div>
+        <div class="card">
+          <h4>No Role Explosion</h4>
+          <p>Can't create 10K Snowflake roles. Can't run 10K <code>GRANT</code> statements. Doesn't scale operationally or financially.</p>
+        </div>
+        <div class="card">
+          <h4>Agent-Generated SQL</h4>
+          <p>The agent writes SQL you can't predict. You can't rely on the agent to add WHERE clauses &mdash; policies must enforce boundaries regardless of what SQL is generated.</p>
+        </div>
+      </div>
+
+      <div class="highlight-box anim-fade">
+        <p><strong>Traditional RBAC requires a Snowflake user per person.</strong> Multi-tenancy decouples identity from Snowflake accounts. Your app owns authentication; Snowflake policies enforce data isolation based on session attributes you pass at invocation time.</p>
+      </div>
+    </section>
+
+    <!-- Slide 3: Architecture Overview -->
+    <section class="slide" id="architecture">
+      <h2>Architecture Overview</h2>
+      <p style="margin-bottom: 1.5rem;">End-to-end request flow from your application to filtered results.</p>
+
+      <div class="flow-diagram anim-fade">
+        <div class="flow-step">
+          <div class="step-label">Step 1</div>
+          <div class="step-title">Your App Authenticates User</div>
+        </div>
+        <div class="flow-arrow">&rarr;</div>
+        <div class="flow-step">
+          <div class="step-label">Step 2</div>
+          <div class="step-title">agent:run API (passes variables)</div>
+        </div>
+        <div class="flow-arrow">&rarr;</div>
+        <div class="flow-step active">
+          <div class="step-label">Step 3</div>
+          <div class="step-title">Session Attributes Set</div>
+        </div>
+        <div class="flow-arrow">&rarr;</div>
+        <div class="flow-step">
+          <div class="step-label">Step 4</div>
+          <div class="step-title">Agent Generates SQL</div>
+        </div>
+        <div class="flow-arrow">&rarr;</div>
+        <div class="flow-step">
+          <div class="step-label">Step 5</div>
+          <div class="step-title">RAP + Masking Filter</div>
+        </div>
+        <div class="flow-arrow">&rarr;</div>
+        <div class="flow-step">
+          <div class="step-label">Step 6</div>
+          <div class="step-title">Filtered Results</div>
+        </div>
+      </div>
+
+      <div class="context-box anim-fade">
+        <p><strong>Shared Responsibility Model:</strong> Your application is responsible for authenticating users and mapping their identity to the correct variables. Snowflake is responsible for enforcing data boundaries via row access policies and masking policies. The agent never sees data outside the caller's authorized scope &mdash; even if it generates a <code>SELECT *</code> with no WHERE clause.</p>
+      </div>
+
+      <p style="margin-top: 1rem;">
+        <a href="https://docs.snowflake.com/en/user-guide/snowflake-cortex/cortex-agents-multi-tenancy" target="_blank" class="badge-blue">Docs</a>
+        <a href="https://docs.snowflake.com/en/user-guide/snowflake-cortex/cortex-agents-setup" target="_blank" class="badge-blue" style="margin-left: 0.5rem;">Agent Setup</a>
+      </p>
+    </section>
+
+    <!-- Slide 4: Session Attributes -->
+    <section class="slide" id="session-attributes">
+      <h2>Session Attributes</h2>
+      <p style="margin-bottom: 1.5rem;">Immutable variables passed at invocation time &mdash; the foundation of multi-tenant isolation.</p>
+
+      <pre class="anim-fade"><span class="comment">-- The agent:run API call with immutable session attributes</span>
+POST /api/v2/cortex/agent:run
+
+{
+  <span class="string">"agent_name"</span>: <span class="string">"my_db.my_schema.support_agent"</span>,
+  <span class="string">"messages"</span>: [{<span class="string">"role"</span>: <span class="string">"user"</span>, <span class="string">"content"</span>: <span class="string">"Show my recent orders"</span>}],
+  <span class="string">"variables"</span>: {
+    <span class="string">"tenant_id"</span>: {
+      <span class="string">"value"</span>: <span class="string">"acme_corp"</span>,
+      <span class="string">"is_immutable_session_attribute"</span>: <span class="number">true</span>
+    },
+    <span class="string">"user_id"</span>: {
+      <span class="string">"value"</span>: <span class="string">"usr_12345"</span>,
+      <span class="string">"is_immutable_session_attribute"</span>: <span class="number">true</span>
+    },
+    <span class="string">"access_level"</span>: {
+      <span class="string">"value"</span>: <span class="string">"standard"</span>,
+      <span class="string">"is_immutable_session_attribute"</span>: <span class="number">true</span>
+    }
+  }
+}</pre>
+
+      <div class="three-col anim-fade">
+        <div class="card">
+          <h4>Immutable</h4>
+          <p>Cannot be modified by generated SQL, code execution, or tool invocation. A prompt injection attempting <code>ALTER SESSION SET</code> will fail.</p>
+        </div>
+        <div class="card">
+          <h4>Session-Scoped</h4>
+          <p>Persist for the duration of the interaction. Every SQL statement the agent generates within the session sees these attributes.</p>
+        </div>
+        <div class="card">
+          <h4>Multiple Attributes</h4>
+          <p>Pass <code>tenant_id</code>, <code>user_id</code>, <code>access_level</code>, or any custom dimension simultaneously. Policies can reference any combination.</p>
+        </div>
+      </div>
+
+      <div class="warning-box anim-fade">
+        <p><strong>Critical:</strong> Always set <code>is_immutable_session_attribute: true</code>. Without this flag, the agent's generated SQL or tool invocations could potentially <code>ALTER SESSION SET</code> a different value, bypassing your security boundaries.</p>
+      </div>
+
+      <p style="margin-top: 1rem;"><a href="https://docs.snowflake.com/en/sql-reference/functions/sys_context" target="_blank" class="badge-blue">Docs: SYS_CONTEXT</a></p>
+    </section>
+
+    <!-- Slide 5: Row Access Policies -->
+    <section class="slide" id="row-access-policies">
+      <h2>Row Access Policies</h2>
+      <p style="margin-bottom: 1.5rem;">Automatically filter rows based on the caller's session attributes &mdash; enforced on every query, regardless of SQL shape.</p>
+
+      <pre class="anim-fade"><span class="comment">-- Create a row access policy using session attributes</span>
+<span class="keyword">CREATE OR REPLACE</span> ROW ACCESS POLICY tenant_isolation_policy
+  <span class="keyword">AS</span> (tenant_id_col <span class="keyword">VARCHAR</span>) <span class="keyword">RETURNS</span> <span class="keyword">BOOLEAN</span> -&gt;
+    tenant_id_col = <span class="function">SYS_CONTEXT</span>(<span class="string">'SNOWFLAKE$SESSION_ATTRIBUTES'</span>, <span class="string">'tenant_id'</span>)
+;</pre>
+
+      <pre class="anim-fade"><span class="comment">-- Apply the policy to a table</span>
+<span class="keyword">ALTER TABLE</span> orders
+  <span class="keyword">ADD</span> ROW ACCESS POLICY tenant_isolation_policy
+  <span class="keyword">ON</span> (tenant_id);</pre>
+
+      <div class="two-col anim-fade">
+        <div class="card">
+          <h4>How It Works</h4>
+          <p>The policy evaluates on <strong>every query</strong> the agent runs against the table. If the agent generates <code>SELECT * FROM orders</code>, only rows where <code>tenant_id</code> matches the session attribute are returned.</p>
+          <ul style="margin-top: 0.75rem;">
+            <li>No WHERE clause needed in generated SQL</li>
+            <li>Cannot be bypassed by the agent</li>
+            <li>Works with JOINs, CTEs, subqueries</li>
+            <li>Zero performance impact on partition pruning</li>
+          </ul>
+        </div>
+        <div class="card">
+          <h4>Compound Policies</h4>
+          <p>Combine multiple attributes for fine-grained control:</p>
+          <pre style="font-size: 0.75rem; margin-top: 0.75rem;"><span class="keyword">CREATE OR REPLACE</span> ROW ACCESS POLICY user_data_policy
+  <span class="keyword">AS</span> (tenant_col <span class="keyword">VARCHAR</span>, user_col <span class="keyword">VARCHAR</span>)
+  <span class="keyword">RETURNS</span> <span class="keyword">BOOLEAN</span> -&gt;
+    tenant_col = <span class="function">SYS_CONTEXT</span>(
+      <span class="string">'SNOWFLAKE$SESSION_ATTRIBUTES'</span>,
+      <span class="string">'tenant_id'</span>)
+    <span class="keyword">AND</span> user_col = <span class="function">SYS_CONTEXT</span>(
+      <span class="string">'SNOWFLAKE$SESSION_ATTRIBUTES'</span>,
+      <span class="string">'user_id'</span>)
+;</pre>
+        </div>
+      </div>
+
+      <p style="margin-top: 1rem;">
+        <a href="https://docs.snowflake.com/en/sql-reference/sql/create-row-access-policy" target="_blank" class="badge-blue">Docs: CREATE ROW ACCESS POLICY</a>
+        <a href="https://docs.snowflake.com/en/sql-reference/functions/sys_context" target="_blank" class="badge-blue" style="margin-left: 0.5rem;">Docs: SYS_CONTEXT</a>
+      </p>
+    </section>
+
+    <!-- Slide 6: Column Masking -->
+    <section class="slide" id="column-masking">
+      <h2>Column Masking Policies</h2>
+      <p style="margin-bottom: 1.5rem;">Hide or mask sensitive columns based on the caller's access level &mdash; complementing row-level filtering with column-level protection.</p>
+
+      <div class="two-col anim-fade">
+        <div class="card">
+          <h4>Simple: Direct Attribute Check</h4>
+          <p style="margin-bottom: 0.75rem;">Mask based on a single session attribute value:</p>
+          <pre style="font-size: 0.75rem;"><span class="comment">-- Mask SSN unless access_level = 'admin'</span>
+<span class="keyword">CREATE OR REPLACE</span> MASKING POLICY ssn_mask
+  <span class="keyword">AS</span> (val <span class="keyword">VARCHAR</span>) <span class="keyword">RETURNS</span> <span class="keyword">VARCHAR</span> -&gt;
+  <span class="keyword">CASE</span>
+    <span class="keyword">WHEN</span> <span class="function">SYS_CONTEXT</span>(
+      <span class="string">'SNOWFLAKE$SESSION_ATTRIBUTES'</span>,
+      <span class="string">'access_level'</span>) = <span class="string">'admin'</span>
+    <span class="keyword">THEN</span> val
+    <span class="keyword">ELSE</span> <span class="string">'***-**-****'</span>
+  <span class="keyword">END</span>;</pre>
+        </div>
+        <div class="card">
+          <h4>Complex: UDF + Entitlements Lookup</h4>
+          <p style="margin-bottom: 0.75rem;">Use a secure UDF to check an entitlements table:</p>
+          <pre style="font-size: 0.75rem;"><span class="comment">-- Secure UDF checks entitlements</span>
+<span class="keyword">CREATE OR REPLACE SECURE FUNCTION</span>
+  has_column_access(col_name <span class="keyword">VARCHAR</span>)
+  <span class="keyword">RETURNS BOOLEAN</span>
+<span class="keyword">AS</span>
+$$
+  <span class="keyword">SELECT</span> <span class="function">COUNT</span>(*) > <span class="number">0</span>
+  <span class="keyword">FROM</span> entitlements.column_access
+  <span class="keyword">WHERE</span> external_user_id = <span class="function">SYS_CONTEXT</span>(
+    <span class="string">'SNOWFLAKE$SESSION_ATTRIBUTES'</span>,
+    <span class="string">'user_id'</span>)
+  <span class="keyword">AND</span> column_name = col_name
+$$;
+
+<span class="comment">-- Masking policy using the UDF</span>
+<span class="keyword">CREATE OR REPLACE</span> MASKING POLICY
+  entitlement_mask
+  <span class="keyword">AS</span> (val <span class="keyword">VARCHAR</span>) <span class="keyword">RETURNS</span> <span class="keyword">VARCHAR</span> -&gt;
+  <span class="keyword">CASE</span>
+    <span class="keyword">WHEN</span> has_column_access(<span class="string">'salary'</span>)
+    <span class="keyword">THEN</span> val
+    <span class="keyword">ELSE</span> <span class="string">'[REDACTED]'</span>
+  <span class="keyword">END</span>;</pre>
+        </div>
+      </div>
+
+      <div class="context-box anim-fade">
+        <p><strong>When to use each pattern:</strong> The direct attribute check is simpler and faster &mdash; use it when access rules map cleanly to a small set of levels (admin/standard/restricted). The UDF pattern supports arbitrary per-user, per-column entitlements stored in a table &mdash; use it when permissions are dynamic and user-specific.</p>
+      </div>
+
+      <p style="margin-top: 1rem;"><a href="https://docs.snowflake.com/en/user-guide/security-column-intro" target="_blank" class="badge-blue">Docs: Column-Level Security</a></p>
+    </section>
+
+    <!-- Slide 7: Entitlements Table Design -->
+    <section class="slide" id="entitlements-table">
+      <h2>Entitlements Table Design</h2>
+      <p style="margin-bottom: 1.5rem;">Your RBAC control plane &mdash; a regular Snowflake table you populate from your IdP, a CSV, or an API sync.</p>
+
+      <pre class="anim-fade"><span class="comment">-- The entitlements table: your external RBAC store</span>
+<span class="keyword">CREATE TABLE</span> entitlements.user_entitlements (
+  external_user_id  <span class="keyword">VARCHAR</span>    <span class="keyword">NOT NULL</span>,
+  tenant_id         <span class="keyword">VARCHAR</span>    <span class="keyword">NOT NULL</span>,
+  access_level      <span class="keyword">VARCHAR</span>    <span class="keyword">DEFAULT</span> <span class="string">'standard'</span>,
+  allowed_regions   <span class="keyword">ARRAY</span>,
+  allowed_columns   <span class="keyword">ARRAY</span>,
+  created_at        <span class="keyword">TIMESTAMP</span>  <span class="keyword">DEFAULT</span> <span class="function">CURRENT_TIMESTAMP</span>(),
+  updated_at        <span class="keyword">TIMESTAMP</span>  <span class="keyword">DEFAULT</span> <span class="function">CURRENT_TIMESTAMP</span>(),
+  <span class="keyword">PRIMARY KEY</span> (external_user_id, tenant_id)
+);</pre>
+
+      <pre class="anim-fade"><span class="comment">-- Add users via INSERT &mdash; no DDL, no role grants</span>
+<span class="keyword">INSERT INTO</span> entitlements.user_entitlements
+  (external_user_id, tenant_id, access_level, allowed_regions)
+<span class="keyword">VALUES</span>
+  (<span class="string">'usr_12345'</span>, <span class="string">'acme_corp'</span>, <span class="string">'admin'</span>, <span class="function">ARRAY_CONSTRUCT</span>(<span class="string">'US'</span>, <span class="string">'EU'</span>)),
+  (<span class="string">'usr_67890'</span>, <span class="string">'acme_corp'</span>, <span class="string">'standard'</span>, <span class="function">ARRAY_CONSTRUCT</span>(<span class="string">'US'</span>)),
+  (<span class="string">'usr_11111'</span>, <span class="string">'beta_inc'</span>, <span class="string">'standard'</span>, <span class="function">ARRAY_CONSTRUCT</span>(<span class="string">'EU'</span>));
+
+<span class="comment">-- Bulk load from your IdP sync</span>
+<span class="keyword">COPY INTO</span> entitlements.user_entitlements
+  <span class="keyword">FROM</span> @my_stage/idp_export/users.csv
+  FILE_FORMAT = (TYPE = <span class="string">'CSV'</span> SKIP_HEADER = <span class="number">1</span>);</pre>
+
+      <div class="highlight-box anim-fade">
+        <p><strong>This is your RBAC control plane.</strong> A regular table you populate from your IdP, a CSV, or an API sync. No Snowflake users, no roles, no grants. When your policies reference this table via a secure UDF, adding or removing access is just an INSERT or DELETE.</p>
+      </div>
+    </section>
+
+    <!-- Slide 8: Scaling Simply -->
+    <section class="slide" id="scaling-simply">
+      <h2>Scaling Simply</h2>
+      <p style="margin-bottom: 1.5rem;">Compare the multi-tenancy approach against traditional Snowflake RBAC at 10K users.</p>
+
+      <table class="anim-fade">
+        <thead>
+          <tr><th>Operation</th><th>Multi-Tenancy (This Pattern)</th><th>Traditional RBAC</th></tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><strong>Add user</strong></td>
+            <td><code>INSERT INTO user_entitlements</code></td>
+            <td><code>CREATE USER</code> + <code>CREATE ROLE</code> + <code>GRANT ROLE</code> + <code>GRANT PRIVILEGES</code></td>
+          </tr>
+          <tr>
+            <td><strong>Change permissions</strong></td>
+            <td><code>UPDATE user_entitlements SET access_level = ...</code></td>
+            <td><code>REVOKE ROLE</code> + <code>GRANT ROLE</code> (new role)</td>
+          </tr>
+          <tr>
+            <td><strong>Remove access</strong></td>
+            <td><code>DELETE FROM user_entitlements</code></td>
+            <td><code>DROP USER</code> + <code>DROP ROLE</code> (cleanup)</td>
+          </tr>
+          <tr>
+            <td><strong>New tenant</strong></td>
+            <td><code>INSERT</code> (rows for new tenant's users)</td>
+            <td>New role hierarchy + grants on all relevant objects</td>
+          </tr>
+          <tr>
+            <td><strong>Bulk onboard 1000 users</strong></td>
+            <td><code>COPY INTO</code> from CSV/stage</td>
+            <td>1000x <code>CREATE USER</code> + 1000x <code>GRANT</code> statements</td>
+          </tr>
+        </tbody>
+      </table>
+
+      <div class="two-col anim-fade">
+        <div class="card">
+          <h4>Multi-Tenancy Advantages</h4>
+          <ul>
+            <li>No DDL required for user lifecycle</li>
+            <li>No Snowflake account costs per user</li>
+            <li>Policy changes apply to all users instantly</li>
+            <li>Bulk operations via standard DML</li>
+            <li>Entitlements auditable via standard queries</li>
+          </ul>
+        </div>
+        <div class="card">
+          <h4>When Traditional RBAC is Better</h4>
+          <ul>
+            <li>Internal users who need Snowsight access</li>
+            <li>Users who run their own SQL directly</li>
+            <li>Compliance requiring named Snowflake accounts</li>
+            <li>Fewer than ~50 users with stable roles</li>
+          </ul>
+        </div>
+      </div>
+    </section>
+
+    <!-- Slide 9: The agent:run API Call -->
+    <section class="slide" id="agent-run-api">
+      <h2>The agent:run API Call</h2>
+      <p style="margin-bottom: 1.5rem;">Full example: your application layer maps authenticated users to session variables.</p>
+
+      <pre class="anim-fade"><span class="comment">-- Full agent:run request with multiple variables</span>
+POST /api/v2/cortex/agent:run
+Authorization: Bearer &lt;your_service_account_token&gt;
+
+{
+  <span class="string">"agent_name"</span>: <span class="string">"analytics_db.agents.customer_support"</span>,
+  <span class="string">"messages"</span>: [
+    {<span class="string">"role"</span>: <span class="string">"user"</span>, <span class="string">"content"</span>: <span class="string">"What are my open support tickets?"</span>}
+  ],
+  <span class="string">"variables"</span>: {
+    <span class="string">"tenant_id"</span>: {
+      <span class="string">"value"</span>: <span class="string">"acme_corp"</span>,
+      <span class="string">"is_immutable_session_attribute"</span>: <span class="number">true</span>
+    },
+    <span class="string">"user_id"</span>: {
+      <span class="string">"value"</span>: <span class="string">"usr_12345"</span>,
+      <span class="string">"is_immutable_session_attribute"</span>: <span class="number">true</span>
+    },
+    <span class="string">"access_level"</span>: {
+      <span class="string">"value"</span>: <span class="string">"standard"</span>,
+      <span class="string">"is_immutable_session_attribute"</span>: <span class="number">true</span>
+    }
+  }
+}</pre>
+
+      <pre class="anim-fade"><span class="comment">-- Your application layer (Python example)</span>
+<span class="keyword">def</span> <span class="function">invoke_agent</span>(authenticated_user, question):
+    <span class="comment"># Map your app's user to Snowflake session variables</span>
+    user_entitlements = get_entitlements(authenticated_user.id)
+
+    response = requests.post(
+        <span class="string">f"https://{account}.snowflakecomputing.com/api/v2/cortex/agent:run"</span>,
+        headers={<span class="string">"Authorization"</span>: <span class="string">f"Bearer {service_token}"</span>},
+        json={
+            <span class="string">"agent_name"</span>: <span class="string">"analytics_db.agents.customer_support"</span>,
+            <span class="string">"messages"</span>: [{<span class="string">"role"</span>: <span class="string">"user"</span>, <span class="string">"content"</span>: question}],
+            <span class="string">"variables"</span>: {
+                <span class="string">"tenant_id"</span>: {
+                    <span class="string">"value"</span>: user_entitlements.tenant_id,
+                    <span class="string">"is_immutable_session_attribute"</span>: True
+                },
+                <span class="string">"user_id"</span>: {
+                    <span class="string">"value"</span>: authenticated_user.id,
+                    <span class="string">"is_immutable_session_attribute"</span>: True
+                },
+                <span class="string">"access_level"</span>: {
+                    <span class="string">"value"</span>: user_entitlements.access_level,
+                    <span class="string">"is_immutable_session_attribute"</span>: True
+                }
+            }
+        }
+    )
+    <span class="keyword">return</span> response.json()</pre>
+
+      <div class="context-box anim-fade">
+        <p><strong>Key point:</strong> The service account token authenticates to Snowflake, but the <code>variables</code> block determines what data is visible. A single service account serves all 10K users &mdash; the session attributes create per-user isolation within that shared connection.</p>
+      </div>
+
+      <p style="margin-top: 1rem;"><a href="https://docs.snowflake.com/en/user-guide/snowflake-cortex/cortex-agents-setup" target="_blank" class="badge-blue">Docs: Agent Setup</a></p>
+    </section>
+
+    <!-- Slide 10: Best Practices -->
+    <section class="slide" id="best-practices">
+      <h2>Best Practices</h2>
+      <p style="margin-bottom: 1.5rem;">Patterns that prevent security gaps and operational surprises.</p>
+
+      <div class="card-grid anim-fade">
+        <div class="card">
+          <h4>Always Use Immutable Attributes</h4>
+          <p>Without <code>is_immutable_session_attribute: true</code>, a prompt injection could trick the agent into running <code>ALTER SESSION SET</code> to escalate privileges. Immutable = non-negotiable.</p>
+        </div>
+        <div class="card">
+          <h4>Scope Narrowly</h4>
+          <p>Only pass variables needed per request. Don't pass a "superuser" attribute that grants broad access &mdash; pass the minimum context needed for the specific interaction.</p>
+        </div>
+        <div class="card">
+          <h4>Test Policies Independently</h4>
+          <p>Before deploying to an agent, verify policies manually with <code>ALTER SESSION SET</code> and run queries directly. Confirm filtering before adding the agent abstraction layer.</p>
+        </div>
+        <div class="card">
+          <h4>Entitlements Caching</h4>
+          <p>Use secure UDFs for complex lookups &mdash; Snowflake caches UDF results within a session, reducing repeated entitlements table scans.</p>
+        </div>
+        <div class="card">
+          <h4>Cortex Search Filtering</h4>
+          <p><strong>RAPs do NOT apply to Cortex Search results.</strong> For search-based agents, create separate search services per tenant, or pre-filter source tables before indexing.</p>
+        </div>
+        <div class="card">
+          <h4>Policy on Every Table</h4>
+          <p>Apply row access policies to <em>all</em> tables the agent can access. A single unprotected table is a data leak. Audit with <code>POLICY_REFERENCES</code> function.</p>
+        </div>
+      </div>
+
+      <div class="warning-box anim-fade">
+        <p><strong>Cortex Search limitation:</strong> Row access policies are enforced by the SQL execution engine. Cortex Search uses a vector index &mdash; it bypasses RAPs. If your agent uses Cortex Search, you must pre-filter data at indexing time or create per-tenant search services. This is a common gap in multi-tenant agent deployments.</p>
+      </div>
+    </section>
+
+    <!-- Slide 11: Audit & Observability -->
+    <section class="slide" id="audit-observability">
+      <h2>Audit &amp; Observability</h2>
+      <p style="margin-bottom: 1.5rem;">Correlate agent usage with your application's auth logs for complete audit trails.</p>
+
+      <pre class="anim-fade"><span class="comment">-- Query agent usage and correlate with your app's user context</span>
+<span class="keyword">SELECT</span>
+  request_id,
+  START_TIME,
+  AGENT_NAME,
+  TOKENS_USED,
+  CREDITS_USED,
+  METADATA
+<span class="keyword">FROM</span> SNOWFLAKE.ACCOUNT_USAGE.CORTEX_AGENT_USAGE_HISTORY
+<span class="keyword">WHERE</span> AGENT_NAME = <span class="string">'ANALYTICS_DB.AGENTS.CUSTOMER_SUPPORT'</span>
+  <span class="keyword">AND</span> START_TIME >= <span class="function">DATEADD</span>(<span class="string">'day'</span>, <span class="number">-7</span>, <span class="function">CURRENT_TIMESTAMP</span>())
+<span class="keyword">ORDER BY</span> START_TIME <span class="keyword">DESC</span>;</pre>
+
+      <pre class="anim-fade"><span class="comment">-- Join with your application logs for full traceability</span>
+<span class="comment">-- Your app logs: (request_id, external_user_id, tenant_id, timestamp)</span>
+<span class="comment">-- Pattern: log the request_id from agent:run response in your app</span>
+
+<span class="keyword">SELECT</span>
+  app.external_user_id,
+  app.tenant_id,
+  sf.TOKENS_USED,
+  sf.CREDITS_USED,
+  sf.START_TIME
+<span class="keyword">FROM</span> app_logs.agent_requests app
+<span class="keyword">JOIN</span> SNOWFLAKE.ACCOUNT_USAGE.CORTEX_AGENT_USAGE_HISTORY sf
+  <span class="keyword">ON</span> app.request_id = sf.request_id
+<span class="keyword">WHERE</span> sf.START_TIME >= <span class="function">DATEADD</span>(<span class="string">'day'</span>, <span class="number">-30</span>, <span class="function">CURRENT_TIMESTAMP</span>())
+<span class="keyword">ORDER BY</span> sf.START_TIME <span class="keyword">DESC</span>;</pre>
+
+      <div class="two-col anim-fade">
+        <div class="card">
+          <h4>What to Log in Your App</h4>
+          <ul>
+            <li><code>request_id</code> from agent:run response</li>
+            <li>Authenticated user identity</li>
+            <li>Variables passed (tenant_id, user_id)</li>
+            <li>Timestamp and user question</li>
+          </ul>
+          <p style="margin-top: 0.75rem; font-size: 0.85rem;">This creates the bridge between Snowflake's usage views and your user identity &mdash; essential for per-user cost attribution and security audits.</p>
+        </div>
+        <div class="card">
+          <h4>Observability Stack</h4>
+          <ul>
+            <li><code>CORTEX_AGENT_USAGE_HISTORY</code> &mdash; token/credit costs per request</li>
+            <li><code>QUERY_ATTRIBUTION_HISTORY</code> &mdash; warehouse compute from generated SQL</li>
+            <li>Your app logs &mdash; user identity, tenant context</li>
+            <li>Combined: full cost-per-user-per-tenant attribution</li>
+          </ul>
+          <p style="margin-top: 0.75rem;"><a href="https://docs.snowflake.com/en/sql-reference/account-usage/cortex_agent_usage_history" target="_blank" class="badge-blue">Docs: Usage History</a></p>
+        </div>
+      </div>
+    </section>
+
+    <!-- Slide 12: Key Takeaways -->
+    <section class="slide" id="takeaways">
+      <h2>Key Takeaways</h2>
+
+      <div class="anim-fade" style="display: grid; grid-template-columns: repeat(5, 1fr); gap: 0.75rem; width: 100%; margin: 2rem 0;">
+        <div class="flow-step">
+          <div class="step-label">1</div>
+          <div class="step-title">Authenticate in App</div>
+        </div>
+        <div class="flow-step">
+          <div class="step-label">2</div>
+          <div class="step-title">Pass Immutable Vars</div>
+        </div>
+        <div class="flow-step active">
+          <div class="step-label">3</div>
+          <div class="step-title">Policies Enforce</div>
+        </div>
+        <div class="flow-step">
+          <div class="step-label">4</div>
+          <div class="step-title">Agent Generates SQL</div>
+        </div>
+        <div class="flow-step">
+          <div class="step-label">5</div>
+          <div class="step-title">Filtered Results</div>
+        </div>
+      </div>
+
+      <div class="card-grid anim-fade" style="margin-top: 2rem;">
+        <div class="card">
+          <h4>Summary</h4>
+          <ul>
+            <li>Session attributes decouple user identity from Snowflake accounts &mdash; scale to 10K+ users with zero DDL</li>
+            <li><code>is_immutable_session_attribute</code> prevents prompt injection from escalating privileges</li>
+            <li>Row access policies filter rows on every query &mdash; regardless of agent-generated SQL</li>
+            <li>Masking policies hide columns based on access level or entitlements lookups</li>
+            <li>RAPs do NOT apply to Cortex Search &mdash; pre-filter or use per-tenant search services</li>
+          </ul>
+        </div>
+        <div class="card">
+          <h4>Getting Started</h4>
+          <ul>
+            <li><strong>Step 1:</strong> Create entitlements table with external_user_id + tenant_id</li>
+            <li><strong>Step 2:</strong> Create row access policy using <code>SYS_CONTEXT</code></li>
+            <li><strong>Step 3:</strong> Apply policy to all agent-accessible tables</li>
+            <li><strong>Step 4:</strong> Create masking policies for sensitive columns</li>
+            <li><strong>Step 5:</strong> Test with <code>ALTER SESSION SET</code> before agent deployment</li>
+            <li><strong>Step 6:</strong> Update app layer to pass immutable variables on agent:run</li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="highlight-box anim-fade" style="text-align: center; margin-top: 1.5rem;">
+        <p><strong>Multi-tenancy is not optional for production external-facing agents.</strong> Without it, every user sees every row. Session attributes + policies give you per-user isolation with zero per-user infrastructure.</p>
+      </div>
+
+      <div class="card anim-fade" style="margin-top: 1.5rem; width: 100%;">
+        <h4>Documentation Quick Reference</h4>
+        <ul>
+          <li><a href="https://docs.snowflake.com/en/user-guide/snowflake-cortex/cortex-agents-multi-tenancy" target="_blank" class="badge-blue">Cortex Agent Multi-Tenancy</a> &mdash; primary reference for session attributes + policies pattern</li>
+          <li><a href="https://docs.snowflake.com/en/user-guide/snowflake-cortex/cortex-agents-setup" target="_blank" class="badge-blue">Cortex Agent Setup</a> &mdash; agent creation, API configuration, service accounts</li>
+          <li><a href="https://docs.snowflake.com/en/sql-reference/sql/create-row-access-policy" target="_blank" class="badge-blue">CREATE ROW ACCESS POLICY</a> &mdash; syntax and examples for row-level filtering</li>
+          <li><a href="https://docs.snowflake.com/en/user-guide/security-column-intro" target="_blank" class="badge-blue">Column-Level Security</a> &mdash; masking policies, dynamic data masking</li>
+          <li><a href="https://docs.snowflake.com/en/sql-reference/functions/sys_context" target="_blank" class="badge-blue">SYS_CONTEXT Function</a> &mdash; reading session attributes in policy expressions</li>
+        </ul>
+      </div>
+    </section>
+
+  </main>
+
+  <script>
+    // Progress bar
+    const progressBar = document.querySelector('.progress-bar');
+    window.addEventListener('scroll', () => {
+      const scrollTop = window.scrollY;
+      const docHeight = document.documentElement.scrollHeight - window.innerHeight;
+      progressBar.style.width = (scrollTop / docHeight * 100) + '%';
+    });
+
+    // Scroll animations
+    const observer = new IntersectionObserver((entries) => {
+      entries.forEach(entry => {
+        if (entry.isIntersecting) {
+          entry.target.classList.add('visible');
+        }
+      });
+    }, { threshold: 0.1 });
+
+    document.querySelectorAll('.anim-fade').forEach(el => observer.observe(el));
+
+    // Active nav tracking
+    const sections = document.querySelectorAll('.slide, .part-divider');
+    const navLinks = document.querySelectorAll('.sidebar a');
+
+    window.addEventListener('scroll', () => {
+      let current = '';
+      sections.forEach(section => {
+        const sectionTop = section.offsetTop - 200;
+        if (window.scrollY >= sectionTop) {
+          current = section.getAttribute('id');
+        }
+      });
+      navLinks.forEach(link => {
+        link.classList.remove('active');
+        if (link.getAttribute('href') === '#' + current) {
+          link.classList.add('active');
+        }
+      });
+    });
+  </script>
+</body>
+</html>

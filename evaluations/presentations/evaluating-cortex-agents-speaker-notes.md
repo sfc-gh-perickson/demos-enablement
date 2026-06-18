@@ -69,6 +69,12 @@ The presentation is structured in two parts: Theory (slides 1-6) covers the "why
   - Describe what a correct response should AND should NOT contain.
 - The SQL example shows the Snowflake dataset format: a VARCHAR column for the input query and a VARIANT column for ground truth.
 
+**Collaborative Dataset Curation via dbt:**
+- Store eval questions as a dbt seed file (CSV with `input` and `ground_truth` columns) in your git repo. This makes the eval dataset version-controlled, PR-reviewable, and collaboratively editable by any team member — analysts, engineers, and product managers can all contribute questions via pull request.
+- On merge, `dbt seed` loads the questions into a Snowflake table referenced by your eval YAML config. The dataset grows organically as the team encounters new edge cases.
+- Complement this static dataset with active sampling: query `SNOWFLAKE.LOCAL.AI_OBSERVABILITY_EVENTS` to find real production questions, prioritizing those with negative user feedback signals or high token cost, and periodically add representative samples back to the seed file.
+- This creates a flywheel: production usage surfaces gaps → gaps become eval questions → eval questions drive agent improvements → improvements get validated before deployment.
+
 **Key Insight:**
 - If you can only do one thing, get real user queries. A small dataset of 50 real queries beats a large dataset of 500 synthetic ones. The distribution of real usage is the hardest thing to replicate synthetically.
 
@@ -115,6 +121,12 @@ The presentation is structured in two parts: Theory (slides 1-6) covers the "why
 
 **Key Insight:**
 - An uncalibrated LLM judge is just another opinion. A calibrated judge — one that demonstrably agrees with human experts 80%+ of the time — is a reliable, scalable measurement tool. The investment in calibration pays for itself by giving you confidence in every subsequent metric you measure.
+
+**Integrating Human Feedback with LLM Judges:**
+- Store user feedback (thumbs up/down, free-text comments) in a Snowflake table alongside the interaction's `request_id` from observability views. This creates a ground-truth signal from real production usage.
+- Use `CORTEX.COMPLETE` to run lightweight sentiment/intent classification on feedback text — this gives you an aggregate signal on which question *types* are underperforming without requiring manual review of every interaction.
+- Periodically sample interactions with negative feedback, have SMEs grade them across your rubric, and use those graded samples to recalibrate your LLM judge (maintaining the 80%+ correlation target). This closes the loop between production reality and your judge's alignment.
+- Practical calibration shortcut: you don't need ground truth on every eval data point. Score 50-100 representative samples by hand, calculate Cohen's Kappa against your LLM judge on those same samples. If correlation is strong, trust the judge on the remaining unscored production traffic. Recalibrate quarterly or when you observe score drift.
 
 ---
 
@@ -198,7 +210,35 @@ The presentation is structured in two parts: Theory (slides 1-6) covers the "why
 **Key Insight:**
 - Set thresholds based on observed baselines, not aspirational targets. Run several evaluations to establish what "normal" looks like before defining quality gates. Thresholds set too aggressively create flaky gates that erode trust in the pipeline.
 
+**Automated Evaluation Architecture with dbt + GitHub Actions:**
+
+The recommended pattern extends the standard dbt CI/CD workflow (Snowflake CLI GitHub Action + OIDC service user) to include agent evaluation as a quality gate:
+
+1. **Repo structure**: Your dbt project includes agent spec YAML, semantic view definitions, eval config YAML, and a `seeds/eval_questions.csv` file containing the eval dataset. Everything is version-controlled — the eval dataset is a first-class artifact alongside the agent definition.
+
+2. **CI workflow (on PR)**:
+   - `snow dbt deploy tester_agent --force -x` deploys a staging agent version
+   - `snow dbt execute ... seed -x` loads the eval dataset into Snowflake
+   - `snow sql -q "CALL EXECUTE_AI_EVALUATION('START', OBJECT_CONSTRUCT('run_name', 'pr-${PR_NUMBER}'), '@stage/eval_config.yaml')" -x` triggers the evaluation
+   - A polling step checks `EXECUTE_AI_EVALUATION('STATUS', ...)` until the run completes
+   - Query `GET_AI_EVALUATION_DATA` to extract aggregate scores; fail the PR if scores fall below the defined threshold (e.g., answer_correctness >= 0.70)
+
+3. **CD workflow (on merge to main)**:
+   - `snow dbt deploy production_agent --default-target prod --force -x` updates the production agent
+   - `ALTER AGENT ... SET ALIAS 'production'` promotes the new version
+   - Optionally trigger a post-deploy validation eval to confirm production quality
+
+4. **Scheduled regression detection via Snowflake Tasks**:
+   - A Task runs `EXECUTE_AI_EVALUATION` daily or weekly against the production alias
+   - A downstream task compares scores to the previous run's baseline
+   - On regression (e.g., accuracy drops from 90% to 80%), a notification integration alerts the team via Slack/email
+   - The team correlates the drop to the most recent agent version change or semantic view PR using `SHOW VERSIONS IN AGENT` and git history
+
+This creates a continuous quality signal: PRs are gated on eval scores, post-deploy validation confirms production quality, and scheduled runs detect drift from external factors (model updates, data changes, tool config drift).
+
 **References:**
+- https://docs.snowflake.com/en/user-guide/tutorials/dbt-projects-on-snowflake-ci-cd-tutorial
+- https://docs.snowflake.com/en/developer-guide/snowflake-cli/cicd/github-action
 - https://www.snowflake.com/en/developers/guides/best-practices-for-evaluating-cortex-agents/
 
 ---
@@ -216,9 +256,16 @@ The presentation is structured in two parts: Theory (slides 1-6) covers the "why
 **Key Insight:**
 - The most powerful feedback loop is: detect production issue → add that query to eval set → improve agent → verify fix with evaluation → deploy improved version → continue monitoring. Each iteration makes the system more robust because real failures drive evaluation coverage.
 
+**Cost Governance as an Adoption Enabler:**
+- A common pattern: organizations initially restrict Cortex access to a handful of SQL-literate power users because they cannot predict or control per-query costs. This limits the value of AI investments to a small group that doesn't need the help most.
+- The combination of eval-backed quality confidence + cost governance (resource budgets, runaway query protection, tag-based attribution) is what unlocks org-wide access. When you can demonstrate that (a) the agent reliably answers correctly (evals), and (b) costs are bounded and attributable (budgets + observability), stakeholders gain confidence to expand access beyond power users.
+- Recommended progression: observability (understand your cost baseline) → budgets (set guardrails with runaway query protection) → evals (prove quality with automated pipelines) → expand access (roll out to non-technical users with confidence).
+- Cross-reference: see the "Cortex AI Observability" module for detailed surface identification, cost attribution via tags, unified cost views, and resource budget governance patterns.
+
 **References:**
 - https://docs.snowflake.com/en/user-guide/snowflake-cortex/cortex-agents-monitor
 - https://docs.snowflake.com/en/user-guide/snowflake-cortex/ai-observability
+- https://docs.snowflake.com/en/user-guide/snowflake-cortex/governance-and-availability/ai-cost-management-and-governance
 
 ---
 

@@ -30,3 +30,46 @@ Once an LLMAJ is aligned to SME judgement, we can utilize it in a variety of dif
 
 ## Iterating upon the Agent Using Evaluation Metrics
 Evaluations are the #1 way to effectively understand the behavior of your AI agent. This means that they are also critical in understanding how to better improve your agent over time, and making sure that no regressions are introduced. Utilize agent versioning to confidently iterate, test, and promote new agents into production.
+
+---
+
+## Automated Evaluation Patterns
+
+### Eval Dataset as a Version-Controlled Artifact
+* Store eval questions as a dbt seed file (CSV with `input` and `ground_truth` columns) in your git repo
+* On merge, `dbt seed` loads the questions into a Snowflake table that your eval YAML config references
+* This makes the eval dataset PR-reviewable and collaboratively editable — any analyst or engineer can contribute questions via a pull request
+* Complement the static seed with active sampling from production: query `SNOWFLAKE.LOCAL.AI_OBSERVABILITY_EVENTS` for real user questions, prioritize those with negative feedback or high token cost, and periodically add representative samples to the seed file
+
+### CI/CD Integration with dbt + GitHub Actions
+The pattern extends the standard dbt CI/CD workflow (Snowflake CLI GitHub Action + OIDC service user):
+
+**CI (on PR):**
+1. `snow dbt deploy tester_agent --force -x` deploys a staging agent version
+2. `snow dbt execute ... seed` loads the eval dataset into Snowflake
+3. `snow sql -q "CALL EXECUTE_AI_EVALUATION('START', OBJECT_CONSTRUCT('run_name', 'pr-${PR_NUMBER}'), '@stage/eval_config.yaml')"` triggers the evaluation
+4. Poll `EXECUTE_AI_EVALUATION('STATUS', ...)` until the run completes
+5. Query `GET_AI_EVALUATION_DATA` to extract aggregate scores
+6. Fail the PR check if scores fall below the defined threshold
+
+**CD (on merge to main):**
+1. `snow dbt deploy production_agent --default-target prod --force -x` updates the production agent
+2. `ALTER AGENT ... SET ALIAS 'production'` promotes the new version
+3. Optionally trigger a post-deploy eval run for validation
+
+### Scheduled Regression Detection via Snowflake Tasks
+* A Snowflake Task runs daily or weekly, calling `EXECUTE_AI_EVALUATION` against the production alias
+* A downstream task queries `GET_AI_EVALUATION_DATA` and compares scores to the previous run's baseline
+* If scores drop below a threshold, trigger a notification integration (Slack/email) to alert the team
+* The team correlates the drop timestamp with agent version history (`SHOW VERSIONS IN AGENT`) and git commit log to identify which change caused the regression
+
+### Human Feedback Integration
+* Store user feedback (thumbs up/down, free-text comments) in a Snowflake table alongside the interaction's `request_id` from observability views
+* Use `CORTEX.COMPLETE` for lightweight sentiment/intent classification on feedback text — provides an aggregate signal on which question types are underperforming
+* Periodically sample interactions with negative feedback, have SMEs grade them, and use those graded samples to recalibrate the LLM judge
+* Practical calibration: 50-100 representative samples scored by humans, calculate Cohen's Kappa against the LLM judge, trust the judge on unscored traffic if correlation is 80%+
+
+### Cost Governance as an Adoption Enabler
+* Organizations often restrict Cortex access to SQL-literate power users because they cannot predict or control per-query costs
+* The combination of eval-backed quality confidence + cost governance (resource budgets, runaway query protection, tag-based attribution) unlocks org-wide access
+* Progression: observability (understand cost baseline) → budgets (set guardrails) → evals (prove quality) → expand access (roll out to non-technical users with confidence)

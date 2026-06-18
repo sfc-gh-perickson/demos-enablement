@@ -14,6 +14,8 @@ An internal enablement repository for Snowflake sales engineers and account exec
   - [Many-Model Training](#many-model-training)
   - [Feature Store](#feature-store)
   - [Cortex AI Observability](#cortex-ai-observability)
+  - [Cortex Agent Multi-Tenancy](#cortex-agent-multi-tenancy)
+  - [Server-Side Agent Routing](#server-side-agent-routing)
 - [Repository Structure](#repository-structure)
 - [Getting Started](#getting-started)
 - [Presentation Format](#presentation-format)
@@ -22,7 +24,7 @@ An internal enablement repository for Snowflake sales engineers and account exec
 
 ## Overview
 
-This repository contains six enablement modules covering key Cortex AI and Snowflake ML topics:
+This repository contains seven enablement modules covering key Cortex AI and Snowflake ML topics:
 
 | Module | Audience | Format | Slides |
 |--------|----------|--------|--------|
@@ -32,8 +34,10 @@ This repository contains six enablement modules covering key Cortex AI and Snowf
 | Many-Model Training | SEs, Data Scientists, ML Engineers | Presentation + Hands-on Lab | [View](https://sfc-gh-perickson.github.io/demos-enablement/many-model-training/presentations/many-model-training.html) |
 | Feature Store | SEs, Data Scientists, ML Engineers | Presentation + Hands-on Lab | [View](https://sfc-gh-perickson.github.io/demos-enablement/feature-store/presentations/feature-store.html) |
 | Cortex AI Observability | SEs, Platform Admins, Finance | Presentation + Hands-on Lab | [View](https://sfc-gh-perickson.github.io/demos-enablement/cortex-ai-observability/presentations/cortex-ai-observability.html) |
+| Cortex Agent Multi-Tenancy | SEs, Solution Architects | Presentation + Hands-on Lab | [View](https://sfc-gh-perickson.github.io/demos-enablement/cortex-agent-multi-tenancy/presentations/cortex-agent-multi-tenancy.html) |
+| Server-Side Agent Routing | SEs, Platform Engineers | Presentation + Hands-on Lab | [View](https://sfc-gh-perickson.github.io/demos-enablement/agent-routing/presentations/server-side-agent-routing.html) |
 
-Each module includes an HTML slide deck and companion speaker notes. The evaluations, many-model-training, feature-store, and cortex-ai-observability modules also provide complete hands-on labs with SQL setup and notebooks.
+Each module includes an HTML slide deck and companion speaker notes. The evaluations, many-model-training, feature-store, cortex-ai-observability, and cortex-agent-multi-tenancy modules also provide complete hands-on labs with SQL setup and notebooks.
 
 ---
 
@@ -190,11 +194,84 @@ The lab walks through querying real ACCOUNT_USAGE views to identify adoption pat
 
 ---
 
+### Server-Side Agent Routing
+
+**Location:** `agent-routing/`
+
+Covers the server-side agent routing pattern — using a supervisor Cortex Agent to route requests to specialist agents via stored procedure wrappers. Eliminates cross-surface tool-selection variance by centralizing routing logic inside Snowflake.
+
+**Contents:**
+
+| File | Description |
+|------|-------------|
+| [`presentations/server-side-agent-routing.html`](https://sfc-gh-perickson.github.io/demos-enablement/agent-routing/presentations/server-side-agent-routing.html) | Slide deck (10 slides) |
+| `presentations/server-side-agent-routing-speaker-notes.md` | Speaker notes with internal context |
+| `lab/setup.sql` | SQL setup (agents, procedures, supervisor, evaluation data) |
+| `lab/server-side-agent-routing-lab.ipynb` | Hands-on lab notebook (30 min) |
+
+#### Lab Prerequisites
+
+1. A Snowflake account with Cortex Agents enabled
+2. Run `agent-routing/lab/setup.sql` to create the `ROUTING_DEMO` database and all agent objects
+3. Open `agent-routing/lab/server-side-agent-routing-lab.ipynb` in Snowflake Notebooks
+
+The lab walks through testing routing, running evaluations with `tool_selection_accuracy`, inspecting results, and iterating on orchestration instructions.
+
+---
+
+### Cortex Agent Multi-Tenancy
+
+**Location:** `cortex-agent-multi-tenancy/`
+
+Covers how to implement row-level and column-level access control for thousands of external users without Snowflake accounts through a single Cortex Agent using session attributes, row access policies, and masking policies.
+
+**Topics covered:**
+- Multi-tenancy architecture with immutable session attributes
+- Row access policies with SYS_CONTEXT for per-tenant filtering
+- Column masking policies with secure UDF patterns
+- Entitlements table as the RBAC control plane
+- Zero-DDL user management (INSERT/UPDATE/DELETE)
+- Cortex Search limitations and workarounds
+
+**Contents:**
+
+| File | Description |
+|------|-------------|
+| [`presentations/cortex-agent-multi-tenancy.html`](https://sfc-gh-perickson.github.io/demos-enablement/cortex-agent-multi-tenancy/presentations/cortex-agent-multi-tenancy.html) | Slide deck (12 slides) |
+| `presentations/cortex-agent-multi-tenancy-speaker-notes.md` | Speaker notes with internal context |
+| `lab/setup.sql` | SQL setup script (database, tables, policies, agent) |
+| `lab/cortex-agent-multi-tenancy-lab.ipynb` | Hands-on lab notebook (30-45 min) |
+
+#### Lab Prerequisites
+
+1. A Snowflake account with Cortex AI features enabled
+2. A role with CREATE DATABASE, CREATE WAREHOUSE, CREATE ROW ACCESS POLICY privileges
+3. Run `cortex-agent-multi-tenancy/lab/setup.sql` to create the `MULTI_TENANCY_LAB` database
+4. Open `cortex-agent-multi-tenancy/lab/cortex-agent-multi-tenancy-lab.ipynb` in Snowflake Notebooks
+
+The lab walks through building a multi-tenant sales analytics agent, applying row/column policies, testing isolation across tenants, and demonstrating zero-DDL user onboarding.
+
+---
+
 ## Repository Structure
 
 ```
 enablement/
 ├── README.md
+├── agent-routing/
+│   ├── lab/
+│   │   ├── setup.sql
+│   │   └── server-side-agent-routing-lab.ipynb
+│   └── presentations/
+│       ├── server-side-agent-routing.html
+│       └── server-side-agent-routing-speaker-notes.md
+├── cortex-agent-multi-tenancy/
+│   ├── lab/
+│   │   ├── setup.sql
+│   │   └── cortex-agent-multi-tenancy-lab.ipynb
+│   └── presentations/
+│       ├── cortex-agent-multi-tenancy.html
+│       └── cortex-agent-multi-tenancy-speaker-notes.md
 ├── cortex-ai-observability/
 │   ├── lab/
 │   │   ├── setup.sql
@@ -254,6 +331,8 @@ enablement/
    - **Evaluations:** Run `evaluations/lab/setup.sql` before starting the notebook
    - **Many-Model Training:** Run `many-model-training/lab/setup.sql` before starting the notebook
    - **Cortex AI Observability:** Run `cortex-ai-observability/lab/setup.sql` before starting the notebook
+   - **Cortex Agent Multi-Tenancy:** Run `cortex-agent-multi-tenancy/lab/setup.sql` before starting the notebook
+   - **Agent Routing:** Run `agent-routing/lab/setup.sql` before starting the notebook
 
 ---
 

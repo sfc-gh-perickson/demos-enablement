@@ -21,8 +21,10 @@ Technical leaders, data engineers, data scientists, and AI/ML practitioners who 
 - Agent versioning for safe iteration
 - Running evaluations in Snowflake
 - Iterating on agents using eval results
-- CI/CD quality gates
+- CI/CD quality gates (including automated eval pipelines with dbt seeds + GitHub Actions + Snowflake Tasks)
+- Human feedback integration with LLM-as-judge calibration
 - Production deployment and monitoring
+- Cost governance as an adoption enabler (evals + budgets unlock org-wide access)
 
 ## Contents
 

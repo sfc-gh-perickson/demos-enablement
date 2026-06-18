@@ -1,0 +1,780 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Server-Side Agent Routing</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+
+    :root {
+      --bg: #0F1B2D;
+      --sidebar-bg: #1B2A4A;
+      --primary: #29B5E8;
+      --accent: #7C3AED;
+      --text: #E2E8F0;
+      --text-muted: #94A3B8;
+      --card-bg: #162236;
+      --border: #2D4A6F;
+      --green: #10B981;
+      --orange: #F59E0B;
+      --red: #EF4444;
+    }
+
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      font-family: 'Inter', sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.6;
+      overflow-x: hidden;
+    }
+
+    .progress-bar {
+      position: fixed;
+      top: 0;
+      left: 0;
+      height: 3px;
+      background: linear-gradient(90deg, var(--primary), var(--accent));
+      z-index: 1000;
+      transition: width 0.1s;
+    }
+
+    .sidebar {
+      position: fixed;
+      left: 0;
+      top: 0;
+      width: 260px;
+      height: 100vh;
+      background: var(--sidebar-bg);
+      padding: 2rem 1.5rem;
+      overflow-y: auto;
+      border-right: 1px solid var(--border);
+      z-index: 100;
+    }
+
+    .sidebar h2 {
+      font-size: 1rem;
+      font-weight: 600;
+      color: var(--primary);
+      margin-bottom: 1.5rem;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+
+    .sidebar a {
+      display: block;
+      color: var(--text-muted);
+      text-decoration: none;
+      padding: 0.5rem 0.75rem;
+      border-radius: 6px;
+      font-size: 0.85rem;
+      margin-bottom: 0.25rem;
+      transition: all 0.2s;
+    }
+
+    .sidebar a:hover,
+    .sidebar a.active {
+      color: var(--text);
+      background: rgba(41, 181, 232, 0.1);
+    }
+
+    .sidebar a.active {
+      border-left: 3px solid var(--primary);
+      padding-left: calc(0.75rem - 3px);
+    }
+
+    .main {
+      margin-left: 260px;
+      padding: 0;
+    }
+
+    .slide {
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      padding: 4rem 3rem;
+      max-width: 1200px;
+      margin: 0 auto;
+    }
+
+    .slide h1 {
+      font-size: 2.5rem;
+      font-weight: 700;
+      margin-bottom: 1rem;
+      background: linear-gradient(135deg, var(--primary), var(--accent));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+
+    .slide h2 {
+      font-size: 1.75rem;
+      font-weight: 600;
+      color: var(--text);
+      margin-bottom: 1.5rem;
+    }
+
+    .slide h3 {
+      font-size: 1.25rem;
+      font-weight: 500;
+      color: var(--text-muted);
+      margin-bottom: 1rem;
+    }
+
+    .slide p {
+      font-size: 1.1rem;
+      color: var(--text-muted);
+      max-width: 700px;
+      text-align: center;
+    }
+
+    .stat-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 1.5rem;
+      width: 100%;
+      margin: 2rem 0;
+    }
+
+    .stat-card {
+      background: var(--card-bg);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 1.5rem;
+      text-align: center;
+    }
+
+    .stat-card .value {
+      font-size: 2rem;
+      font-weight: 700;
+      color: var(--primary);
+    }
+
+    .stat-card .label {
+      font-size: 0.85rem;
+      color: var(--text-muted);
+      margin-top: 0.5rem;
+    }
+
+    .card-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+      gap: 1.5rem;
+      width: 100%;
+      margin: 2rem 0;
+    }
+
+    .card {
+      background: var(--card-bg);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 1.5rem;
+    }
+
+    .card h4 {
+      font-size: 1rem;
+      font-weight: 600;
+      color: var(--text);
+      margin-bottom: 0.75rem;
+    }
+
+    .card p, .card ul {
+      font-size: 0.9rem;
+      color: var(--text-muted);
+      text-align: left;
+    }
+
+    .card ul {
+      list-style: none;
+      padding: 0;
+    }
+
+    .card ul li {
+      padding: 0.3rem 0;
+      padding-left: 1rem;
+      position: relative;
+    }
+
+    .card ul li::before {
+      content: '';
+      position: absolute;
+      left: 0;
+      top: 50%;
+      transform: translateY(-50%);
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: var(--primary);
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 2rem 0;
+      font-size: 0.9rem;
+    }
+
+    th {
+      background: var(--card-bg);
+      color: var(--primary);
+      font-weight: 600;
+      padding: 0.75rem 1rem;
+      text-align: left;
+      border-bottom: 2px solid var(--border);
+    }
+
+    td {
+      padding: 0.75rem 1rem;
+      border-bottom: 1px solid var(--border);
+      color: var(--text);
+    }
+
+    tr:hover td {
+      background: rgba(41, 181, 232, 0.05);
+    }
+
+    .highlight-box {
+      background: rgba(41, 181, 232, 0.1);
+      border: 1px solid var(--primary);
+      border-radius: 12px;
+      padding: 1.5rem;
+      margin: 1.5rem 0;
+      width: 100%;
+    }
+
+    .context-box {
+      background: rgba(124, 58, 237, 0.1);
+      border: 1px solid var(--accent);
+      border-radius: 12px;
+      padding: 1.5rem;
+      margin: 1.5rem 0;
+      width: 100%;
+    }
+
+    .warning-box {
+      background: rgba(245, 158, 11, 0.1);
+      border: 1px solid var(--orange);
+      border-radius: 12px;
+      padding: 1.5rem;
+      margin: 1.5rem 0;
+      width: 100%;
+    }
+
+    .badge-green { background: rgba(16, 185, 129, 0.15); color: var(--green); padding: 0.25rem 0.75rem; border-radius: 99px; font-size: 0.8rem; font-weight: 500; }
+    .badge-blue { background: rgba(41, 181, 232, 0.15); color: var(--primary); padding: 0.25rem 0.75rem; border-radius: 99px; font-size: 0.8rem; font-weight: 500; }
+    .badge-purple { background: rgba(124, 58, 237, 0.15); color: var(--accent); padding: 0.25rem 0.75rem; border-radius: 99px; font-size: 0.8rem; font-weight: 500; }
+    .badge-orange { background: rgba(245, 158, 11, 0.15); color: var(--orange); padding: 0.25rem 0.75rem; border-radius: 99px; font-size: 0.8rem; font-weight: 500; }
+
+    .score-high { color: var(--green); font-weight: 600; }
+    .score-mid { color: var(--orange); font-weight: 600; }
+    .score-low { color: var(--red); font-weight: 600; }
+
+    .slide ul {
+      list-style: none;
+      width: 100%;
+      max-width: 700px;
+    }
+
+    .slide ul li {
+      padding: 0.75rem 0;
+      padding-left: 1.5rem;
+      position: relative;
+      color: var(--text);
+      font-size: 1.05rem;
+    }
+
+    .slide ul li::before {
+      content: '';
+      position: absolute;
+      left: 0;
+      top: 50%;
+      transform: translateY(-50%);
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: var(--primary);
+    }
+
+    .anim-fade {
+      opacity: 0;
+      transform: translateY(20px);
+      transition: opacity 0.6s ease, transform 0.6s ease;
+    }
+
+    .anim-fade.visible {
+      opacity: 1;
+      transform: translateY(0);
+    }
+
+    .arch-diagram {
+      width: 100%;
+      max-width: 800px;
+      margin: 2rem auto;
+      padding: 2rem;
+      background: var(--card-bg);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      text-align: center;
+      font-family: 'Inter', monospace;
+      font-size: 0.85rem;
+    }
+
+    .arch-diagram .level {
+      display: flex;
+      justify-content: center;
+      gap: 1rem;
+      margin: 1rem 0;
+    }
+
+    .arch-diagram .node {
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 0.75rem 1.25rem;
+      color: var(--text);
+    }
+
+    .arch-diagram .node-primary {
+      border-color: var(--primary);
+      box-shadow: 0 0 12px rgba(41, 181, 232, 0.2);
+    }
+
+    .arch-diagram .node-accent {
+      border-color: var(--accent);
+    }
+
+    .arch-diagram .arrow {
+      color: var(--text-muted);
+      font-size: 1.2rem;
+      margin: 0.5rem 0;
+    }
+
+    .code-block {
+      background: #0d1520;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 1.25rem 1.5rem;
+      font-family: 'SF Mono', 'Fira Code', monospace;
+      font-size: 0.8rem;
+      color: var(--text);
+      overflow-x: auto;
+      width: 100%;
+      max-width: 800px;
+      margin: 1.5rem 0;
+      line-height: 1.7;
+      white-space: pre;
+    }
+
+    .code-block .kw { color: var(--accent); }
+    .code-block .fn { color: var(--primary); }
+    .code-block .str { color: var(--green); }
+    .code-block .comment { color: var(--text-muted); font-style: italic; }
+
+    .two-col {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 2rem;
+      width: 100%;
+      margin: 2rem 0;
+    }
+
+    @media (max-width: 900px) {
+      .sidebar { display: none; }
+      .main { margin-left: 0; }
+      .stat-grid { grid-template-columns: repeat(2, 1fr); }
+      .slide { padding: 2rem 1.5rem; }
+      .two-col { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+  <div class="progress-bar"></div>
+
+  <nav class="sidebar">
+    <h2>Agent Routing</h2>
+    <a href="#hero">Overview</a>
+    <a href="#problem">The Problem</a>
+    <a href="#root-cause">Root Cause</a>
+    <a href="#solution">The Solution</a>
+    <a href="#architecture">Architecture</a>
+    <a href="#pattern">Implementation Pattern</a>
+    <a href="#supervisor">Supervisor Agent</a>
+    <a href="#evaluation">Evaluation</a>
+    <a href="#comparison">Before vs After</a>
+    <a href="#scaling">Scaling to N Agents</a>
+    <a href="#next-steps">Next Steps</a>
+  </nav>
+
+  <main class="main">
+
+    <!-- Hero -->
+    <section class="slide" id="hero">
+      <h1>Server-Side Agent Routing</h1>
+      <p>Eliminating cross-surface variance by moving orchestration into the platform layer where the agents already live</p>
+      <div class="stat-grid" style="margin-top: 2.5rem;">
+        <div class="stat-card anim-fade">
+          <div class="value">N</div>
+          <div class="label">Cortex Agents</div>
+        </div>
+        <div class="stat-card anim-fade">
+          <div class="value">Many</div>
+          <div class="label">Client Surfaces</div>
+        </div>
+        <div class="stat-card anim-fade">
+          <div class="value">1</div>
+          <div class="label">Supervisor</div>
+        </div>
+        <div class="stat-card anim-fade">
+          <div class="value">0</div>
+          <div class="label">Routing Variance</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Problem -->
+    <section class="slide" id="problem">
+      <h2>The Problem: Inconsistent Agent Selection</h2>
+      <p style="margin-bottom: 2rem;">Users reach the same agents through multiple AI assistant surfaces. Each surface selects agents differently.</p>
+      <div class="card-grid">
+        <div class="card anim-fade">
+          <h4>Developer Tools</h4>
+          <p>Tool search may be ON by default. MCP tools deferred — only <strong>names</strong> visible before search. Shares ranking with every other connector the user has enabled.</p>
+        </div>
+        <div class="card anim-fade">
+          <h4>Chat Interfaces</h4>
+          <p>User-toggled tool access settings (Auto / On demand). Auto-deferral algorithms are not published. Behavior varies per user configuration.</p>
+        </div>
+        <div class="card anim-fade">
+          <h4>Collaborative Assistants</h4>
+          <p>Tool-loading behavior varies by platform. Agent visibility and selection logic is opaque from the server side.</p>
+        </div>
+      </div>
+      <div class="warning-box anim-fade" style="margin-top: 1.5rem;">
+        <strong>Result:</strong> The same question routes to different agents (or fails to route at all) depending on which surface the user is on, what other connectors they have, and their local settings.
+      </div>
+    </section>
+
+    <!-- Root Cause -->
+    <section class="slide" id="root-cause">
+      <h2>Root Cause</h2>
+      <p style="margin-bottom: 2rem;">The agent-selection decision lives in the client harness, not in our platform.</p>
+      <div class="two-col anim-fade">
+        <div class="card">
+          <h4>What We Control</h4>
+          <ul>
+            <li>Tool descriptions in MCP server spec</li>
+            <li>Tool names and identifiers</li>
+            <li>Agent instructions and behavior</li>
+          </ul>
+        </div>
+        <div class="card">
+          <h4>What We Don't Control</h4>
+          <ul>
+            <li>Whether tools are preloaded or deferred</li>
+            <li>Client-side search ranking algorithm</li>
+            <li>System prompt wrapping per surface</li>
+            <li>Competition with other user connectors</li>
+            <li>Per-user settings and session state</li>
+          </ul>
+        </div>
+      </div>
+      <div class="highlight-box anim-fade" style="margin-top: 1.5rem;">
+        <strong>Key insight:</strong> Variance affects <em>discovery</em>, not <em>execution</em>. Once the right agent is invoked, the same Cortex Agent runs identically everywhere. The fix is to make discovery deterministic.
+      </div>
+    </section>
+
+    <!-- Solution -->
+    <section class="slide" id="solution">
+      <h2>The Solution: Platform-Side Orchestration</h2>
+      <p style="margin-bottom: 2rem;">Move agent selection out of the client and into Snowflake — where the agents already live.</p>
+      <div class="card-grid anim-fade">
+        <div class="card">
+          <h4>Single Entry Point</h4>
+          <p>One Supervisor Agent receives every request. Clients see exactly one tool, not N.</p>
+        </div>
+        <div class="card">
+          <h4>Server-Side Routing</h4>
+          <p>The supervisor selects the right specialist inside Snowflake using stored procedure tools. No client-side variance.</p>
+        </div>
+        <div class="card">
+          <h4>Testable & Measurable</h4>
+          <p>Routing decisions are evaluated with Cortex Agent Evaluations — regressions are caught before they reach users.</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- Architecture -->
+    <section class="slide" id="architecture">
+      <h2>Architecture</h2>
+      <div class="arch-diagram anim-fade">
+        <div class="level">
+          <div class="node" style="width: 400px;">Any Client Surface (LLM tools, chat, collaborative apps, REST API)</div>
+        </div>
+        <div class="arrow">&#8595; single call</div>
+        <div class="level">
+          <div class="node node-primary" style="width: 300px;"><strong>SUPERVISOR AGENT</strong><br>routing logic + instructions</div>
+        </div>
+        <div class="arrow">&#8595; stored procedure tools</div>
+        <div class="level">
+          <div class="node node-accent">Sales Analyst</div>
+          <div class="node node-accent">Product Support</div>
+          <div class="node node-accent">Supply Chain</div>
+        </div>
+        <div style="margin-top: 1rem; color: var(--text-muted); font-size: 0.8rem;">
+          Each specialist is wrapped in an EXECUTE AS OWNER procedure calling DATA_AGENT_RUN
+        </div>
+      </div>
+      <div class="context-box anim-fade">
+        <strong>Pattern:</strong> CREATE AGENT (specialist) &rarr; CREATE PROCEDURE wrapper calling DATA_AGENT_RUN &rarr; CREATE AGENT (supervisor) with <code>type: generic</code> tools pointing to procedures via <code>tool_resources</code>
+      </div>
+    </section>
+
+    <!-- Implementation Pattern -->
+    <section class="slide" id="pattern">
+      <h2>Implementation Pattern</h2>
+      <h3>The Stored Procedure Wrapper</h3>
+      <div class="code-block anim-fade"><span class="kw">CREATE OR REPLACE PROCEDURE</span> <span class="fn">RUN_SALES_AGENT</span>(message STRING)
+  RETURNS STRING
+  LANGUAGE PYTHON
+  RUNTIME_VERSION = '3.11'
+  PACKAGES = ('snowflake-snowpark-python')
+  HANDLER = 'run'
+  <span class="kw">EXECUTE AS OWNER</span>
+AS
+$$
+<span class="kw">import</span> json
+
+<span class="kw">def</span> <span class="fn">run</span>(session, message):
+    body = json.dumps({
+        <span class="str">"messages"</span>: [{<span class="str">"role"</span>: <span class="str">"user"</span>,
+                     <span class="str">"content"</span>: [{<span class="str">"type"</span>: <span class="str">"text"</span>, <span class="str">"text"</span>: message}]}]
+    })
+    result = session.sql(f<span class="str">"""
+        SELECT SNOWFLAKE.CORTEX.DATA_AGENT_RUN(
+            'ROUTING_DEMO.ROUTING.SALES_ANALYST',
+            '{body}'
+        )
+    """</span>).collect()
+    <span class="kw">return</span> str(result[0][0]) <span class="kw">if</span> result <span class="kw">else</span> <span class="str">''</span>
+$$;</div>
+      <div class="highlight-box anim-fade">
+        <strong>Why EXECUTE AS OWNER?</strong> The wrapper procedure runs with the owner's identity, resetting the caller context. Each specialist agent operates with its own grants — no privilege escalation chain.
+      </div>
+    </section>
+
+    <!-- Supervisor Agent -->
+    <section class="slide" id="supervisor">
+      <h2>Supervisor Agent Specification</h2>
+      <div class="code-block anim-fade"><span class="kw">CREATE OR REPLACE AGENT</span> <span class="fn">SUPERVISOR</span>
+FROM SPECIFICATION $$
+<span class="comment"># Tools declare procedure wrappers as generic tools</span>
+tools:
+  - tool_spec:
+      type: generic
+      name: sales_agent
+      description: <span class="str">"Revenue, sales forecasts, channel performance"</span>
+      input_schema:
+        type: object
+        properties:
+          message: { type: string }
+        required: [<span class="str">"message"</span>]
+
+<span class="comment"># Resources map tool names to stored procedures</span>
+tool_resources:
+  sales_agent:
+    type: procedure
+    identifier: ROUTING_DEMO.ROUTING.RUN_SALES_AGENT
+    execution_environment:
+      type: warehouse
+      warehouse: ROUTING_DEMO_WH
+$$;</div>
+      <p style="margin-top: 1rem;">The supervisor's orchestration instructions define routing keywords per specialist. All routing logic is in one place, under our control.</p>
+    </section>
+
+    <!-- Evaluation -->
+    <section class="slide" id="evaluation">
+      <h2>Evaluating Routing Quality</h2>
+      <p style="margin-bottom: 2rem;">Cortex Agent Evaluations measure whether the supervisor routes correctly and answers well.</p>
+      <div class="stat-grid anim-fade">
+        <div class="stat-card">
+          <div class="value" style="font-size: 1.3rem;">tool_selection<br>_accuracy</div>
+          <div class="label">Did it pick the right specialist?</div>
+        </div>
+        <div class="stat-card">
+          <div class="value" style="font-size: 1.3rem;">answer<br>_correctness</div>
+          <div class="label">Did the specialist answer well?</div>
+        </div>
+        <div class="stat-card">
+          <div class="value" style="font-size: 1.3rem;">logical<br>_consistency</div>
+          <div class="label">Is reasoning coherent?</div>
+        </div>
+        <div class="stat-card">
+          <div class="value" style="font-size: 1.3rem;">custom<br>metrics</div>
+          <div class="label">Domain-specific checks</div>
+        </div>
+      </div>
+      <div class="code-block anim-fade"><span class="comment">-- Evaluation dataset row: ground truth defines expected routing</span>
+INSERT INTO EVAL_DATA SELECT
+  <span class="str">'What was our total revenue last quarter?'</span>,
+  PARSE_JSON(<span class="str">'{
+    "ground_truth_output": "Revenue figures for the most recent quarter",
+    "ground_truth_invocations": [{
+      "tool_name": "sales_agent",
+      "tool_input": "What was our total revenue last quarter?"
+    }]
+  }'</span>);
+
+<span class="comment">-- Run evaluation</span>
+<span class="kw">CALL</span> <span class="fn">EXECUTE_AI_EVALUATION</span>(
+  <span class="str">'START'</span>,
+  OBJECT_CONSTRUCT(<span class="str">'run_name'</span>, <span class="str">'routing-baseline-1'</span>),
+  <span class="str">'@EVAL_STAGE/eval_config.yaml'</span>
+);</div>
+    </section>
+
+    <!-- Comparison -->
+    <section class="slide" id="comparison">
+      <h2>Before vs After</h2>
+      <div class="anim-fade" style="width: 100%; overflow-x: auto;">
+        <table>
+          <thead>
+            <tr>
+              <th>Dimension</th>
+              <th>Client-Side Routing (Before)</th>
+              <th>Server-Side Routing (After)</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>Routing consistency</td>
+              <td class="score-low">Varies by surface, user, session</td>
+              <td class="score-high">Identical everywhere</td>
+            </tr>
+            <tr>
+              <td>Dependencies</td>
+              <td class="score-mid">User's installed connectors, settings</td>
+              <td class="score-high">Only our instructions + descriptions</td>
+            </tr>
+            <tr>
+              <td>Testability</td>
+              <td class="score-low">No isolation — can't test routing alone</td>
+              <td class="score-high">tool_selection_accuracy metric</td>
+            </tr>
+            <tr>
+              <td>Variance</td>
+              <td class="score-mid">Narrows but never disappears</td>
+              <td class="score-high">Zero (single code path)</td>
+            </tr>
+            <tr>
+              <td>Client surface count</td>
+              <td class="score-low">N different behaviors</td>
+              <td class="score-high">1 universal entry point</td>
+            </tr>
+            <tr>
+              <td>Regression detection</td>
+              <td class="score-low">Manual observation only</td>
+              <td class="score-high">Automated eval pipeline</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- Scaling -->
+    <section class="slide" id="scaling">
+      <h2>Scaling to N Specialists</h2>
+      <p style="margin-bottom: 2rem;">The pattern extends linearly. Each new specialist requires three additions:</p>
+      <div class="card-grid anim-fade">
+        <div class="card">
+          <h4>1. Agent Definition</h4>
+          <p>CREATE AGENT with domain-specific instructions, tools (semantic views, search services), and budget.</p>
+        </div>
+        <div class="card">
+          <h4>2. Wrapper Procedure</h4>
+          <p>EXECUTE AS OWNER stored procedure calling DATA_AGENT_RUN for the new specialist.</p>
+        </div>
+        <div class="card">
+          <h4>3. Supervisor Tool Entry</h4>
+          <p>Add a tool_spec + tool_resources entry to the supervisor's specification with routing keywords.</p>
+        </div>
+        <div class="card">
+          <h4>4. Evaluation Coverage</h4>
+          <p>Add test queries to the evaluation dataset covering the new specialist's domain boundaries.</p>
+        </div>
+      </div>
+      <div class="highlight-box anim-fade" style="margin-top: 1.5rem;">
+        <strong>Production considerations:</strong> The supervisor adds ~1-3s of LLM reasoning before routing. Monitor token costs via CORTEX_AI_USAGE views. Run evaluations after any change to instructions or tool descriptions.
+      </div>
+    </section>
+
+    <!-- Next Steps -->
+    <section class="slide" id="next-steps">
+      <h2>Next Steps</h2>
+      <div class="card-grid anim-fade">
+        <div class="card">
+          <h4>1. Run the Lab Notebook</h4>
+          <p>Execute <code>server-side-agent-routing-lab.ipynb</code> in Snowsight to validate the pattern against your account and data.</p>
+        </div>
+        <div class="card">
+          <h4>2. Connect Real Specialist Tools</h4>
+          <p>Replace code_execution placeholders with your existing Cortex Analyst semantic views and Cortex Search services.</p>
+        </div>
+        <div class="card">
+          <h4>3. Expand to All Specialists</h4>
+          <p>Create wrapper procedures for each specialist and add them to the supervisor's tool roster.</p>
+        </div>
+        <div class="card">
+          <h4>4. Establish Eval Baseline</h4>
+          <p>Build a comprehensive evaluation dataset covering domain boundaries and edge cases across all specialists.</p>
+        </div>
+      </div>
+      <div class="context-box anim-fade" style="margin-top: 2rem;">
+        <strong>End state:</strong> One Supervisor Agent exposed via MCP. Every client — LLM-powered tools, REST API, Snowflake Intelligence — makes a single call. Routing is consistent, testable, and owned by your team.
+      </div>
+    </section>
+
+  </main>
+
+  <script>
+    const progressBar = document.querySelector('.progress-bar');
+    window.addEventListener('scroll', () => {
+      const scrollTop = window.scrollY;
+      const docHeight = document.documentElement.scrollHeight - window.innerHeight;
+      progressBar.style.width = (scrollTop / docHeight * 100) + '%';
+    });
+
+    const observer = new IntersectionObserver((entries) => {
+      entries.forEach(entry => {
+        if (entry.isIntersecting) {
+          entry.target.classList.add('visible');
+        }
+      });
+    }, { threshold: 0.1 });
+
+    document.querySelectorAll('.anim-fade').forEach(el => observer.observe(el));
+
+    const sections = document.querySelectorAll('.slide');
+    const navLinks = document.querySelectorAll('.sidebar a');
+
+    window.addEventListener('scroll', () => {
+      let current = '';
+      sections.forEach(section => {
+        const sectionTop = section.offsetTop - 200;
+        if (window.scrollY >= sectionTop) {
+          current = section.getAttribute('id');
+        }
+      });
+      navLinks.forEach(link => {
+        link.classList.remove('active');
+        if (link.getAttribute('href') === '#' + current) {
+          link.classList.add('active');
+        }
+      });
+    });
+  </script>
+</body>
+</html>
