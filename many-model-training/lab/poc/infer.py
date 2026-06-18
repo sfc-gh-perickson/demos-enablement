@@ -1,3 +1,5 @@
+# Inference pipeline: score TEST_DATA via the registered partitioned model
+# Co-authored with CoCo
 """Inference pipeline: score TEST_DATA via the registered partitioned model."""
 from snowflake.snowpark import Session
 import snowflake.snowpark.functions as F
@@ -32,14 +34,20 @@ def score_test_data(session: Session, model_name: str = "MMT_DEMAND_MODEL"):
     infer_data = session.table("TEST_DATA")
 
     # Model signature excludes the target column; keep features + grain + time.
-    # Cast numeric features to DOUBLE to match the FLOAT model signature.
-    from snowflake.snowpark.types import DoubleType
+    # Cast feature columns to DOUBLE to match the FLOAT model signature.
+    # BOOLEANs must go through INTEGER first (Snowflake cannot CAST BOOLEAN→FLOAT directly).
+    from snowflake.snowpark.types import DoubleType, BooleanType
     input_cols = [c for c in infer_data.columns if c != TARGET]
     infer_input = infer_data.select(input_cols)
-    infer_input = infer_input.select([
-        F.col(c).cast(DoubleType()).alias(c) if c not in (GRAIN, TIME) else F.col(c)
-        for c in infer_input.columns
-    ])
+    cast_exprs = []
+    for field in infer_input.schema.fields:
+        if field.name in (GRAIN, TIME):
+            cast_exprs.append(F.col(field.name))
+        elif isinstance(field.datatype, BooleanType):
+            cast_exprs.append(F.col(field.name).cast("INTEGER").cast(DoubleType()).alias(field.name))
+        else:
+            cast_exprs.append(F.col(field.name).cast(DoubleType()).alias(field.name))
+    infer_input = infer_input.select(cast_exprs)
 
     mv = get_model_version(session, model_name)
     print(f"   Using model: {mv.model_name} version {mv.version_name}")

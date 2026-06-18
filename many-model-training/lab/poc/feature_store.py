@@ -1,3 +1,5 @@
+# Feature Store integration for versioned feature management and reproducible experiments
+# Co-authored with CoCo
 """Feature Store integration for versioned feature management and reproducible experiments.
 
 This module provides:
@@ -30,6 +32,9 @@ GRAIN = feature_cfg["partition_col"]
 TARGET = feature_cfg["target_col"]
 TIME = feature_cfg["time_col"]
 
+# FEATURE_TABLE lives in the Feature Store schema, not the connection schema
+FEATURE_TABLE_FQN = f"{conn_cfg['database']}.{fs_cfg['schema']}.{feature_cfg['name']}"
+
 
 def get_fs(session: Session) -> FeatureStore:
     """Return a FeatureStore instance for the configured schema."""
@@ -56,7 +61,6 @@ def setup_feature_store(session: Session):
     views on top of the existing table.
     """
     fs = get_fs(session)
-    feature_table_fqn = get_fully_qualified_name(feature_cfg["name"])
 
     # --- Entity ---
     entity = Entity(
@@ -74,7 +78,7 @@ def setup_feature_store(session: Session):
 
         # Build the source DataFrame: entity key + timestamp + feature columns
         select_cols = [GRAIN, TIME] + columns
-        feature_df = session.table(feature_table_fqn).select(select_cols)
+        feature_df = session.table(FEATURE_TABLE_FQN).select(select_cols)
 
         fv = FeatureView(
             name=fv_full_name,
@@ -150,12 +154,11 @@ def generate_training_dataset(
         (train_df, feature_metadata) tuple.
     """
     fs = get_fs(session)
-    feature_table_fqn = get_fully_qualified_name(feature_cfg["name"])
     if test_pct is None:
         test_pct = feature_cfg["test_pct"]
 
     # Build spine: entity key + timestamp + label
-    spine_df = session.table(feature_table_fqn).select(GRAIN, TIME, TARGET)
+    spine_df = session.table(FEATURE_TABLE_FQN).select(GRAIN, TIME, TARGET)
 
     # Generate training set using Feature Store (point-in-time correct join)
     full_df = fs.generate_training_set(
@@ -164,6 +167,15 @@ def generate_training_dataset(
         spine_timestamp_col=TIME,
         spine_label_cols=[TARGET],
     )
+
+    # Cast BOOLEAN columns to INTEGER for ManyModelTraining compatibility
+    # (Snowflake cannot CAST BOOLEAN directly to FLOAT, which the distributor requires)
+    from snowflake.snowpark.types import BooleanType
+    for field in full_df.schema.fields:
+        if isinstance(field.datatype, BooleanType):
+            full_df = full_df.with_column(
+                field.name, F.col(field.name).cast("INTEGER")
+            )
 
     # Collect feature metadata for reproducibility
     feature_metadata = {
@@ -211,8 +223,11 @@ def generate_training_dataset(
     train_table = f"{table_prefix}TRAIN_DATA"
     test_table = f"{table_prefix}TEST_DATA"
 
-    train_df.write.mode("overwrite").save_as_table(train_table)
-    test_df.write.mode("overwrite").save_as_table(test_table)
+    # Drop first to force schema recreation (overwrite mode preserves existing column types)
+    session.sql(f"DROP TABLE IF EXISTS {train_table}").collect()
+    session.sql(f"DROP TABLE IF EXISTS {test_table}").collect()
+    train_df.write.save_as_table(train_table)
+    test_df.write.save_as_table(test_table)
 
     print(f"   Train rows: {train_count:,}")
     print(f"   Test rows: {test_count:,}")
