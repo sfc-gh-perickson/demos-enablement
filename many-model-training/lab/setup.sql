@@ -362,7 +362,6 @@ CREATE OR REPLACE TABLE MMT_DEMO.FORECASTING.AGENT_INSIGHTS (
 -- Semantic view for Cortex Analyst — allows the agent to query telemetry,
 -- model catalog, and experiment data via natural language.
 CREATE OR REPLACE SEMANTIC VIEW MMT_DEMO.FORECASTING.MMT_TELEMETRY_VIEW
-  COMMENT = 'Semantic view for ML model monitoring — telemetry, catalog, and experiments'
 AS
   SELECT * FROM MMT_DEMO.FORECASTING.FORECAST_TELEMETRY
   UNION ALL SELECT NULL, NULL, NULL, NULL, NULL, NULL, NULL WHERE 1=0
@@ -387,6 +386,9 @@ RELATIONSHIPS (
   MMT_DEMO.FORECASTING.MODEL_CATALOG (PARTITION_ID) REFERENCES MMT_DEMO.FORECASTING.FORECAST_TELEMETRY (STORE_ITEM_ID),
   MMT_DEMO.FORECASTING.EXPERIMENT_RESULTS (PARTITION_ID) REFERENCES MMT_DEMO.FORECASTING.FORECAST_TELEMETRY (STORE_ITEM_ID)
 );
+
+COMMENT ON SEMANTIC VIEW MMT_DEMO.FORECASTING.MMT_TELEMETRY_VIEW IS
+  'Semantic view for ML model monitoring — telemetry, catalog, and experiments';
 
 -- Cortex Search service over past insights — enables the agent to find
 -- historical patterns and past recommendations.
