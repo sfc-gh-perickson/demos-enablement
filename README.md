@@ -16,6 +16,8 @@ An internal enablement repository for Snowflake sales engineers and account exec
   - [Cortex AI Observability](#cortex-ai-observability)
   - [Cortex Agent Multi-Tenancy](#cortex-agent-multi-tenancy)
   - [Server-Side Agent Routing](#server-side-agent-routing)
+  - [PII Redaction](#pii-redaction)
+  - [Label Studio on SPCS](#label-studio-on-spcs)
 - [Repository Structure](#repository-structure)
 - [Getting Started](#getting-started)
 - [Presentation Format](#presentation-format)
@@ -24,7 +26,7 @@ An internal enablement repository for Snowflake sales engineers and account exec
 
 ## Overview
 
-This repository contains seven enablement modules covering key Cortex AI and Snowflake ML topics:
+This repository contains ten enablement modules covering key Cortex AI and Snowflake ML topics:
 
 | Module | Audience | Format | Slides |
 |--------|----------|--------|--------|
@@ -36,8 +38,10 @@ This repository contains seven enablement modules covering key Cortex AI and Sno
 | Cortex AI Observability | SEs, Platform Admins, Finance | Presentation + Hands-on Lab | [View](https://sfc-gh-perickson.github.io/demos-enablement/cortex-ai-observability/presentations/cortex-ai-observability.html) |
 | Cortex Agent Multi-Tenancy | SEs, Solution Architects | Presentation + Hands-on Lab | [View](https://sfc-gh-perickson.github.io/demos-enablement/cortex-agent-multi-tenancy/presentations/cortex-agent-multi-tenancy.html) |
 | Server-Side Agent Routing | SEs, Platform Engineers | Presentation + Hands-on Lab | [View](https://sfc-gh-perickson.github.io/demos-enablement/agent-routing/presentations/server-side-agent-routing.html) |
+| PII Redaction | SEs, Data Engineers, Compliance | Presentation + Hands-on Lab | [View](https://sfc-gh-perickson.github.io/demos-enablement/pii-redaction/presentations/pii-redaction.html) |
+| Label Studio on SPCS | SEs, ML Engineers, Platform Engineers | Presentation + Hands-on Lab | [View](https://sfc-gh-perickson.github.io/demos-enablement/label-studio-spcs/presentations/label-studio-spcs.html) |
 
-Each module includes an HTML slide deck and companion speaker notes. The evaluations, many-model-training, feature-store, cortex-ai-observability, and cortex-agent-multi-tenancy modules also provide complete hands-on labs with SQL setup and notebooks.
+Each module includes an HTML slide deck and companion speaker notes. The evaluations, many-model-training, feature-store, cortex-ai-observability, cortex-agent-multi-tenancy, and label-studio-spcs modules also provide complete hands-on labs with SQL setup and notebooks.
 
 ---
 
@@ -219,6 +223,31 @@ The lab walks through testing routing, running evaluations with `tool_selection_
 
 ---
 
+### PII Redaction
+
+**Location:** `pii-redaction/`
+
+Covers three approaches to PII redaction on Snowflake — AI_REDACT (managed), AI_COMPLETE Extract+Replace (custom), and pre-computed caching (sub-second). Includes a head-to-head comparison and decision framework.
+
+**Contents:**
+
+| File | Description |
+|------|-------------|
+| [`presentations/pii-redaction.html`](https://sfc-gh-perickson.github.io/demos-enablement/pii-redaction/presentations/pii-redaction.html) | Slide deck (12 slides) |
+| `presentations/pii-redaction-speaker-notes.md` | Speaker notes with internal context |
+| `lab/setup.sql` | SQL setup (database, synthetic PII data, UDF, cache table) |
+| `lab/pii-redaction-lab.ipynb` | Hands-on lab notebook (30-45 min) |
+
+#### Lab Prerequisites
+
+1. A Snowflake account with Cortex AI features enabled
+2. Run `pii-redaction/lab/setup.sql` to create the `PII_REDACTION_DEMO` database and synthetic data
+3. Open `pii-redaction/lab/pii-redaction-lab.ipynb` in Snowflake Notebooks
+
+The lab walks through AI_REDACT (detect/redact modes), AI_COMPLETE extract+replace with structured output, a head-to-head comparison, and building a pre-computed PII cache for sub-second response.
+
+---
+
 ### Cortex Agent Multi-Tenancy
 
 **Location:** `cortex-agent-multi-tenancy/`
@@ -250,6 +279,42 @@ Covers how to implement row-level and column-level access control for thousands 
 4. Open `cortex-agent-multi-tenancy/lab/cortex-agent-multi-tenancy-lab.ipynb` in Snowflake Notebooks
 
 The lab walks through building a multi-tenant sales analytics agent, applying row/column policies, testing isolation across tenants, and demonstrating zero-DDL user onboarding.
+
+---
+
+### Label Studio on SPCS
+
+**Location:** `label-studio-spcs/`
+
+Covers deploying Label Studio, an open-source data labeling platform, on Snowpark Container Services with Snowflake Postgres as the managed database backend. Demonstrates running containerized web applications on SPCS with persistent storage and public endpoints.
+
+**Topics covered:**
+- SPCS service deployment with custom Docker images
+- Snowflake Postgres as an application database
+- Stage volumes for data access
+- Public endpoints with OAuth authentication
+- Data labeling workflow with Snowflake-native data
+
+**Contents:**
+
+| File | Description |
+|------|-------------|
+| [`presentations/label-studio-spcs.html`](https://sfc-gh-perickson.github.io/demos-enablement/label-studio-spcs/presentations/label-studio-spcs.html) | Slide deck (11 slides) |
+| `presentations/label-studio-spcs-speaker-notes.md` | Speaker notes with internal context |
+| `lab/setup.sql` | SQL setup script (database, Postgres instance, compute pool, sample data) |
+| `lab/Dockerfile` | Container image for Label Studio |
+| `lab/label-studio-spec.yaml` | SPCS service specification |
+| `lab/label-studio-spcs-lab.ipynb` | Hands-on lab notebook (30-45 min) |
+
+#### Lab Prerequisites
+
+1. A Snowflake account with SPCS and Snowflake Postgres enabled
+2. A role with CREATE DATABASE, CREATE WAREHOUSE, CREATE COMPUTE POOL, CREATE POSTGRES INSTANCE privileges
+3. Docker installed locally for building and pushing the container image
+4. Run `label-studio-spcs/lab/setup.sql` to create the `LABEL_STUDIO_SPCS` database and all infrastructure
+5. Open `label-studio-spcs/lab/label-studio-spcs-lab.ipynb` in Snowflake Notebooks
+
+The lab walks through building the container image, deploying Label Studio on SPCS, creating annotation projects, labeling data, and comparing human labels with Cortex AI classification.
 
 ---
 
@@ -291,6 +356,15 @@ enablement/
 │   └── presentations/
 │       ├── evaluating-cortex-agents.html
 │       └── evaluating-cortex-agents-speaker-notes.md
+├── label-studio-spcs/
+│   ├── lab/
+│   │   ├── setup.sql
+│   │   ├── Dockerfile
+│   │   ├── label-studio-spec.yaml
+│   │   └── label-studio-spcs-lab.ipynb
+│   └── presentations/
+│       ├── label-studio-spcs.html
+│       └── label-studio-spcs-speaker-notes.md
 ├── feature-store/
 │   ├── lab/
 │   │   ├── setup.sql
@@ -333,6 +407,8 @@ enablement/
    - **Cortex AI Observability:** Run `cortex-ai-observability/lab/setup.sql` before starting the notebook
    - **Cortex Agent Multi-Tenancy:** Run `cortex-agent-multi-tenancy/lab/setup.sql` before starting the notebook
    - **Agent Routing:** Run `agent-routing/lab/setup.sql` before starting the notebook
+   - **PII Redaction:** Run `pii-redaction/lab/setup.sql` before starting the notebook
+   - **Label Studio on SPCS:** Run `label-studio-spcs/lab/setup.sql` before starting the notebook
 
 ---
 

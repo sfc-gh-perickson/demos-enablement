@@ -1,0 +1,798 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Data Labeling on Snowflake: Label Studio on SPCS</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    :root {
+      --bg-primary: #0f1724;
+      --bg-secondary: #1a2537;
+      --bg-card: #1e2d42;
+      --accent: #29b5e8;
+      --accent-dim: rgba(41, 181, 232, 0.15);
+      --text-primary: #e8edf5;
+      --text-secondary: #8899aa;
+      --border: rgba(41, 181, 232, 0.2);
+      --gradient-start: #29b5e8;
+      --gradient-end: #a855f7;
+      --success: #4ade80;
+      --warning: #fbbf24;
+      --danger: #f87171;
+    }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: var(--bg-primary);
+      color: var(--text-primary);
+      line-height: 1.6;
+      overflow-x: hidden;
+    }
+    .progress-bar {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 0%;
+      height: 3px;
+      background: linear-gradient(90deg, var(--gradient-start), var(--gradient-end));
+      z-index: 200;
+      transition: width 0.2s;
+    }
+    .sidebar {
+      position: fixed;
+      left: 0;
+      top: 0;
+      width: 260px;
+      height: 100vh;
+      background: var(--bg-secondary);
+      border-right: 1px solid var(--border);
+      padding: 24px 0;
+      overflow-y: auto;
+      z-index: 100;
+    }
+    .sidebar-logo {
+      padding: 0 24px 24px;
+      border-bottom: 1px solid var(--border);
+      margin-bottom: 16px;
+    }
+    .sidebar-logo h2 {
+      font-size: 14px;
+      color: var(--accent);
+      text-transform: uppercase;
+      letter-spacing: 1.5px;
+    }
+    .sidebar-logo p {
+      font-size: 11px;
+      color: var(--text-secondary);
+      margin-top: 4px;
+    }
+    .sidebar a {
+      display: block;
+      padding: 10px 24px;
+      color: var(--text-secondary);
+      text-decoration: none;
+      font-size: 13px;
+      border-left: 3px solid transparent;
+      transition: all 0.2s;
+    }
+    .sidebar a:hover, .sidebar a.active {
+      color: var(--accent);
+      background: var(--accent-dim);
+      border-left-color: var(--accent);
+    }
+    .main-content {
+      margin-left: 260px;
+      padding: 0;
+    }
+    .slide {
+      min-height: 100vh;
+      padding: 80px 60px;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+    }
+    .slide-header {
+      margin-bottom: 48px;
+    }
+    .slide-header h1 {
+      font-size: 42px;
+      font-weight: 700;
+      background: linear-gradient(135deg, var(--gradient-start), var(--gradient-end));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+      margin-bottom: 12px;
+    }
+    .slide-header h2 {
+      font-size: 32px;
+      font-weight: 600;
+      color: var(--text-primary);
+      margin-bottom: 8px;
+    }
+    .slide-header p {
+      font-size: 18px;
+      color: var(--text-secondary);
+      max-width: 700px;
+    }
+    .hero-slide {
+      text-align: center;
+      align-items: center;
+    }
+    .hero-slide .slide-header h1 {
+      font-size: 56px;
+    }
+    .hero-slide .slide-header p {
+      font-size: 22px;
+      max-width: 800px;
+      margin: 0 auto;
+    }
+    .stats-row {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+      gap: 24px;
+      margin-top: 48px;
+      width: 100%;
+      max-width: 900px;
+    }
+    .stat-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 24px;
+      text-align: center;
+    }
+    .stat-card .stat-value {
+      font-size: 28px;
+      font-weight: 700;
+      color: var(--accent);
+      margin-bottom: 4px;
+    }
+    .stat-card .stat-label {
+      font-size: 13px;
+      color: var(--text-secondary);
+    }
+    .card-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+      gap: 24px;
+      margin-top: 32px;
+    }
+    .card {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 28px;
+      transition: transform 0.2s, border-color 0.2s;
+    }
+    .card:hover {
+      transform: translateY(-2px);
+      border-color: var(--accent);
+    }
+    .card h3 {
+      color: var(--accent);
+      font-size: 16px;
+      margin-bottom: 8px;
+    }
+    .card p, .card ul {
+      color: var(--text-secondary);
+      font-size: 14px;
+    }
+    .card ul {
+      list-style: none;
+      padding: 0;
+      margin-top: 8px;
+    }
+    .card ul li {
+      padding: 4px 0;
+    }
+    .card ul li::before {
+      content: "→ ";
+      color: var(--accent);
+    }
+    .code-block {
+      background: #0d1117;
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 24px;
+      margin: 24px 0;
+      overflow-x: auto;
+      font-family: 'SF Mono', 'Fira Code', monospace;
+      font-size: 13px;
+      line-height: 1.7;
+      color: #e6edf3;
+    }
+    .code-block .comment { color: #8b949e; }
+    .code-block .keyword { color: #ff7b72; }
+    .code-block .string { color: #a5d6ff; }
+    .code-block .function { color: #d2a8ff; }
+    .code-block .constant { color: #79c0ff; }
+    .flow-diagram {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 32px;
+      margin: 24px 0;
+      text-align: center;
+    }
+    .flow-row {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-wrap: wrap;
+      gap: 12px;
+      margin: 16px 0;
+    }
+    .flow-box {
+      background: var(--bg-secondary);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 12px 20px;
+      font-size: 13px;
+      font-weight: 500;
+    }
+    .flow-box.accent {
+      border-color: var(--accent);
+      color: var(--accent);
+    }
+    .flow-box.purple {
+      border-color: #a855f7;
+      color: #a855f7;
+    }
+    .flow-box.green {
+      border-color: var(--success);
+      color: var(--success);
+    }
+    .flow-box.warning {
+      border-color: var(--warning);
+      color: var(--warning);
+    }
+    .flow-arrow {
+      color: var(--text-secondary);
+      font-size: 18px;
+    }
+    .two-col {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 32px;
+      margin-top: 24px;
+    }
+    .highlight-box {
+      background: var(--accent-dim);
+      border: 1px solid var(--accent);
+      border-radius: 10px;
+      padding: 20px;
+      margin: 16px 0;
+    }
+    .highlight-box h4 {
+      color: var(--accent);
+      margin-bottom: 8px;
+      font-size: 14px;
+    }
+    .highlight-box p, .highlight-box ul {
+      color: var(--text-secondary);
+      font-size: 13px;
+    }
+    .highlight-box ul {
+      list-style: none;
+      padding: 0;
+      margin-top: 8px;
+    }
+    .highlight-box ul li {
+      padding: 3px 0;
+    }
+    .highlight-box ul li::before {
+      content: "✓ ";
+      color: var(--success);
+    }
+    .steps-list {
+      counter-reset: step-counter;
+      list-style: none;
+      padding: 0;
+      margin-top: 24px;
+    }
+    .steps-list li {
+      counter-increment: step-counter;
+      position: relative;
+      padding: 16px 16px 16px 60px;
+      margin-bottom: 12px;
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      color: var(--text-secondary);
+      font-size: 14px;
+    }
+    .steps-list li::before {
+      content: counter(step-counter);
+      position: absolute;
+      left: 18px;
+      top: 50%;
+      transform: translateY(-50%);
+      width: 28px;
+      height: 28px;
+      background: var(--accent-dim);
+      border: 1px solid var(--accent);
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 13px;
+      font-weight: 700;
+      color: var(--accent);
+    }
+    .badge {
+      display: inline-block;
+      padding: 3px 10px;
+      border-radius: 12px;
+      font-size: 11px;
+      font-weight: 600;
+    }
+    .badge-blue { background: rgba(41, 181, 232, 0.15); color: var(--accent); }
+    .badge-green { background: rgba(74, 222, 128, 0.15); color: var(--success); }
+    .badge-yellow { background: rgba(251, 191, 36, 0.15); color: var(--warning); }
+    .badge-red { background: rgba(248, 113, 113, 0.15); color: var(--danger); }
+    .badge-purple { background: rgba(168, 85, 247, 0.15); color: #a855f7; }
+    .anim-fade {
+      opacity: 0;
+      transform: translateY(20px);
+      transition: opacity 0.6s ease, transform 0.6s ease;
+    }
+    .anim-fade.visible {
+      opacity: 1;
+      transform: translateY(0);
+    }
+    @media (max-width: 900px) {
+      .sidebar { display: none; }
+      .main-content { margin-left: 0; }
+      .slide { padding: 40px 20px; }
+      .two-col { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+  <div class="progress-bar" id="progressBar"></div>
+
+  <nav class="sidebar">
+    <div class="sidebar-logo">
+      <h2>Label Studio</h2>
+      <p>SPCS Enablement</p>
+    </div>
+    <a href="#hero" class="active">Overview</a>
+    <a href="#challenge">The Challenge</a>
+    <a href="#why-spcs">Why SPCS</a>
+    <a href="#architecture">Architecture</a>
+    <a href="#primitives">SPCS Primitives</a>
+    <a href="#postgres">Postgres Backend</a>
+    <a href="#deployment">Deployment</a>
+    <a href="#dataflow">Data Flow</a>
+    <a href="#security">Security Model</a>
+    <a href="#production">Production</a>
+    <a href="#demo">Demo / Q&A</a>
+  </nav>
+
+  <main class="main-content">
+    <!-- Slide 1: Hero -->
+    <section class="slide hero-slide" id="hero">
+      <div class="slide-header">
+        <h1>Data Labeling on Snowflake</h1>
+        <p>Label Studio on SPCS — enterprise-grade data labeling with zero egress, full governance, and Snowflake-native storage powered by Snowflake Postgres.</p>
+      </div>
+      <div class="stats-row anim-fade">
+        <div class="stat-card">
+          <div class="stat-value">Zero Egress</div>
+          <div class="stat-label">Data never leaves Snowflake</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-value">Full RBAC</div>
+          <div class="stat-label">Existing governance applies</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-value">Open Source</div>
+          <div class="stat-label">No vendor lock-in</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-value">Managed PG</div>
+          <div class="stat-label">Snowflake Postgres backend</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Slide 2: The Data Labeling Challenge -->
+    <section class="slide" id="challenge">
+      <div class="slide-header">
+        <h2>The Data Labeling Challenge</h2>
+        <p>High-quality labeled data is the foundation of every ML model — but getting it right is expensive, slow, and fraught with security risk.</p>
+      </div>
+      <div class="card-grid anim-fade">
+        <div class="card">
+          <h3>Quality = Model Quality</h3>
+          <p>Training data quality directly determines model accuracy. Garbage in, garbage out — no amount of architecture tuning compensates for bad labels.</p>
+        </div>
+        <div class="card">
+          <h3>Expensive & Slow</h3>
+          <p>Manual labeling costs $1–$10+ per label depending on complexity. Weeks of annotator time for datasets that need thousands of examples.</p>
+        </div>
+        <div class="card">
+          <h3>Collaboration Challenges</h3>
+          <p>Multiple annotators need consistent guidelines, inter-annotator agreement tracking, and review workflows. Coordination overhead is massive.</p>
+        </div>
+        <div class="card">
+          <h3>Security Concerns</h3>
+          <p>SaaS labeling tools require data to leave your environment. For PII, healthcare, financial, or proprietary data — this is often a non-starter.</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- Slide 3: Why Label Studio on SPCS -->
+    <section class="slide" id="why-spcs">
+      <div class="slide-header">
+        <h2>Why Label Studio on SPCS</h2>
+        <p>Combine open-source labeling flexibility with Snowflake's security, governance, and compute — no data movement required.</p>
+      </div>
+      <div class="card-grid anim-fade">
+        <div class="card">
+          <h3>Data Never Leaves</h3>
+          <p>All data stays within the Snowflake security perimeter. No egress, no external storage, no third-party data access.</p>
+        </div>
+        <div class="card">
+          <h3>Governed by Snowflake RBAC</h3>
+          <p>Existing roles, grants, and policies apply to compute, storage, and network access. No separate permission system to manage.</p>
+        </div>
+        <div class="card">
+          <h3>Elastic Compute</h3>
+          <p>SPCS compute pools scale with demand. Spin up for labeling sprints, scale down when idle. Pay only for what you use.</p>
+        </div>
+        <div class="card">
+          <h3>Native Stage Integration</h3>
+          <p>Mount Snowflake stages directly into containers for data I/O. Images, documents, audio — all accessible without export.</p>
+        </div>
+        <div class="card">
+          <h3>Open Source, Extensible</h3>
+          <p>Label Studio is open-source (Apache 2.0). Full customization of labeling interfaces, ML backends, webhooks — no vendor lock-in.</p>
+        </div>
+        <div class="card">
+          <h3>Single Platform</h3>
+          <p>Labeling, storage, compute, ML training, and inference — all on Snowflake. Eliminates integration complexity between services.</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- Slide 4: Architecture -->
+    <section class="slide" id="architecture">
+      <div class="slide-header">
+        <h2>Architecture</h2>
+        <p>Four components working together: SPCS compute, Snowflake Postgres, Snowflake Stages, and a public endpoint for browser access.</p>
+      </div>
+      <div class="flow-diagram anim-fade">
+        <div style="margin-bottom: 24px; font-size: 12px; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 1px;">Snowflake Security Perimeter</div>
+        <div class="flow-row">
+          <div class="flow-box accent">SPCS Compute Pool</div>
+          <span class="flow-arrow">→</span>
+          <div class="flow-box purple">Label Studio Container</div>
+        </div>
+        <div class="flow-row">
+          <div class="flow-box green">Snowflake Postgres</div>
+          <span class="flow-arrow">←</span>
+          <div class="flow-box purple">Label Studio Container</div>
+          <span class="flow-arrow">→</span>
+          <div class="flow-box warning">Stage Volumes</div>
+        </div>
+        <div style="margin-top: 24px; border-top: 1px solid var(--border); padding-top: 24px;">
+          <div class="flow-row">
+            <div class="flow-box purple">Label Studio Container</div>
+            <span class="flow-arrow">→</span>
+            <div class="flow-box">Public Endpoint (OAuth)</div>
+            <span class="flow-arrow">→</span>
+            <div class="flow-box">Browser / Annotators</div>
+          </div>
+        </div>
+      </div>
+      <div class="two-col anim-fade">
+        <div class="highlight-box">
+          <h4>Postgres Role</h4>
+          <ul>
+            <li>Project metadata</li>
+            <li>Annotation storage</li>
+            <li>User accounts & permissions</li>
+            <li>Task queue management</li>
+          </ul>
+        </div>
+        <div class="highlight-box">
+          <h4>Stage Volumes Role</h4>
+          <ul>
+            <li>Source images & documents</li>
+            <li>Audio / video files</li>
+            <li>Pre-processed text data</li>
+            <li>Export artifacts</li>
+          </ul>
+        </div>
+      </div>
+    </section>
+
+    <!-- Slide 5: SPCS Primitives Used -->
+    <section class="slide" id="primitives">
+      <div class="slide-header">
+        <h2>SPCS Primitives Used</h2>
+        <p>Label Studio leverages core SPCS building blocks — all GA and production-ready.</p>
+      </div>
+      <div class="card-grid anim-fade">
+        <div class="card">
+          <h3>Compute Pool</h3>
+          <p>CPU_X64_S instance family. Single node for dev/lab, multi-node for production annotator teams. Auto-suspend available.</p>
+        </div>
+        <div class="card">
+          <h3>Image Repository</h3>
+          <p>Private container registry within Snowflake. Push Label Studio Docker images — no external registry dependencies.</p>
+        </div>
+        <div class="card">
+          <h3>Stage Volumes</h3>
+          <p>Mount internal stages directly into the container filesystem. Label Studio reads source data files without copying or exporting.</p>
+        </div>
+        <div class="card">
+          <h3>Public Endpoints</h3>
+          <p>OAuth-secured HTTPS endpoints expose Label Studio's web UI to annotators. No VPN or SSH tunneling required.</p>
+        </div>
+        <div class="card">
+          <h3>External Access Integration</h3>
+          <p>Outbound networking for ML pre-labeling backends, webhook notifications, or pulling model predictions from external APIs.</p>
+        </div>
+        <div class="card">
+          <h3>Secrets</h3>
+          <p>Securely store Postgres credentials, API keys, and tokens. Mounted into containers at runtime — never hardcoded.</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- Slide 6: Snowflake Postgres as Backend -->
+    <section class="slide" id="postgres">
+      <div class="slide-header">
+        <h2>Snowflake Postgres as Backend</h2>
+        <p>Managed PostgreSQL with zero operational overhead — the ideal metadata store for Label Studio.</p>
+      </div>
+      <div class="two-col anim-fade">
+        <div>
+          <div class="card" style="margin-bottom: 16px;">
+            <h3>Fully Managed</h3>
+            <p>No patching, no upgrades, no backups to configure. Snowflake handles all PostgreSQL operations. Focus on labeling, not DBA work.</p>
+          </div>
+          <div class="card" style="margin-bottom: 16px;">
+            <h3>Right-Sized Compute</h3>
+            <p>BURST_S for dev/lab environments (low-cost, burstable). STANDARD_M+ for production with sustained throughput guarantees.</p>
+          </div>
+          <div class="card">
+            <h3>Built-in Connection Pooling</h3>
+            <p>PgBouncer included — handles connection multiplexing automatically. No external pooler needed even with many concurrent annotators.</p>
+          </div>
+        </div>
+        <div>
+          <div class="card" style="margin-bottom: 16px;">
+            <h3>Network Policies</h3>
+            <p>Restrict Postgres access to specific SPCS services or IP ranges. Defense-in-depth even within the Snowflake perimeter.</p>
+          </div>
+          <div class="card" style="margin-bottom: 16px;">
+            <h3>High Availability</h3>
+            <p>HIGH_AVAILABILITY=TRUE for production. Automatic failover, synchronous replication, zero annotation data loss.</p>
+          </div>
+          <div class="card">
+            <h3>Standard PostgreSQL</h3>
+            <p>Wire-compatible PostgreSQL. Label Studio connects via standard libpq — no drivers, no adapters, no Snowflake-specific code changes.</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Slide 7: Deployment Walkthrough -->
+    <section class="slide" id="deployment">
+      <div class="slide-header">
+        <h2>Deployment Walkthrough</h2>
+        <p>Six steps from zero to a running Label Studio instance on SPCS.</p>
+      </div>
+      <ol class="steps-list anim-fade">
+        <li><strong>Build Docker Image</strong> — Extend the official Label Studio image with Postgres driver and any custom ML backends.</li>
+        <li><strong>Push to Image Repository</strong> — Tag and push to your Snowflake image repository. No external registry access needed.</li>
+        <li><strong>Create Postgres Instance</strong> — CREATE POSTGRES INSTANCE with desired compute family (BURST_S for lab, STANDARD_M for prod).</li>
+        <li><strong>Configure Service Spec</strong> — YAML spec referencing the image, stage volumes, Postgres credentials (via secrets), and endpoint config.</li>
+        <li><strong>Create SPCS Service</strong> — CREATE SERVICE with the spec on your compute pool. Label Studio initializes the Postgres schema on first boot.</li>
+        <li><strong>Access via Public Endpoint</strong> — Navigate to the OAuth-secured endpoint. Log in, create a project, import data from mounted stages.</li>
+      </ol>
+      <div class="highlight-box anim-fade" style="margin-top: 24px;">
+        <h4>Time to Deploy</h4>
+        <p>From scratch, the full deployment takes approximately 15-20 minutes. Most time is spent on the Docker build and image push. The Postgres instance and SPCS service come up in under a minute each.</p>
+      </div>
+    </section>
+
+    <!-- Slide 8: Data Flow -->
+    <section class="slide" id="dataflow">
+      <div class="slide-header">
+        <h2>Data Flow</h2>
+        <p>End-to-end pipeline: from raw data in Snowflake to labeled datasets ready for ML training.</p>
+      </div>
+      <div class="flow-diagram anim-fade">
+        <div style="margin-bottom: 16px; font-size: 12px; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 1px;">Ingestion</div>
+        <div class="flow-row">
+          <div class="flow-box">Snowflake Tables</div>
+          <span class="flow-arrow">→</span>
+          <div class="flow-box">Internal Stages</div>
+          <span class="flow-arrow">→</span>
+          <div class="flow-box accent">Stage Volume Mount</div>
+        </div>
+        <div style="margin: 24px 0; border-top: 1px solid var(--border); padding-top: 16px; font-size: 12px; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 1px;">Labeling</div>
+        <div class="flow-row">
+          <div class="flow-box accent">Stage Volume Mount</div>
+          <span class="flow-arrow">→</span>
+          <div class="flow-box purple">Label Studio UI</div>
+          <span class="flow-arrow">→</span>
+          <div class="flow-box green">Annotations (Postgres)</div>
+        </div>
+        <div style="margin: 24px 0; border-top: 1px solid var(--border); padding-top: 16px; font-size: 12px; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 1px;">Export</div>
+        <div class="flow-row">
+          <div class="flow-box green">Annotations (Postgres)</div>
+          <span class="flow-arrow">→</span>
+          <div class="flow-box warning">Export to Stage</div>
+          <span class="flow-arrow">→</span>
+          <div class="flow-box">Snowflake Tables</div>
+          <span class="flow-arrow">→</span>
+          <div class="flow-box">ML Training</div>
+        </div>
+      </div>
+      <div class="card-grid anim-fade">
+        <div class="card">
+          <h3>Supported Data Types</h3>
+          <ul>
+            <li>Images (PNG, JPEG, TIFF)</li>
+            <li>Documents (PDF, text)</li>
+            <li>Audio (WAV, MP3)</li>
+            <li>Video (MP4)</li>
+            <li>Structured text (NER, classification)</li>
+          </ul>
+        </div>
+        <div class="card">
+          <h3>Export Formats</h3>
+          <ul>
+            <li>JSON (Label Studio native)</li>
+            <li>COCO (object detection)</li>
+            <li>VOC XML (bounding boxes)</li>
+            <li>YOLO (detection training)</li>
+            <li>CSV / TSV (classification)</li>
+          </ul>
+        </div>
+      </div>
+    </section>
+
+    <!-- Slide 9: Security Model -->
+    <section class="slide" id="security">
+      <div class="slide-header">
+        <h2>Security Model</h2>
+        <p>Defense-in-depth: every layer of the stack is secured by Snowflake-native controls.</p>
+      </div>
+      <div class="card-grid anim-fade">
+        <div class="card">
+          <h3>OAuth Public Endpoints</h3>
+          <p>End-user access is authenticated via Snowflake OAuth. Only authorized users can reach the Label Studio UI — no anonymous access.</p>
+        </div>
+        <div class="card">
+          <h3>Snowflake RBAC</h3>
+          <p>All objects — compute pools, services, stages, Postgres instances — governed by standard Snowflake roles and grants.</p>
+        </div>
+        <div class="card">
+          <h3>Network Policies</h3>
+          <p>Restrict Postgres access to SPCS service IPs only. Optional IP allowlisting for public endpoints. Layer 4 control within the perimeter.</p>
+        </div>
+        <div class="card">
+          <h3>Secrets Management</h3>
+          <p>Postgres credentials stored as Snowflake secrets. Injected at container runtime — never in spec files, logs, or environment variables in plain text.</p>
+        </div>
+        <div class="card">
+          <h3>No Data Egress</h3>
+          <p>Source data, annotations, and exports all stay within Snowflake. External access is opt-in (EAI) and can be fully blocked.</p>
+        </div>
+        <div class="card">
+          <h3>Audit Trail</h3>
+          <p>All access to compute, storage, and Postgres is captured in Snowflake access history. Full provenance for compliance requirements.</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- Slide 10: Production Considerations -->
+    <section class="slide" id="production">
+      <div class="slide-header">
+        <h2>Production Considerations</h2>
+        <p>Moving from lab to production: reliability, scale, and automation patterns.</p>
+      </div>
+      <div class="two-col anim-fade">
+        <div>
+          <div class="card" style="margin-bottom: 16px;">
+            <h3>HA Postgres</h3>
+            <p>HIGH_AVAILABILITY=TRUE enables synchronous replication and automatic failover. Zero annotation loss on infrastructure failures.</p>
+          </div>
+          <div class="card" style="margin-bottom: 16px;">
+            <h3>Production Compute</h3>
+            <p>STANDARD_M+ compute family for Postgres ensures sustained throughput. No burst credits to exhaust during peak labeling sessions.</p>
+          </div>
+          <div class="card">
+            <h3>ML Pre-Labeling</h3>
+            <p>Use External Access Integration to connect ML backends for automated pre-labeling. Annotators review and correct, reducing per-label cost by 50-80%.</p>
+          </div>
+        </div>
+        <div>
+          <div class="card" style="margin-bottom: 16px;">
+            <h3>Team Scaling</h3>
+            <p>Label Studio supports multiple annotators with agreement tracking, review workflows, and role-based access within the application.</p>
+          </div>
+          <div class="card" style="margin-bottom: 16px;">
+            <h3>Automated Pipelines</h3>
+            <p>Snowflake Tasks to stage new data, trigger exports, and load labeled datasets into training tables on a schedule.</p>
+          </div>
+          <div class="card">
+            <h3>Monitoring</h3>
+            <p>SPCS service health via SYSTEM$GET_SERVICE_STATUS. Postgres metrics via pg_stat. Alerting via Snowflake alerts on service state changes.</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Slide 11: Demo / Q&A -->
+    <section class="slide hero-slide" id="demo">
+      <div class="slide-header">
+        <h1>Demo & Q&A</h1>
+        <p>Let's see Label Studio on SPCS in action — from deployment to a labeled dataset ready for training.</p>
+      </div>
+      <div class="card-grid anim-fade" style="max-width: 700px;">
+        <div class="card">
+          <h3>Lab Guide</h3>
+          <p>Step-by-step deployment walkthrough with all SQL, Docker commands, and service specs included.</p>
+        </div>
+        <div class="card">
+          <h3>Documentation</h3>
+          <p>SPCS docs, Snowflake Postgres docs, and Label Studio configuration reference.</p>
+        </div>
+        <div class="card">
+          <h3>Source Code</h3>
+          <p>Dockerfile, service spec, setup scripts, and sample labeling configurations in the enablement repo.</p>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <script>
+    // Progress bar
+    window.addEventListener('scroll', () => {
+      const scrollTop = window.scrollY;
+      const docHeight = document.documentElement.scrollHeight - window.innerHeight;
+      const progress = (scrollTop / docHeight) * 100;
+      document.getElementById('progressBar').style.width = progress + '%';
+    });
+
+    // Intersection Observer for fade-in animations
+    const observer = new IntersectionObserver((entries) => {
+      entries.forEach(entry => {
+        if (entry.isIntersecting) {
+          entry.target.classList.add('visible');
+        }
+      });
+    }, { threshold: 0.1 });
+
+    document.querySelectorAll('.anim-fade').forEach(el => observer.observe(el));
+
+    // Active nav tracking
+    const sections = document.querySelectorAll('.slide');
+    const navLinks = document.querySelectorAll('.sidebar a');
+
+    window.addEventListener('scroll', () => {
+      let current = '';
+      sections.forEach(section => {
+        const sectionTop = section.offsetTop - 200;
+        if (window.scrollY >= sectionTop) {
+          current = section.getAttribute('id');
+        }
+      });
+      navLinks.forEach(link => {
+        link.classList.remove('active');
+        if (link.getAttribute('href') === '#' + current) {
+          link.classList.add('active');
+        }
+      });
+    });
+  </script>
+</body>
+</html>

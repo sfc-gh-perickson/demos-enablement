@@ -1,0 +1,37 @@
+# =============================================================================
+# Label Studio SPCS Service Specification
+# =============================================================================
+# Before deploying:
+#   1. Replace <POSTGRES_HOST> with the host from CREATE POSTGRES INSTANCE output
+#   2. Replace <POSTGRES_PASSWORD> with the 'application' user password from output
+#   3. Push the container image to LABEL_STUDIO_SPCS.APP.LABEL_STUDIO_REPO
+# =============================================================================
+spec:
+  containers:
+  - name: label-studio
+    image: /LABEL_STUDIO_SPCS/APP/LABEL_STUDIO_REPO/label-studio:latest
+    env:
+      DJANGO_DB: default
+      POSTGRE_HOST: "<POSTGRES_HOST>"
+      POSTGRE_PORT: "5432"
+      POSTGRE_NAME: postgres
+      POSTGRE_USER: application
+      POSTGRE_PASSWORD: "<POSTGRES_PASSWORD>"
+      LABEL_STUDIO_PORT: "8080"
+      LABEL_STUDIO_LOCAL_FILES_SERVING_ENABLED: "true"
+      LABEL_STUDIO_LOCAL_FILES_DOCUMENT_ROOT: "/label-studio/files"
+    readinessProbe:
+      port: 8080
+      path: /health
+    volumeMounts:
+    - name: data-files
+      mountPath: /label-studio/files
+  endpoints:
+  - name: ui
+    port: 8080
+    public: true
+  volumes:
+  - name: data-files
+    source: "@LABEL_STUDIO_SPCS.APP.DATA_STAGE"
+    uid: 1000
+    gid: 1000

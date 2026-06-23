@@ -1,0 +1,1027 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>PII Redaction on Snowflake</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+
+    :root {
+      --bg: #0F1B2D;
+      --sidebar-bg: #1B2A4A;
+      --primary: #29B5E8;
+      --accent: #7C3AED;
+      --text: #E2E8F0;
+      --text-muted: #94A3B8;
+      --card-bg: #162236;
+      --border: #2D4A6F;
+      --green: #10B981;
+      --orange: #F59E0B;
+      --red: #EF4444;
+    }
+
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      font-family: 'Inter', sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.6;
+      overflow-x: hidden;
+    }
+
+    .progress-bar {
+      position: fixed;
+      top: 0;
+      left: 0;
+      height: 3px;
+      background: linear-gradient(90deg, var(--primary), var(--accent));
+      z-index: 1000;
+      transition: width 0.1s;
+    }
+
+    .sidebar {
+      position: fixed;
+      left: 0;
+      top: 0;
+      width: 260px;
+      height: 100vh;
+      background: var(--sidebar-bg);
+      padding: 2rem 1.5rem;
+      overflow-y: auto;
+      border-right: 1px solid var(--border);
+      z-index: 100;
+    }
+
+    .sidebar h2 {
+      font-size: 1rem;
+      font-weight: 600;
+      color: var(--primary);
+      margin-bottom: 1.5rem;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+
+    .sidebar a {
+      display: block;
+      color: var(--text-muted);
+      text-decoration: none;
+      padding: 0.5rem 0.75rem;
+      border-radius: 6px;
+      font-size: 0.85rem;
+      margin-bottom: 0.25rem;
+      transition: all 0.2s;
+    }
+
+    .sidebar a:hover,
+    .sidebar a.active {
+      color: var(--text);
+      background: rgba(41, 181, 232, 0.1);
+    }
+
+    .sidebar a.active {
+      border-left: 3px solid var(--primary);
+      padding-left: calc(0.75rem - 3px);
+    }
+
+    .main {
+      margin-left: 260px;
+      padding: 0;
+    }
+
+    .slide {
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      padding: 4rem 3rem;
+      max-width: 1200px;
+      margin: 0 auto;
+    }
+
+    .slide h1 {
+      font-size: 2.5rem;
+      font-weight: 700;
+      margin-bottom: 1rem;
+      background: linear-gradient(135deg, var(--primary), var(--accent));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+
+    .slide h2 {
+      font-size: 1.75rem;
+      font-weight: 600;
+      color: var(--text);
+      margin-bottom: 1.5rem;
+    }
+
+    .slide h3 {
+      font-size: 1.25rem;
+      font-weight: 500;
+      color: var(--text-muted);
+      margin-bottom: 1rem;
+    }
+
+    .slide p {
+      font-size: 1.1rem;
+      color: var(--text-muted);
+      max-width: 700px;
+      text-align: center;
+    }
+
+    .stat-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 1.5rem;
+      width: 100%;
+      margin: 2rem 0;
+    }
+
+    .stat-card {
+      background: var(--card-bg);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 1.5rem;
+      text-align: center;
+    }
+
+    .stat-card .value {
+      font-size: 2rem;
+      font-weight: 700;
+      color: var(--primary);
+    }
+
+    .stat-card .label {
+      font-size: 0.85rem;
+      color: var(--text-muted);
+      margin-top: 0.5rem;
+    }
+
+    .card-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+      gap: 1.5rem;
+      width: 100%;
+      margin: 2rem 0;
+    }
+
+    .card {
+      background: var(--card-bg);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 1.5rem;
+    }
+
+    .card h4 {
+      font-size: 1rem;
+      font-weight: 600;
+      color: var(--text);
+      margin-bottom: 0.75rem;
+    }
+
+    .card p {
+      font-size: 0.9rem;
+      color: var(--text-muted);
+      text-align: left;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 2rem 0;
+      font-size: 0.9rem;
+    }
+
+    th {
+      background: var(--card-bg);
+      color: var(--primary);
+      font-weight: 600;
+      padding: 0.75rem 1rem;
+      text-align: left;
+      border-bottom: 2px solid var(--border);
+    }
+
+    td {
+      padding: 0.75rem 1rem;
+      border-bottom: 1px solid var(--border);
+      color: var(--text);
+    }
+
+    tr:hover td {
+      background: rgba(41, 181, 232, 0.05);
+    }
+
+    .highlight-box {
+      background: rgba(41, 181, 232, 0.1);
+      border: 1px solid var(--primary);
+      border-radius: 12px;
+      padding: 1.5rem;
+      margin: 1.5rem 0;
+      width: 100%;
+    }
+
+    .context-box {
+      background: rgba(124, 58, 237, 0.1);
+      border: 1px solid var(--accent);
+      border-radius: 12px;
+      padding: 1.5rem;
+      margin: 1.5rem 0;
+      width: 100%;
+    }
+
+    .warning-box {
+      background: rgba(245, 158, 11, 0.1);
+      border: 1px solid var(--orange);
+      border-radius: 12px;
+      padding: 1.5rem;
+      margin: 1.5rem 0;
+      width: 100%;
+    }
+
+    .badge-green { background: rgba(16, 185, 129, 0.15); color: var(--green); padding: 0.25rem 0.75rem; border-radius: 99px; font-size: 0.8rem; font-weight: 500; display: inline-block; }
+    .badge-orange { background: rgba(245, 158, 11, 0.15); color: var(--orange); padding: 0.25rem 0.75rem; border-radius: 99px; font-size: 0.8rem; font-weight: 500; display: inline-block; }
+    .badge-red { background: rgba(239, 68, 68, 0.15); color: var(--red); padding: 0.25rem 0.75rem; border-radius: 99px; font-size: 0.8rem; font-weight: 500; display: inline-block; }
+    .badge-blue { background: rgba(41, 181, 232, 0.15); color: var(--primary); padding: 0.25rem 0.75rem; border-radius: 99px; font-size: 0.8rem; font-weight: 500; display: inline-block; }
+    .badge-purple { background: rgba(124, 58, 237, 0.15); color: var(--accent); padding: 0.25rem 0.75rem; border-radius: 99px; font-size: 0.8rem; font-weight: 500; display: inline-block; }
+
+    .slide ul {
+      list-style: none;
+      width: 100%;
+      max-width: 700px;
+    }
+
+    .slide ul li {
+      padding: 0.75rem 0;
+      padding-left: 1.5rem;
+      position: relative;
+      color: var(--text);
+      font-size: 1.05rem;
+    }
+
+    .slide ul li::before {
+      content: '';
+      position: absolute;
+      left: 0;
+      top: 50%;
+      transform: translateY(-50%);
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: var(--primary);
+    }
+
+    code {
+      background: var(--card-bg);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 0.2rem 0.5rem;
+      font-size: 0.85rem;
+      font-family: 'SF Mono', 'Fira Code', monospace;
+      color: var(--primary);
+    }
+
+    pre {
+      background: var(--card-bg);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 1.5rem;
+      overflow-x: auto;
+      width: 100%;
+      margin: 1.5rem 0;
+      font-size: 0.85rem;
+      line-height: 1.7;
+      font-family: 'SF Mono', 'Fira Code', monospace;
+      color: var(--text);
+    }
+
+    pre .keyword { color: var(--accent); font-weight: 500; }
+    pre .string { color: var(--green); }
+    pre .comment { color: var(--text-muted); font-style: italic; }
+    pre .function { color: var(--primary); }
+
+    .flow-diagram {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.5rem;
+      margin: 2rem 0;
+      flex-wrap: wrap;
+      width: 100%;
+    }
+
+    .flow-step {
+      background: var(--card-bg);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 1rem 1.5rem;
+      text-align: center;
+      min-width: 140px;
+    }
+
+    .flow-step.active {
+      border-color: var(--primary);
+      box-shadow: 0 0 20px rgba(41, 181, 232, 0.2);
+    }
+
+    .flow-step .step-label {
+      font-size: 0.75rem;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+
+    .flow-step .step-title {
+      font-size: 1rem;
+      font-weight: 600;
+      color: var(--text);
+      margin-top: 0.25rem;
+    }
+
+    .flow-arrow {
+      color: var(--primary);
+      font-size: 1.5rem;
+      font-weight: 300;
+    }
+
+    .two-col {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 2rem;
+      width: 100%;
+      margin: 2rem 0;
+    }
+
+    .anim-fade {
+      opacity: 0;
+      transform: translateY(20px);
+      transition: opacity 0.6s ease, transform 0.6s ease;
+    }
+
+    .anim-fade.visible {
+      opacity: 1;
+      transform: translateY(0);
+    }
+
+    @media (max-width: 900px) {
+      .sidebar { display: none; }
+      .main { margin-left: 0; }
+      .stat-grid { grid-template-columns: repeat(2, 1fr); }
+      .slide { padding: 2rem 1.5rem; }
+      .two-col { grid-template-columns: 1fr; }
+    }
+
+    .github-link {
+      position: fixed;
+      top: 1rem;
+      right: 1.5rem;
+      z-index: 1000;
+      color: var(--text-muted);
+      text-decoration: none;
+      font-size: 0.8rem;
+      font-weight: 500;
+      display: flex;
+      align-items: center;
+      gap: 0.4rem;
+      padding: 0.4rem 0.75rem;
+      border-radius: 6px;
+      border: 1px solid var(--border);
+      background: var(--card-bg);
+      transition: all 0.2s;
+    }
+    .github-link:hover {
+      color: var(--text);
+      border-color: var(--primary);
+    }
+    .github-link svg {
+      width: 16px;
+      height: 16px;
+      fill: currentColor;
+    }
+  </style>
+</head>
+<body>
+  <a href="https://github.com/sfc-gh-perickson/demos-enablement/tree/main/pii-redaction" class="github-link" target="_blank">
+    <svg viewBox="0 0 16 16"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"/></svg>
+    GitHub
+  </a>
+  <div class="progress-bar"></div>
+
+  <nav class="sidebar">
+    <h2>PII Redaction</h2>
+    <a href="#hero">Overview</a>
+    <a href="#problem">The Problem</a>
+    <a href="#ai-redact">AI_REDACT</a>
+    <a href="#ai-complete">AI_COMPLETE Extract</a>
+    <a href="#insight">The Key Insight</a>
+    <a href="#udf">The UDF</a>
+    <a href="#cached">Pre-Computed Cache</a>
+    <a href="#comparison">Comparison</a>
+    <a href="#cost">Cost Analysis</a>
+    <a href="#production">Production Patterns</a>
+    <a href="#decision">Decision Framework</a>
+    <a href="#closing">Next Steps</a>
+  </nav>
+
+  <main class="main">
+
+    <!-- Slide 1: Hero -->
+    <section class="slide" id="hero">
+      <h1>PII Redaction on Snowflake</h1>
+      <p>Three approaches to redacting personally identifiable information — from zero-config to sub-second cached.</p>
+      <div class="stat-grid anim-fade" style="margin-top: 2rem;">
+        <div class="stat-card">
+          <div class="value">3</div>
+          <div class="label">Approaches</div>
+        </div>
+        <div class="stat-card">
+          <div class="value">12+</div>
+          <div class="label">PII Categories</div>
+        </div>
+        <div class="stat-card">
+          <div class="value">Sub-second</div>
+          <div class="label">Cached Response</div>
+        </div>
+        <div class="stat-card">
+          <div class="value">Zero</div>
+          <div class="label">Data Movement</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Slide 2: The Problem -->
+    <section class="slide" id="problem">
+      <h2>PII in Unstructured Text</h2>
+      <div class="card-grid anim-fade">
+        <div class="card">
+          <h4>Regulatory Compliance</h4>
+          <p>GDPR, CCPA, HIPAA, and SOX all mandate that PII be masked or redacted before sharing, analytics, or long-term storage.</p>
+        </div>
+        <div class="card">
+          <h4>Scale Challenge</h4>
+          <p>Millions of support tickets, medical notes, and chat transcripts arrive daily. Manual review is impossible at production scale.</p>
+        </div>
+        <div class="card">
+          <h4>Latency Requirements</h4>
+          <p>Real-time applications need redacted text in milliseconds, not the seconds that LLM inference typically requires.</p>
+        </div>
+        <div class="card">
+          <h4>Accuracy Demands</h4>
+          <p>Regex-based approaches miss context-dependent PII. "Jordan" is a name in one context but a country in another.</p>
+        </div>
+      </div>
+      <div class="warning-box anim-fade" style="margin-top: 1.5rem;">
+        <strong>The naive approach:</strong> Calling an LLM to rewrite entire paragraphs is accurate but slow — output tokens are generated sequentially, and rewriting 500 words takes 3-5 seconds per record.
+      </div>
+    </section>
+
+    <!-- Slide 3: AI_REDACT -->
+    <section class="slide" id="ai-redact">
+      <h2>Approach 1: AI_REDACT</h2>
+      <h3>Managed, zero-config redaction</h3>
+      <pre class="anim-fade"><span class="comment">-- Detect PII categories in text</span>
+<span class="keyword">SELECT</span> <span class="function">SNOWFLAKE.CORTEX.AI_REDACT</span>(
+  transcript,
+  <span class="string">'detect'</span>
+) <span class="keyword">AS</span> pii_detected
+<span class="keyword">FROM</span> PII_REDACTION_DEMO.RAW.SUPPORT_TICKETS;
+
+<span class="comment">-- Redact PII with placeholder labels</span>
+<span class="keyword">SELECT</span> <span class="function">SNOWFLAKE.CORTEX.AI_REDACT</span>(
+  transcript,
+  <span class="string">'redact'</span>
+) <span class="keyword">AS</span> redacted_text
+<span class="keyword">FROM</span> PII_REDACTION_DEMO.RAW.SUPPORT_TICKETS;</pre>
+      <div class="two-col anim-fade">
+        <div class="card">
+          <h4>Detect Mode</h4>
+          <p>Returns a JSON object identifying PII spans and their categories — useful for auditing what's present without modifying text.</p>
+        </div>
+        <div class="card">
+          <h4>Redact Mode</h4>
+          <p>Returns the original text with PII replaced by category labels like <code>[PERSON]</code>, <code>[EMAIL]</code>, <code>[PHONE_NUMBER]</code>.</p>
+        </div>
+      </div>
+      <div class="anim-fade" style="width: 100%; overflow-x: auto;">
+        <table>
+          <thead>
+            <tr><th>Category</th><th>Example</th><th>Redacted As</th></tr>
+          </thead>
+          <tbody>
+            <tr><td>Person Name</td><td>John Smith</td><td><code>[PERSON]</code></td></tr>
+            <tr><td>Email</td><td>john@acme.com</td><td><code>[EMAIL]</code></td></tr>
+            <tr><td>Phone</td><td>(555) 123-4567</td><td><code>[PHONE_NUMBER]</code></td></tr>
+            <tr><td>SSN</td><td>123-45-6789</td><td><code>[SSN]</code></td></tr>
+            <tr><td>Address</td><td>123 Main St, NYC</td><td><code>[ADDRESS]</code></td></tr>
+            <tr><td>Credit Card</td><td>4111-1111-1111-1111</td><td><code>[CREDIT_CARD]</code></td></tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="highlight-box anim-fade">
+        <strong>Zero setup required.</strong> No model to deploy, no prompt to write, no UDF to maintain. Just call the function and get redacted text back.
+      </div>
+    </section>
+
+    <!-- Slide 4: AI_COMPLETE Extract+Replace -->
+    <section class="slide" id="ai-complete">
+      <h2>Approach 2: AI_COMPLETE Extract+Replace</h2>
+      <h3>Custom structured extraction with typed labels</h3>
+      <pre class="anim-fade"><span class="keyword">SELECT</span> <span class="function">SNOWFLAKE.CORTEX.COMPLETE</span>(
+  <span class="string">'llama3.1-8b'</span>,
+  <span class="string">'Extract all PII from this text. Return JSON with keys:
+  names, emails, phones, addresses, ssns, credit_cards.
+  Each key maps to an array of found values.
+  Text: '</span> || transcript,
+  {
+    <span class="string">'response_format'</span>: {
+      <span class="string">'type'</span>: <span class="string">'json'</span>,
+      <span class="string">'schema'</span>: {
+        <span class="string">'type'</span>: <span class="string">'object'</span>,
+        <span class="string">'properties'</span>: {
+          <span class="string">'names'</span>:        {<span class="string">'type'</span>: <span class="string">'array'</span>, <span class="string">'items'</span>: {<span class="string">'type'</span>: <span class="string">'string'</span>}},
+          <span class="string">'emails'</span>:       {<span class="string">'type'</span>: <span class="string">'array'</span>, <span class="string">'items'</span>: {<span class="string">'type'</span>: <span class="string">'string'</span>}},
+          <span class="string">'phones'</span>:       {<span class="string">'type'</span>: <span class="string">'array'</span>, <span class="string">'items'</span>: {<span class="string">'type'</span>: <span class="string">'string'</span>}},
+          <span class="string">'addresses'</span>:    {<span class="string">'type'</span>: <span class="string">'array'</span>, <span class="string">'items'</span>: {<span class="string">'type'</span>: <span class="string">'string'</span>}},
+          <span class="string">'ssns'</span>:         {<span class="string">'type'</span>: <span class="string">'array'</span>, <span class="string">'items'</span>: {<span class="string">'type'</span>: <span class="string">'string'</span>}},
+          <span class="string">'credit_cards'</span>: {<span class="string">'type'</span>: <span class="string">'array'</span>, <span class="string">'items'</span>: {<span class="string">'type'</span>: <span class="string">'string'</span>}}
+        }
+      }
+    }
+  }
+) <span class="keyword">AS</span> extracted_pii
+<span class="keyword">FROM</span> PII_REDACTION_DEMO.RAW.SUPPORT_TICKETS;</pre>
+      <div class="card-grid anim-fade">
+        <div class="card">
+          <h4>Structured Output</h4>
+          <p>Using <code>response_format</code> guarantees valid JSON — no parsing failures, no regex on free-text responses.</p>
+        </div>
+        <div class="card">
+          <h4>Typed Labels</h4>
+          <p>Each PII category is extracted separately, enabling type-specific redaction (e.g., partial masking for phones, full removal for SSNs).</p>
+        </div>
+        <div class="card">
+          <h4>Model Flexibility</h4>
+          <p>Choose your model: <code>llama3.1-8b</code> for speed, <code>llama3.1-70b</code> for accuracy, or <code>claude-3.5-sonnet</code> for complex documents.</p>
+        </div>
+      </div>
+      <div class="context-box anim-fade">
+        <strong>Key advantage over AI_REDACT:</strong> Full control over extraction categories, custom labels, and the ability to do partial masking (e.g., showing last 4 digits of a phone number).
+      </div>
+    </section>
+
+    <!-- Slide 5: The Key Insight -->
+    <section class="slide" id="insight">
+      <h2>The Key Insight</h2>
+      <h3>Output tokens are sequential — reducing output reduces latency</h3>
+      <div class="flow-diagram anim-fade">
+        <div class="flow-step">
+          <div class="step-label">Naive</div>
+          <div class="step-title">Rewrite Text</div>
+        </div>
+        <div class="flow-arrow">&rarr;</div>
+        <div class="flow-step">
+          <div class="step-label">Output</div>
+          <div class="step-title">500 tokens</div>
+        </div>
+        <div class="flow-arrow">&rarr;</div>
+        <div class="flow-step">
+          <div class="step-label">Latency</div>
+          <div class="step-title">3-5 seconds</div>
+        </div>
+      </div>
+      <div class="flow-diagram anim-fade">
+        <div class="flow-step active">
+          <div class="step-label">Extract</div>
+          <div class="step-title">PII Only</div>
+        </div>
+        <div class="flow-arrow">&rarr;</div>
+        <div class="flow-step active">
+          <div class="step-label">Output</div>
+          <div class="step-title">20-50 tokens</div>
+        </div>
+        <div class="flow-arrow">&rarr;</div>
+        <div class="flow-step active">
+          <div class="step-label">Latency</div>
+          <div class="step-title">0.3-0.8 sec</div>
+        </div>
+      </div>
+      <div class="two-col anim-fade" style="margin-top: 2rem;">
+        <div class="card">
+          <h4>Why Rewriting is Slow</h4>
+          <p>Asking the LLM to output the full redacted paragraph means generating every single word sequentially — even the words that don't change.</p>
+        </div>
+        <div class="card">
+          <h4>Why Extraction is Fast</h4>
+          <p>Asking for only the PII values means the LLM outputs just the entities (a few tokens). String replacement in Python handles the rest instantly.</p>
+        </div>
+      </div>
+      <div class="highlight-box anim-fade">
+        <strong>10x latency reduction</strong> — Extract PII values, then do deterministic string replacement. The LLM does what it's good at (understanding context), Python does what it's good at (string ops).
+      </div>
+    </section>
+
+    <!-- Slide 6: The UDF -->
+    <section class="slide" id="udf">
+      <h2>The UDF: REDACT_PII</h2>
+      <h3>Combining extraction + deterministic replacement</h3>
+      <pre class="anim-fade"><span class="keyword">CREATE OR REPLACE FUNCTION</span> PII_REDACTION_DEMO.ANALYTICS.<span class="function">REDACT_PII</span>(input_text <span class="keyword">STRING</span>)
+<span class="keyword">RETURNS STRING</span>
+<span class="keyword">LANGUAGE PYTHON</span>
+<span class="keyword">RUNTIME_VERSION</span> = <span class="string">'3.11'</span>
+<span class="keyword">PACKAGES</span> = (<span class="string">'snowflake-snowpark-python'</span>)
+<span class="keyword">HANDLER</span> = <span class="string">'redact_pii'</span>
+<span class="keyword">AS</span> $$
+<span class="keyword">import</span> json
+<span class="keyword">from</span> snowflake.snowpark <span class="keyword">import</span> Session
+
+<span class="keyword">def</span> <span class="function">redact_pii</span>(input_text):
+    session = Session.builder.getOrCreate()
+
+    <span class="comment"># Extract PII via structured LLM call</span>
+    prompt = f<span class="string">"""Extract all PII. Return JSON with keys:
+    names, emails, phones, addresses, ssns, credit_cards.
+    Text: {input_text}"""</span>
+
+    result = session.sql(f<span class="string">"""
+        SELECT SNOWFLAKE.CORTEX.COMPLETE(
+            'llama3.1-8b', '{prompt}',
+            {{'response_format': {{'type': 'json'}}}}
+        )"""</span>).collect()[0][0]
+
+    pii = json.loads(result)
+
+    <span class="comment"># Deterministic replacement</span>
+    redacted = input_text
+    label_map = {
+        <span class="string">'names'</span>: <span class="string">'[PERSON]'</span>,
+        <span class="string">'emails'</span>: <span class="string">'[EMAIL]'</span>,
+        <span class="string">'phones'</span>: <span class="string">'[PHONE]'</span>,
+        <span class="string">'addresses'</span>: <span class="string">'[ADDRESS]'</span>,
+        <span class="string">'ssns'</span>: <span class="string">'[SSN]'</span>,
+        <span class="string">'credit_cards'</span>: <span class="string">'[CREDIT_CARD]'</span>
+    }
+    <span class="keyword">for</span> category, label <span class="keyword">in</span> label_map.items():
+        <span class="keyword">for</span> value <span class="keyword">in</span> pii.get(category, []):
+            redacted = redacted.replace(value, label)
+
+    <span class="keyword">return</span> redacted
+$$;</pre>
+      <div class="card-grid anim-fade">
+        <div class="card">
+          <h4>Instant Replacement</h4>
+          <p>String replacement is O(n) — no token generation overhead. The LLM only extracts the PII values, Python handles substitution.</p>
+        </div>
+        <div class="card">
+          <h4>Typed Labels</h4>
+          <p>Each PII type gets a distinct label, making downstream analytics aware of what was redacted without exposing the data.</p>
+        </div>
+        <div class="card">
+          <h4>Deterministic</h4>
+          <p>Same input always produces the same output. No LLM temperature variance in the redaction step itself.</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- Slide 7: Pre-Computed Cache -->
+    <section class="slide" id="cached">
+      <h2>Approach 3: Pre-Computed Cache</h2>
+      <h3>Zero LLM calls at query time</h3>
+      <div class="flow-diagram anim-fade">
+        <div class="flow-step">
+          <div class="step-label">Ingest</div>
+          <div class="step-title">Raw Data</div>
+        </div>
+        <div class="flow-arrow">&rarr;</div>
+        <div class="flow-step active">
+          <div class="step-label">Background</div>
+          <div class="step-title">Redact + Store</div>
+        </div>
+        <div class="flow-arrow">&rarr;</div>
+        <div class="flow-step">
+          <div class="step-label">Query</div>
+          <div class="step-title">Read Cache</div>
+        </div>
+        <div class="flow-arrow">&rarr;</div>
+        <div class="flow-step">
+          <div class="step-label">Result</div>
+          <div class="step-title">Sub-second</div>
+        </div>
+      </div>
+      <pre class="anim-fade"><span class="comment">-- Create the redacted cache table</span>
+<span class="keyword">CREATE OR REPLACE TABLE</span> PII_REDACTION_DEMO.ANALYTICS.REDACTED_TICKETS <span class="keyword">AS</span>
+<span class="keyword">SELECT</span>
+  ticket_id,
+  created_at,
+  PII_REDACTION_DEMO.ANALYTICS.<span class="function">REDACT_PII</span>(transcript) <span class="keyword">AS</span> redacted_transcript,
+  category,
+  priority
+<span class="keyword">FROM</span> PII_REDACTION_DEMO.RAW.SUPPORT_TICKETS;
+
+<span class="comment">-- Query the cache — no LLM, no latency</span>
+<span class="keyword">SELECT</span> ticket_id, redacted_transcript, category
+<span class="keyword">FROM</span> PII_REDACTION_DEMO.ANALYTICS.REDACTED_TICKETS
+<span class="keyword">WHERE</span> priority = <span class="string">'high'</span>
+<span class="keyword">ORDER BY</span> created_at <span class="keyword">DESC</span>;</pre>
+      <div class="two-col anim-fade">
+        <div class="card">
+          <h4>Write-Time Cost</h4>
+          <p>LLM inference happens once during ingestion or via a scheduled task. The cost is amortized across all subsequent reads.</p>
+        </div>
+        <div class="card">
+          <h4>Read-Time Speed</h4>
+          <p>Queries hit a standard Snowflake table — micro-partition pruning, result caching, and columnar scan all apply.</p>
+        </div>
+      </div>
+      <div class="highlight-box anim-fade">
+        <strong>Sub-second response times.</strong> Analysts query redacted data without waiting for LLM inference. The cache is just a table — standard Snowflake performance guarantees apply.
+      </div>
+    </section>
+
+    <!-- Slide 8: Comparison -->
+    <section class="slide" id="comparison">
+      <h2>Approach Comparison</h2>
+      <div class="anim-fade" style="width: 100%; overflow-x: auto;">
+        <table>
+          <thead>
+            <tr>
+              <th>Dimension</th>
+              <th>AI_REDACT</th>
+              <th>AI_COMPLETE + UDF</th>
+              <th>Pre-Computed Cache</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><strong>Setup Effort</strong></td>
+              <td><span class="badge-green">None</span></td>
+              <td><span class="badge-orange">Medium</span></td>
+              <td><span class="badge-orange">Medium</span></td>
+            </tr>
+            <tr>
+              <td><strong>Query Latency</strong></td>
+              <td>1-3 seconds</td>
+              <td>0.3-0.8 seconds</td>
+              <td><span class="badge-green">&lt; 100ms</span></td>
+            </tr>
+            <tr>
+              <td><strong>Customizability</strong></td>
+              <td><span class="badge-red">Low</span></td>
+              <td><span class="badge-green">High</span></td>
+              <td><span class="badge-green">High</span></td>
+            </tr>
+            <tr>
+              <td><strong>Cost per Query</strong></td>
+              <td>LLM inference</td>
+              <td>LLM inference</td>
+              <td><span class="badge-green">Warehouse only</span></td>
+            </tr>
+            <tr>
+              <td><strong>Accuracy</strong></td>
+              <td><span class="badge-green">High</span></td>
+              <td><span class="badge-green">High</span></td>
+              <td><span class="badge-green">High</span></td>
+            </tr>
+            <tr>
+              <td><strong>Real-time Capable</strong></td>
+              <td><span class="badge-orange">Moderate</span></td>
+              <td><span class="badge-green">Yes</span></td>
+              <td><span class="badge-red">No (batch)</span></td>
+            </tr>
+            <tr>
+              <td><strong>Maintenance</strong></td>
+              <td><span class="badge-green">Zero</span></td>
+              <td><span class="badge-orange">UDF updates</span></td>
+              <td><span class="badge-orange">Pipeline ops</span></td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="context-box anim-fade">
+        <strong>They're complementary, not competing.</strong> Use AI_REDACT for ad-hoc exploration, the UDF for real-time APIs, and the cache for high-throughput analytics.
+      </div>
+    </section>
+
+    <!-- Slide 9: Cost Analysis -->
+    <section class="slide" id="cost">
+      <h2>Cost Analysis</h2>
+      <h3>Annual cost projections at scale</h3>
+      <div class="anim-fade" style="width: 100%; overflow-x: auto;">
+        <table>
+          <thead>
+            <tr>
+              <th>Scenario</th>
+              <th>Volume</th>
+              <th>AI_REDACT</th>
+              <th>UDF (Extract)</th>
+              <th>Cached</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><strong>Small</strong></td>
+              <td>100K records/year</td>
+              <td>~$150</td>
+              <td>~$80</td>
+              <td>~$80 + storage</td>
+            </tr>
+            <tr>
+              <td><strong>Medium</strong></td>
+              <td>1M records/year</td>
+              <td>~$1,500</td>
+              <td>~$800</td>
+              <td>~$800 + storage</td>
+            </tr>
+            <tr>
+              <td><strong>Large</strong></td>
+              <td>10M records/year</td>
+              <td>~$15,000</td>
+              <td>~$8,000</td>
+              <td>~$8,000 + storage</td>
+            </tr>
+            <tr>
+              <td><strong>Read-heavy (10x reads)</strong></td>
+              <td>1M records, 10M reads</td>
+              <td>~$15,000</td>
+              <td>~$8,000</td>
+              <td><span class="badge-green">~$800 + $50 compute</span></td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="card-grid anim-fade">
+        <div class="card">
+          <h4>Write-Once, Read-Many</h4>
+          <p>The cached approach pays the LLM cost once per record. Every subsequent read is pure warehouse compute — orders of magnitude cheaper.</p>
+        </div>
+        <div class="card">
+          <h4>Token Efficiency</h4>
+          <p>The extract-only approach generates 10-20x fewer output tokens than rewriting full text, directly reducing per-call cost.</p>
+        </div>
+        <div class="card">
+          <h4>AI_REDACT Simplicity</h4>
+          <p>Higher per-call cost but zero engineering overhead. For low-volume or exploratory use cases, the managed approach wins on total cost of ownership.</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- Slide 10: Production Patterns -->
+    <section class="slide" id="production">
+      <h2>Production Patterns</h2>
+      <h3>Keeping the cache fresh and reliable</h3>
+      <div class="card-grid anim-fade">
+        <div class="card">
+          <h4>Tasks + Streams</h4>
+          <p>Use a Snowflake Stream on the raw table to detect new inserts. A Task triggers the UDF only on new rows — no full-table rescans.</p>
+          <pre style="margin-top: 0.75rem; font-size: 0.8rem;"><span class="keyword">CREATE STREAM</span> ticket_stream
+  <span class="keyword">ON TABLE</span> RAW.SUPPORT_TICKETS;
+
+<span class="keyword">CREATE TASK</span> redact_new_tickets
+  <span class="keyword">SCHEDULE</span> = <span class="string">'5 MINUTE'</span>
+  <span class="keyword">WHEN</span> SYSTEM$STREAM_HAS_DATA(<span class="string">'ticket_stream'</span>)
+<span class="keyword">AS</span>
+  <span class="keyword">INSERT INTO</span> ANALYTICS.REDACTED_TICKETS
+  <span class="keyword">SELECT</span> ticket_id, created_at,
+    REDACT_PII(transcript), category, priority
+  <span class="keyword">FROM</span> ticket_stream;</pre>
+        </div>
+        <div class="card">
+          <h4>Dynamic Tables</h4>
+          <p>Let Snowflake manage the refresh. Define the transformation declaratively and set a target lag.</p>
+          <pre style="margin-top: 0.75rem; font-size: 0.8rem;"><span class="keyword">CREATE DYNAMIC TABLE</span> REDACTED_TICKETS
+  <span class="keyword">TARGET_LAG</span> = <span class="string">'10 minutes'</span>
+  <span class="keyword">WAREHOUSE</span> = REDACTION_WH
+<span class="keyword">AS</span>
+  <span class="keyword">SELECT</span> ticket_id, created_at,
+    REDACT_PII(transcript) <span class="keyword">AS</span> redacted,
+    category, priority
+  <span class="keyword">FROM</span> RAW.SUPPORT_TICKETS;</pre>
+        </div>
+        <div class="card">
+          <h4>Staleness Detection</h4>
+          <p>Monitor cache freshness by comparing max timestamps between raw and redacted tables. Alert when lag exceeds SLA.</p>
+          <pre style="margin-top: 0.75rem; font-size: 0.8rem;"><span class="keyword">SELECT</span>
+  TIMESTAMPDIFF(<span class="string">'minute'</span>,
+    (<span class="keyword">SELECT MAX</span>(created_at) <span class="keyword">FROM</span> REDACTED_TICKETS),
+    (<span class="keyword">SELECT MAX</span>(created_at) <span class="keyword">FROM</span> RAW.SUPPORT_TICKETS)
+  ) <span class="keyword">AS</span> lag_minutes;</pre>
+        </div>
+        <div class="card">
+          <h4>Error Handling</h4>
+          <p>Wrap redaction in TRY/CATCH. Route failures to a dead-letter table for manual review rather than blocking the pipeline.</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- Slide 11: Decision Framework -->
+    <section class="slide" id="decision">
+      <h2>Decision Framework</h2>
+      <h3>When to use each approach</h3>
+      <div class="card-grid anim-fade">
+        <div class="card" style="border-color: var(--green);">
+          <h4 style="color: var(--green);">Use AI_REDACT when...</h4>
+          <ul style="margin-top: 0.5rem;">
+            <li>You need quick, ad-hoc redaction</li>
+            <li>Standard PII categories suffice</li>
+            <li>Volume is low (< 100K records)</li>
+            <li>You don't need custom labels</li>
+            <li>Zero maintenance is the priority</li>
+          </ul>
+        </div>
+        <div class="card" style="border-color: var(--primary);">
+          <h4 style="color: var(--primary);">Use Extract+Replace UDF when...</h4>
+          <ul style="margin-top: 0.5rem;">
+            <li>You need custom PII categories</li>
+            <li>Partial masking is required</li>
+            <li>Real-time responses under 1 second</li>
+            <li>You want model flexibility</li>
+            <li>Type-aware downstream processing</li>
+          </ul>
+        </div>
+        <div class="card" style="border-color: var(--accent);">
+          <h4 style="color: var(--accent);">Use Pre-Computed Cache when...</h4>
+          <ul style="margin-top: 0.5rem;">
+            <li>Read-heavy analytics workloads</li>
+            <li>Sub-second query latency required</li>
+            <li>Same data queried repeatedly</li>
+            <li>Cost optimization at scale</li>
+            <li>Batch processing is acceptable</li>
+          </ul>
+        </div>
+      </div>
+      <div class="highlight-box anim-fade" style="margin-top: 1.5rem;">
+        <strong>Best practice:</strong> Start with AI_REDACT for prototyping. Graduate to the UDF when you need customization. Add the cache layer when query volume or latency demands it.
+      </div>
+    </section>
+
+    <!-- Slide 12: Next Steps -->
+    <section class="slide" id="closing">
+      <h2>Next Steps</h2>
+      <div class="card-grid anim-fade">
+        <div class="card">
+          <h4>1. Try AI_REDACT</h4>
+          <p>Run a single query against your data — no setup required. Evaluate the built-in categories against your compliance requirements.</p>
+        </div>
+        <div class="card">
+          <h4>2. Build the UDF</h4>
+          <p>Customize extraction categories for your domain. Test with <code>response_format</code> to ensure structured output reliability.</p>
+        </div>
+        <div class="card">
+          <h4>3. Deploy the Cache</h4>
+          <p>Set up a Stream + Task pipeline on your highest-volume table. Measure query latency improvement for your analytics team.</p>
+        </div>
+        <div class="card">
+          <h4>4. Monitor & Iterate</h4>
+          <p>Track redaction accuracy with spot checks. Add new PII categories as compliance requirements evolve. Tune model selection for cost/accuracy.</p>
+        </div>
+      </div>
+      <div class="highlight-box anim-fade" style="margin-top: 1.5rem;">
+        <strong>All code lives in <code>PII_REDACTION_DEMO</code></strong> — clone the database, swap in your data, and you have a production-ready redaction pipeline running entirely within Snowflake.
+      </div>
+    </section>
+
+  </main>
+
+  <script>
+    // Progress bar
+    window.addEventListener('scroll', () => {
+      const scrollTop = window.scrollY;
+      const docHeight = document.documentElement.scrollHeight - window.innerHeight;
+      const progress = (scrollTop / docHeight) * 100;
+      document.querySelector('.progress-bar').style.width = progress + '%';
+    });
+
+    // Scroll animations
+    const observer = new IntersectionObserver((entries) => {
+      entries.forEach(entry => {
+        if (entry.isIntersecting) {
+          entry.target.classList.add('visible');
+        }
+      });
+    }, { threshold: 0.1 });
+
+    document.querySelectorAll('.anim-fade').forEach(el => observer.observe(el));
+
+    // Active nav tracking
+    const sections = document.querySelectorAll('.slide');
+    const navLinks = document.querySelectorAll('.sidebar a');
+
+    window.addEventListener('scroll', () => {
+      let current = '';
+      sections.forEach(section => {
+        const sectionTop = section.offsetTop - 200;
+        if (window.scrollY >= sectionTop) {
+          current = section.getAttribute('id');
+        }
+      });
+      navLinks.forEach(link => {
+        link.classList.remove('active');
+        if (link.getAttribute('href') === '#' + current) {
+          link.classList.add('active');
+        }
+      });
+    });
+  </script>
+</body>
+</html>
