@@ -1,6 +1,7 @@
--- =============================================================================
 -- Cortex Agent Multi-Tenancy Lab: Setup Script
--- =============================================================================
+-- Co-authored with CoCo
+-- ====================================================
+
 -- Run this script once before starting the notebook.
 -- It creates all prerequisite objects: database, tables, policies, semantic view,
 -- and the multi-tenant Cortex Agent.
@@ -276,41 +277,22 @@ ALTER TABLE SALES_DATA MODIFY COLUMN CUSTOMER_NAME SET MASKING POLICY MASK_CUSTO
 -- ─────────────────────────────────────────────────────────────────────────────
 
 CREATE OR REPLACE SEMANTIC VIEW TENANT_SALES_ANALYTICS
+  TABLES (
+    MULTI_TENANCY_LAB.PUBLIC.SALES_DATA
+  )
+  DIMENSIONS (
+    SALES_DATA.TENANT_ID AS TENANT_ID comment='Company tenant identifier (acme_corp, globex_inc, initech, umbrella_co)',
+    SALES_DATA.REGION AS REGION comment='Geographic sales region: North America, Europe, or Asia Pacific',
+    SALES_DATA.PRODUCT AS PRODUCT comment='Product or service that was sold',
+    SALES_DATA.SALE_DATE AS SALE_DATE comment='Date of the sale transaction'
+  )
+  METRICS (
+    SALES_DATA.TOTAL_REVENUE AS SUM(AMOUNT) comment='Total revenue in USD (sum of sale amounts)',
+    SALES_DATA.AVG_ORDER_VALUE AS AVG(AMOUNT) comment='Average order value in USD',
+    SALES_DATA.ORDER_COUNT AS COUNT(*) comment='Total number of sales orders'
+  )
   COMMENT = 'Multi-tenant sales analytics for Cortex Agent'
-AS
-  SELECT * FROM SALES_DATA
-  WITH
-    ENTITIES (
-      tenant ENTITY
-        DESCRIPTION 'Company tenant identifier (acme_corp, globex_inc, initech, umbrella_co)'
-        COLUMNS (TENANT_ID),
-
-      region ENTITY
-        DESCRIPTION 'Geographic sales region: North America, Europe, or Asia Pacific'
-        COLUMNS (REGION),
-
-      product ENTITY
-        DESCRIPTION 'Product or service that was sold'
-        COLUMNS (PRODUCT),
-
-      sale_date ENTITY
-        DESCRIPTION 'Date of the sale transaction'
-        COLUMNS (SALE_DATE)
-    )
-    METRICS (
-      total_revenue METRIC
-        DESCRIPTION 'Total revenue in USD (sum of sale amounts)'
-        EXPRESSION 'SUM(AMOUNT)',
-
-      avg_order_value METRIC
-        DESCRIPTION 'Average order value in USD'
-        EXPRESSION 'AVG(AMOUNT)',
-
-      order_count METRIC
-        DESCRIPTION 'Total number of sales orders'
-        EXPRESSION 'COUNT(*)'
-    )
-    CUSTOM_INSTRUCTIONS = 'This is a multi-tenant sales table. Row access policies automatically filter data by tenant based on session attributes — do not add tenant_id filters in SQL. Always round currency to 2 decimal places. When no date filter is specified, default to the full year 2024.';
+  AI_SQL_GENERATION 'This is a multi-tenant sales table. Row access policies automatically filter data by tenant based on session attributes — do not add tenant_id filters in SQL. Always round currency to 2 decimal places. When no date filter is specified, default to the full year 2024.';
 
 -- ─────────────────────────────────────────────────────────────────────────────
 -- 11. CORTEX AGENT
