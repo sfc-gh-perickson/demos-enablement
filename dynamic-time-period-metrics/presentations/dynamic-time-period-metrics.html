@@ -1,0 +1,908 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Dynamic Time-Period Metrics in Semantic Views</title>
+  <style>
+    :root {
+      --bg: #0f1117;
+      --surface: #1a1d27;
+      --surface-alt: #232733;
+      --border: #2e3345;
+      --text: #e4e7ef;
+      --text-muted: #8b92a8;
+      --accent: #29b5f6;
+      --accent-dim: rgba(41, 181, 246, 0.12);
+      --green: #4caf50;
+      --orange: #ff9800;
+      --red: #f44336;
+      --purple: #ab47bc;
+      --sidebar-width: 240px;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Segoe UI', Roboto, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.6;
+      overflow-x: hidden;
+    }
+
+    .progress-bar {
+      position: fixed;
+      top: 0;
+      left: 0;
+      height: 3px;
+      background: var(--accent);
+      z-index: 1000;
+      transition: width 0.1s;
+    }
+
+    .sidebar {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: var(--sidebar-width);
+      height: 100vh;
+      background: var(--surface);
+      border-right: 1px solid var(--border);
+      padding: 2rem 1.25rem;
+      overflow-y: auto;
+      z-index: 100;
+    }
+
+    .sidebar h3 {
+      font-size: 0.75rem;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      color: var(--accent);
+      margin-bottom: 1rem;
+      font-weight: 700;
+    }
+
+    .sidebar .nav-section {
+      margin-bottom: 1.5rem;
+    }
+
+    .sidebar .nav-section-title {
+      font-size: 0.65rem;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--text-muted);
+      margin-bottom: 0.5rem;
+      font-weight: 600;
+    }
+
+    .sidebar a {
+      display: block;
+      padding: 0.35rem 0.75rem;
+      color: var(--text-muted);
+      text-decoration: none;
+      font-size: 0.8rem;
+      border-radius: 4px;
+      margin-bottom: 2px;
+      transition: all 0.2s;
+    }
+
+    .sidebar a:hover {
+      color: var(--text);
+      background: var(--surface-alt);
+    }
+
+    .sidebar a.active {
+      color: var(--accent);
+      background: var(--accent-dim);
+    }
+
+    .sidebar .github-link {
+      position: absolute;
+      bottom: 1.5rem;
+      left: 1.25rem;
+      right: 1.25rem;
+      padding: 0.5rem 0.75rem;
+      background: var(--surface-alt);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      color: var(--text-muted);
+      font-size: 0.75rem;
+      text-align: center;
+    }
+
+    .sidebar .github-link:hover {
+      border-color: var(--accent);
+      color: var(--accent);
+    }
+
+    .main {
+      margin-left: var(--sidebar-width);
+      min-height: 100vh;
+    }
+
+    .slide {
+      padding: 4rem 3rem;
+      max-width: 1200px;
+      margin: 0 auto;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .slide h2 {
+      font-size: 1.75rem;
+      font-weight: 700;
+      margin-bottom: 0.75rem;
+      background: linear-gradient(135deg, var(--text), var(--accent));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+
+    .slide h3 {
+      font-size: 1.1rem;
+      font-weight: 600;
+      color: var(--text);
+      margin-bottom: 0.5rem;
+    }
+
+    .slide h4 {
+      font-size: 0.95rem;
+      font-weight: 600;
+      color: var(--accent);
+      margin-bottom: 0.5rem;
+    }
+
+    .slide p {
+      color: var(--text-muted);
+      font-size: 0.95rem;
+    }
+
+    .slide ul, .slide ol {
+      color: var(--text-muted);
+      font-size: 0.9rem;
+      padding-left: 1.25rem;
+    }
+
+    .slide li {
+      margin-bottom: 0.35rem;
+    }
+
+    .hero {
+      padding: 6rem 3rem 4rem;
+      text-align: center;
+      max-width: 1200px;
+      margin: 0 auto;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .hero h1 {
+      font-size: 2.5rem;
+      font-weight: 800;
+      background: linear-gradient(135deg, var(--text) 0%, var(--accent) 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+      margin-bottom: 1rem;
+      line-height: 1.2;
+    }
+
+    .hero .subtitle {
+      font-size: 1.1rem;
+      color: var(--text-muted);
+      margin-bottom: 2.5rem;
+    }
+
+    .stat-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 1rem;
+      margin: 2rem 0;
+    }
+
+    .stat-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 1.25rem;
+      text-align: center;
+    }
+
+    .stat-card .stat-value {
+      font-size: 1.5rem;
+      font-weight: 700;
+      color: var(--accent);
+      display: block;
+    }
+
+    .stat-card .stat-label {
+      font-size: 0.8rem;
+      color: var(--text-muted);
+      margin-top: 0.25rem;
+    }
+
+    .card-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+      gap: 1rem;
+      margin: 1.5rem 0;
+    }
+
+    .card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 1.25rem;
+    }
+
+    .card:hover {
+      border-color: var(--accent);
+    }
+
+    .two-col {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 1.5rem;
+      margin: 1.5rem 0;
+    }
+
+    .three-col {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 1rem;
+      margin: 1.5rem 0;
+    }
+
+    .highlight-box {
+      background: var(--accent-dim);
+      border: 1px solid var(--accent);
+      border-radius: 8px;
+      padding: 1.25rem;
+      margin: 1.5rem 0;
+    }
+
+    .highlight-box p {
+      color: var(--text);
+    }
+
+    .context-box {
+      background: var(--surface-alt);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 1.25rem;
+      margin: 1.5rem 0;
+    }
+
+    .context-box p {
+      color: var(--text);
+    }
+
+    .warning-box {
+      background: rgba(255, 152, 0, 0.08);
+      border: 1px solid var(--orange);
+      border-radius: 8px;
+      padding: 1.25rem;
+      margin: 1.5rem 0;
+    }
+
+    .warning-box p {
+      color: var(--text);
+    }
+
+    .flow-diagram {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.5rem;
+      margin: 2rem 0;
+      flex-wrap: wrap;
+    }
+
+    .flow-step {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 1rem 1.25rem;
+      text-align: center;
+      min-width: 120px;
+    }
+
+    .flow-step.active {
+      border-color: var(--accent);
+      background: var(--accent-dim);
+    }
+
+    .flow-step .step-label {
+      font-size: 0.7rem;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: var(--text-muted);
+      margin-bottom: 0.25rem;
+    }
+
+    .flow-step .step-title {
+      font-size: 0.85rem;
+      font-weight: 600;
+      color: var(--text);
+    }
+
+    .flow-arrow {
+      color: var(--text-muted);
+      font-size: 1.25rem;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 1rem 0;
+      font-size: 0.85rem;
+    }
+
+    th, td {
+      padding: 0.6rem 0.75rem;
+      border: 1px solid var(--border);
+      text-align: left;
+    }
+
+    th {
+      background: var(--surface-alt);
+      font-weight: 600;
+      color: var(--text);
+    }
+
+    td {
+      color: var(--text-muted);
+    }
+
+    pre {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 1.25rem;
+      overflow-x: auto;
+      font-family: 'SF Mono', 'Fira Code', 'JetBrains Mono', monospace;
+      font-size: 0.8rem;
+      line-height: 1.7;
+      margin: 1rem 0;
+    }
+
+    code {
+      font-family: 'SF Mono', 'Fira Code', 'JetBrains Mono', monospace;
+      background: var(--surface-alt);
+      padding: 0.15rem 0.4rem;
+      border-radius: 3px;
+      font-size: 0.85rem;
+    }
+
+    .keyword { color: #c792ea; }
+    .string { color: #c3e88d; }
+    .function { color: #82aaff; }
+    .comment { color: #546e7a; }
+    .number { color: #f78c6c; }
+
+    .badge-green {
+      background: rgba(76, 175, 80, 0.15);
+      color: var(--green);
+      padding: 0.15rem 0.5rem;
+      border-radius: 4px;
+      font-size: 0.75rem;
+      font-weight: 600;
+    }
+
+    .badge-orange {
+      background: rgba(255, 152, 0, 0.15);
+      color: var(--orange);
+      padding: 0.15rem 0.5rem;
+      border-radius: 4px;
+      font-size: 0.75rem;
+      font-weight: 600;
+    }
+
+    .anim-fade {
+      opacity: 0;
+      transform: translateY(20px);
+      transition: opacity 0.6s ease, transform 0.6s ease;
+    }
+
+    .anim-fade.visible {
+      opacity: 1;
+      transform: translateY(0);
+    }
+
+    @media (max-width: 900px) {
+      .sidebar { display: none; }
+      .main { margin-left: 0; }
+      .stat-grid { grid-template-columns: repeat(2, 1fr); }
+      .two-col { grid-template-columns: 1fr; }
+      .three-col { grid-template-columns: 1fr; }
+      .hero h1 { font-size: 1.75rem; }
+    }
+  </style>
+</head>
+<body>
+  <div class="progress-bar"></div>
+
+  <!-- Sidebar -->
+  <nav class="sidebar">
+    <h3>Dynamic Metrics</h3>
+
+    <div class="nav-section">
+      <div class="nav-section-title">Introduction</div>
+      <a href="#hero">Overview</a>
+      <a href="#problem">The Problem</a>
+      <a href="#approaches">Three Approaches</a>
+    </div>
+
+    <div class="nav-section">
+      <div class="nav-section-title">Patterns</div>
+      <a href="#pattern1">Pattern 1: Variables</a>
+      <a href="#pattern1-demo">Variables Demo</a>
+      <a href="#pattern2">Pattern 2: Window Functions</a>
+      <a href="#pattern2-demo">Window Demo</a>
+      <a href="#pattern3">Pattern 3: Combined</a>
+      <a href="#pattern3-demo">Combined Demo</a>
+    </div>
+
+    <div class="nav-section">
+      <div class="nav-section-title">Practical</div>
+      <a href="#limitations">Limitations</a>
+      <a href="#decision">Decision Guide</a>
+      <a href="#takeaways">Key Takeaways</a>
+    </div>
+
+    <a href="https://github.com/sfc-gh-perickson/demos-enablement/tree/main/dynamic-time-period-metrics" class="github-link" target="_blank">View on GitHub &rarr;</a>
+  </nav>
+
+  <!-- Main Content -->
+  <main class="main">
+
+    <!-- Slide 1: Hero -->
+    <section class="slide hero" id="hero">
+      <h1>Dynamic Time-Period Metrics<br/>in Semantic Views</h1>
+      <p class="subtitle">Define once, query at any granularity &mdash; monthly, quarterly, yearly &mdash; without redefining the view.</p>
+
+      <div class="stat-grid anim-fade">
+        <div class="stat-card">
+          <span class="stat-value">Variables</span>
+          <span class="stat-label">Swap time grain at query time</span>
+        </div>
+        <div class="stat-card">
+          <span class="stat-value">Window Funcs</span>
+          <span class="stat-label">Rolling averages &amp; period-over-period</span>
+        </div>
+        <div class="stat-card">
+          <span class="stat-value">Combined</span>
+          <span class="stat-label">Multi-grain + comparative metrics</span>
+        </div>
+      </div>
+
+      <div class="context-box anim-fade">
+        <p><strong>Goal:</strong> Calculate metrics dynamically over adjustable time periods (monthly, quarterly, yearly) in a single semantic view, with seamless switching at query time.</p>
+      </div>
+    </section>
+
+    <!-- Slide 2: The Problem -->
+    <section class="slide" id="problem">
+      <h2>The Problem</h2>
+      <p style="margin-bottom: 2rem;">Business users need to view the same KPIs at different time granularities. Traditional approaches require multiple views or complex SQL.</p>
+
+      <div class="two-col anim-fade">
+        <div class="card">
+          <h4>Without Semantic Views</h4>
+          <ul>
+            <li>Separate views for monthly, quarterly, yearly</li>
+            <li>Duplicated metric logic across each</li>
+            <li>Manual switching between views</li>
+            <li>Rolling averages require CTEs or subqueries</li>
+            <li>Period-over-period needs self-joins</li>
+          </ul>
+        </div>
+        <div class="card">
+          <h4>With Semantic View Features</h4>
+          <ul>
+            <li><strong>One view</strong> with a variable to swap grain</li>
+            <li>Metrics defined once, computed at any grain</li>
+            <li>Query-time grain switching via <code>VARIABLES</code></li>
+            <li>Window function metrics for rolling calcs</li>
+            <li>LAG/LEAD built into the metric definition</li>
+          </ul>
+        </div>
+      </div>
+    </section>
+
+    <!-- Slide 3: Three Approaches -->
+    <section class="slide" id="approaches">
+      <h2>Three Approaches</h2>
+      <p style="margin-bottom: 2rem;">Depending on your use case, choose one or combine these patterns:</p>
+
+      <div class="three-col anim-fade">
+        <div class="card">
+          <h4>1. Variables</h4>
+          <p>A <code>time_grain</code> variable controls how the time dimension is computed. Change it at query time.</p>
+          <p style="margin-top: 0.75rem;"><span class="badge-green">Best for</span> Simple aggregations at swappable grains</p>
+        </div>
+        <div class="card">
+          <h4>2. Window Functions</h4>
+          <p>Metrics that call window functions (AVG OVER, LAG, SUM OVER) on other metrics.</p>
+          <p style="margin-top: 0.75rem;"><span class="badge-green">Best for</span> Rolling averages, lag comparisons, running totals</p>
+        </div>
+        <div class="card">
+          <h4>3. Combined</h4>
+          <p>Multiple grain dimensions + window functions per grain. Users pick which to query.</p>
+          <p style="margin-top: 0.75rem;"><span class="badge-green">Best for</span> Period-over-period at multiple grains</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- Slide 4: Pattern 1 - Variables -->
+    <section class="slide" id="pattern1">
+      <h2>Pattern 1: Variables for Swappable Time Grain</h2>
+      <p style="margin-bottom: 0.5rem;">Define a variable with a default value. Use it in a CASE expression to control the time dimension format.</p>
+      <p style="margin-bottom: 2rem;"><a href="https://docs.snowflake.com/en/user-guide/views-semantic/variables" target="_blank" class="badge-blue">Docs: Variables</a> <a href="https://docs.snowflake.com/en/sql-reference/sql/create-semantic-view#label-create-semantic-view-variables" target="_blank" class="badge-blue">Docs: CREATE SEMANTIC VIEW &mdash; Variables</a></p>
+
+      <pre class="anim-fade"><span class="keyword">CREATE OR REPLACE SEMANTIC VIEW</span> sv_variable_time_grain
+  <span class="keyword">TABLES</span> (
+    revenue <span class="keyword">AS</span> daily_revenue
+  )
+  <span class="keyword">VARIABLES</span> (
+    time_grain <span class="keyword">VARCHAR DEFAULT</span> <span class="string">'month'</span>
+  )
+  <span class="keyword">DIMENSIONS</span> (
+    revenue.time_period <span class="keyword">AS</span>
+      <span class="keyword">CASE</span> time_grain
+        <span class="keyword">WHEN</span> <span class="string">'month'</span>   <span class="keyword">THEN</span> <span class="function">TO_CHAR</span>(sale_date, <span class="string">'YYYY-MM'</span>)
+        <span class="keyword">WHEN</span> <span class="string">'quarter'</span> <span class="keyword">THEN</span> <span class="function">TO_CHAR</span>(sale_date, <span class="string">'YYYY'</span>) || <span class="string">'-Q'</span> || <span class="function">TO_CHAR</span>(<span class="function">QUARTER</span>(sale_date))
+        <span class="keyword">WHEN</span> <span class="string">'year'</span>    <span class="keyword">THEN</span> <span class="function">TO_CHAR</span>(sale_date, <span class="string">'YYYY'</span>)
+      <span class="keyword">END</span>,
+    revenue.region <span class="keyword">AS</span> region
+  )
+  <span class="keyword">METRICS</span> (
+    revenue.total_revenue <span class="keyword">AS</span> <span class="function">SUM</span>(revenue),
+    revenue.avg_daily_revenue <span class="keyword">AS</span> <span class="function">AVG</span>(revenue)
+  )</pre>
+
+      <div class="highlight-box anim-fade">
+        <p><strong>Key insight:</strong> The variable defaults to <code>'month'</code>, so queries work without specifying it. Override with <code>VARIABLES time_grain = 'quarter'</code> to change the grain.</p>
+      </div>
+    </section>
+
+    <!-- Slide 5: Pattern 1 Demo -->
+    <section class="slide" id="pattern1-demo">
+      <h2>Pattern 1: Query-Time Grain Switching</h2>
+      <p style="margin-bottom: 0.5rem;">The same query, three different granularities &mdash; just change the <code>VARIABLES</code> clause.</p>
+      <p style="margin-bottom: 2rem;"><a href="https://docs.snowflake.com/en/sql-reference/constructs/semantic_view" target="_blank" class="badge-blue">Docs: SEMANTIC_VIEW Query Syntax</a></p>
+
+      <div class="two-col anim-fade">
+        <div>
+          <h3>Monthly (default)</h3>
+          <pre><span class="keyword">SELECT</span> * <span class="keyword">FROM SEMANTIC_VIEW</span>(
+  sv_variable_time_grain
+  <span class="keyword">DIMENSIONS</span> revenue.time_period
+  <span class="keyword">METRICS</span> revenue.total_revenue
+)
+<span class="keyword">ORDER BY</span> time_period</pre>
+          <table>
+            <tr><th>TIME_PERIOD</th><th>TOTAL_REVENUE</th></tr>
+            <tr><td>2023-01</td><td>865,219</td></tr>
+            <tr><td>2023-02</td><td>895,567</td></tr>
+            <tr><td>2023-03</td><td>1,041,189</td></tr>
+          </table>
+        </div>
+        <div>
+          <h3>Quarterly</h3>
+          <pre><span class="keyword">SELECT</span> * <span class="keyword">FROM SEMANTIC_VIEW</span>(
+  sv_variable_time_grain
+  <span class="keyword">DIMENSIONS</span> revenue.time_period
+  <span class="keyword">METRICS</span> revenue.total_revenue
+  <span class="keyword">VARIABLES</span> time_grain = <span class="string">'quarter'</span>
+)</pre>
+          <table>
+            <tr><th>TIME_PERIOD</th><th>TOTAL_REVENUE</th></tr>
+            <tr><td>2023-Q1</td><td>2,801,975</td></tr>
+            <tr><td>2023-Q2</td><td>2,837,836</td></tr>
+            <tr><td>2023-Q3</td><td>2,035,669</td></tr>
+          </table>
+        </div>
+      </div>
+
+      <div class="context-box anim-fade">
+        <p>Works with any additional dimensions and filters. Add <code>revenue.region</code> to the DIMENSIONS clause and the variable still controls the time grain.</p>
+      </div>
+    </section>
+
+    <!-- Slide 6: Pattern 2 - Window Functions -->
+    <section class="slide" id="pattern2">
+      <h2>Pattern 2: Window Function Metrics</h2>
+      <p style="margin-bottom: 0.5rem;">Define rolling averages, running totals, and lag comparisons directly in the semantic view. Window functions operate <strong>on other metrics</strong>.</p>
+      <p style="margin-bottom: 2rem;"><a href="https://docs.snowflake.com/en/sql-reference/sql/create-semantic-view#label-create-semantic-view-window-function" target="_blank" class="badge-blue">Docs: Window Function Metrics</a> <a href="https://docs.snowflake.com/en/user-guide/views-semantic/querying#label-semantic-views-querying-window" target="_blank" class="badge-blue">Docs: Querying Window Metrics</a></p>
+
+      <pre class="anim-fade"><span class="keyword">METRICS</span> (
+  <span class="comment">-- Base metric</span>
+  revenue.daily_revenue <span class="keyword">AS</span> <span class="function">SUM</span>(revenue),
+
+  <span class="comment">-- Rolling 7-day average</span>
+  revenue.rolling_7day_avg <span class="keyword">AS</span> <span class="function">AVG</span>(daily_revenue)
+    <span class="keyword">OVER</span> (<span class="keyword">PARTITION BY EXCLUDING</span> revenue.sale_date
+          <span class="keyword">ORDER BY</span> revenue.sale_date
+          <span class="keyword">RANGE BETWEEN INTERVAL</span> <span class="string">'6 days'</span> <span class="keyword">PRECEDING AND CURRENT ROW</span>),
+
+  <span class="comment">-- Revenue 7 days ago</span>
+  revenue.revenue_7_days_ago <span class="keyword">AS</span> <span class="function">LAG</span>(daily_revenue, <span class="number">7</span>)
+    <span class="keyword">OVER</span> (<span class="keyword">PARTITION BY EXCLUDING</span> revenue.sale_date
+          <span class="keyword">ORDER BY</span> revenue.sale_date)
+)</pre>
+
+      <div class="highlight-box anim-fade">
+        <p><strong><code>PARTITION BY EXCLUDING</code></strong> &mdash; Removes the specified dimension from partitioning. All other dimensions in the query remain. This means the window adapts to whatever grouping the user queries with.</p>
+      </div>
+    </section>
+
+    <!-- Slide 7: Pattern 2 Demo -->
+    <section class="slide" id="pattern2-demo">
+      <h2>Pattern 2: Rolling Averages in Action</h2>
+      <p style="margin-bottom: 2rem;">Window function metrics compute automatically when you query them. You must include the ORDER BY dimension in your query.</p>
+
+      <pre class="anim-fade"><span class="keyword">SELECT</span> * <span class="keyword">FROM SEMANTIC_VIEW</span>(
+  sv_window_metrics
+  <span class="keyword">DIMENSIONS</span> revenue.sale_date
+  <span class="keyword">METRICS</span> revenue.daily_revenue, revenue.rolling_7day_avg, revenue.revenue_7_days_ago
+)
+<span class="keyword">WHERE</span> sale_date >= <span class="string">'2024-06-01'</span> <span class="keyword">AND</span> sale_date <= <span class="string">'2024-06-07'</span></pre>
+
+      <table class="anim-fade">
+        <thead>
+          <tr><th>SALE_DATE</th><th>DAILY_REVENUE</th><th>ROLLING_7DAY_AVG</th><th>REVENUE_7_DAYS_AGO</th></tr>
+        </thead>
+        <tbody>
+          <tr><td>2024-06-01</td><td>33,641</td><td>32,061</td><td>31,682</td></tr>
+          <tr><td>2024-06-02</td><td>31,743</td><td>31,883</td><td>32,986</td></tr>
+          <tr><td>2024-06-03</td><td>28,905</td><td>31,619</td><td>30,755</td></tr>
+          <tr><td>2024-06-04</td><td>35,750</td><td>32,122</td><td>32,231</td></tr>
+          <tr><td>2024-06-05</td><td>41,724</td><td>33,711</td><td>30,599</td></tr>
+          <tr><td>2024-06-06</td><td>36,268</td><td>34,173</td><td>33,030</td></tr>
+          <tr><td>2024-06-07</td><td>29,753</td><td>33,969</td><td>31,183</td></tr>
+        </tbody>
+      </table>
+
+      <div class="context-box anim-fade">
+        <p><strong>Adding dimensions:</strong> If you add <code>revenue.region</code> to the query, the rolling average is computed per region automatically (PARTITION BY EXCLUDING keeps all other dimensions in the partition).</p>
+      </div>
+    </section>
+
+    <!-- Slide 8: Pattern 3 - Combined -->
+    <section class="slide" id="pattern3">
+      <h2>Pattern 3: Combined &mdash; Multiple Grains + Window Functions</h2>
+      <p style="margin-bottom: 0.5rem;">Define separate dimensions for each grain and attach window function metrics to each. Users pick which grain to query.</p>
+      <p style="margin-bottom: 2rem;"><a href="https://docs.snowflake.com/en/sql-reference/sql/create-semantic-view" target="_blank" class="badge-blue">Docs: CREATE SEMANTIC VIEW</a> <a href="https://docs.snowflake.com/en/sql-reference/constructs/semantic_view" target="_blank" class="badge-blue">Docs: SEMANTIC_VIEW Clause</a></p>
+
+      <pre class="anim-fade"><span class="keyword">DIMENSIONS</span> (
+  revenue.month_period <span class="keyword">AS</span> <span class="function">TO_CHAR</span>(sale_date, <span class="string">'YYYY-MM'</span>),
+  revenue.quarter_period <span class="keyword">AS</span> <span class="function">TO_CHAR</span>(sale_date, <span class="string">'YYYY'</span>) || <span class="string">'-Q'</span> || ...,
+  revenue.year_period <span class="keyword">AS</span> <span class="function">TO_CHAR</span>(sale_date, <span class="string">'YYYY'</span>)
+)
+<span class="keyword">METRICS</span> (
+  revenue.period_revenue <span class="keyword">AS</span> <span class="function">SUM</span>(revenue),
+
+  <span class="comment">-- Month-over-month</span>
+  revenue.prior_month_revenue <span class="keyword">AS</span> <span class="function">LAG</span>(period_revenue, <span class="number">1</span>)
+    <span class="keyword">OVER</span> (<span class="keyword">PARTITION BY EXCLUDING</span> revenue.month_period
+          <span class="keyword">ORDER BY</span> revenue.month_period),
+
+  <span class="comment">-- Quarter-over-quarter</span>
+  revenue.prior_quarter_revenue <span class="keyword">AS</span> <span class="function">LAG</span>(period_revenue, <span class="number">1</span>)
+    <span class="keyword">OVER</span> (<span class="keyword">PARTITION BY EXCLUDING</span> revenue.quarter_period
+          <span class="keyword">ORDER BY</span> revenue.quarter_period),
+
+  <span class="comment">-- 3-month moving average</span>
+  revenue.moving_avg_3_months <span class="keyword">AS</span> <span class="function">AVG</span>(period_revenue)
+    <span class="keyword">OVER</span> (<span class="keyword">PARTITION BY EXCLUDING</span> revenue.month_period
+          <span class="keyword">ORDER BY</span> revenue.month_period
+          <span class="keyword">ROWS BETWEEN</span> <span class="number">2</span> <span class="keyword">PRECEDING AND CURRENT ROW</span>)
+)</pre>
+    </section>
+
+    <!-- Slide 9: Pattern 3 Demo -->
+    <section class="slide" id="pattern3-demo">
+      <h2>Pattern 3: Period-Over-Period at Any Grain</h2>
+      <p style="margin-bottom: 2rem;">Choose monthly or quarterly by selecting which dimension to query.</p>
+
+      <div class="two-col anim-fade">
+        <div>
+          <h3>Monthly + MoM + Moving Avg</h3>
+          <pre><span class="keyword">SELECT</span> * <span class="keyword">FROM SEMANTIC_VIEW</span>(
+  sv_combined_dynamic
+  <span class="keyword">DIMENSIONS</span> revenue.month_period
+  <span class="keyword">METRICS</span> revenue.period_revenue,
+    revenue.prior_month_revenue,
+    revenue.moving_avg_3_months
+)</pre>
+          <table>
+            <tr><th>MONTH</th><th>REVENUE</th><th>PRIOR</th><th>3M AVG</th></tr>
+            <tr><td>2023-01</td><td>865K</td><td>NULL</td><td>865K</td></tr>
+            <tr><td>2023-02</td><td>896K</td><td>865K</td><td>880K</td></tr>
+            <tr><td>2023-03</td><td>1,041K</td><td>896K</td><td>934K</td></tr>
+          </table>
+        </div>
+        <div>
+          <h3>Quarterly + QoQ</h3>
+          <pre><span class="keyword">SELECT</span> * <span class="keyword">FROM SEMANTIC_VIEW</span>(
+  sv_combined_dynamic
+  <span class="keyword">DIMENSIONS</span> revenue.quarter_period
+  <span class="keyword">METRICS</span> revenue.period_revenue,
+    revenue.prior_quarter_revenue
+)</pre>
+          <table>
+            <tr><th>QUARTER</th><th>REVENUE</th><th>PRIOR QTR</th></tr>
+            <tr><td>2023-Q1</td><td>2,802K</td><td>NULL</td></tr>
+            <tr><td>2023-Q2</td><td>2,838K</td><td>2,802K</td></tr>
+            <tr><td>2023-Q3</td><td>2,036K</td><td>2,838K</td></tr>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <!-- Slide 10: Limitations -->
+    <section class="slide" id="limitations">
+      <h2>Limitations &amp; Workarounds</h2>
+      <p style="margin-bottom: 0.5rem;">Current constraints to be aware of when combining these features.</p>
+      <p style="margin-bottom: 2rem;"><a href="https://docs.snowflake.com/en/user-guide/views-semantic/validation-rules" target="_blank" class="badge-blue">Docs: Semantic View Validation Rules</a> <a href="https://docs.snowflake.com/en/sql-reference/sql/show-semantic-dimensions-for-metric" target="_blank" class="badge-blue">Docs: SHOW SEMANTIC DIMENSIONS FOR METRIC</a></p>
+
+      <div class="card-grid anim-fade">
+        <div class="card">
+          <h4>Variables + Window Functions</h4>
+          <p>Variables expand to subqueries internally. These subqueries are <strong>not valid GROUP BY expressions</strong> when window functions are involved.</p>
+          <p style="margin-top: 0.5rem;"><span class="badge-orange">Workaround</span> Use Pattern 3 (separate dimensions per grain)</p>
+        </div>
+        <div class="card">
+          <h4>Variable Frame Bounds</h4>
+          <p>You cannot parameterize window frame sizes with variables. <code>INTERVAL my_var PRECEDING</code> is not supported.</p>
+          <p style="margin-top: 0.5rem;"><span class="badge-orange">Workaround</span> Define separate metrics for each frame (7-day, 30-day, 90-day)</p>
+        </div>
+        <div class="card">
+          <h4>Window Metric Chaining</h4>
+          <p>Window function metrics cannot reference other window function metrics. Each must reference a base metric directly.</p>
+          <p style="margin-top: 0.5rem;"><span class="badge-orange">Workaround</span> Flatten calculations into a single window expression</p>
+        </div>
+      </div>
+
+      <div class="warning-box anim-fade">
+        <p><strong>Required dimensions:</strong> When querying window function metrics, you <em>must</em> include the dimensions referenced in the PARTITION BY EXCLUDING and ORDER BY clauses. Use <code>SHOW SEMANTIC DIMENSIONS ... FOR METRIC</code> to check.</p>
+      </div>
+    </section>
+
+    <!-- Slide 11: Decision Guide -->
+    <section class="slide" id="decision">
+      <h2>Decision Guide: Which Pattern?</h2>
+      <p style="margin-bottom: 2rem;">Match the pattern to your use case.</p>
+
+      <table class="anim-fade">
+        <thead>
+          <tr><th>Use Case</th><th>Pattern</th><th>Why</th></tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>Total / average / count at different grains</td>
+            <td><strong>1: Variables</strong></td>
+            <td>Cleanest syntax; single dimension + variable swap</td>
+          </tr>
+          <tr>
+            <td>Rolling averages or lag at a fixed grain</td>
+            <td><strong>2: Window Functions</strong></td>
+            <td>PARTITION BY EXCLUDING adapts to query dimensions</td>
+          </tr>
+          <tr>
+            <td>Period-over-period AND switchable grains</td>
+            <td><strong>3: Combined</strong></td>
+            <td>Variables can't be used with window funcs; multi-dimension approach works</td>
+          </tr>
+          <tr>
+            <td>Simple parameterized thresholds/filters</td>
+            <td><strong>1: Variables</strong></td>
+            <td>Variables support any scalar expression, not just time</td>
+          </tr>
+          <tr>
+            <td>Cumulative YTD totals</td>
+            <td><strong>2 or 3: Window Functions</strong></td>
+            <td>SUM OVER with ROWS UNBOUNDED PRECEDING</td>
+          </tr>
+        </tbody>
+      </table>
+
+      <div class="flow-diagram anim-fade">
+        <div class="flow-step">
+          <div class="step-label">Need</div>
+          <div class="step-title">Swappable grain?</div>
+        </div>
+        <div class="flow-arrow">&rarr;</div>
+        <div class="flow-step">
+          <div class="step-label">Need</div>
+          <div class="step-title">Window calcs?</div>
+        </div>
+        <div class="flow-arrow">&rarr;</div>
+        <div class="flow-step active">
+          <div class="step-label">Answer</div>
+          <div class="step-title">Both? &rarr; Pattern 3</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Slide 12: Takeaways -->
+    <section class="slide" id="takeaways">
+      <h2>Key Takeaways</h2>
+
+      <div class="card-grid anim-fade">
+        <div class="card">
+          <h4>Variables are Powerful</h4>
+          <p>A single <code>time_grain</code> variable eliminates the need for multiple views. Default values ensure backward compatibility.</p>
+        </div>
+        <div class="card">
+          <h4>Window Functions Are Native</h4>
+          <p>Rolling averages, LAG/LEAD, and running totals are first-class metric types &mdash; no CTEs or self-joins required.</p>
+        </div>
+        <div class="card">
+          <h4>PARTITION BY EXCLUDING Is Key</h4>
+          <p>This clause makes window metrics adaptive &mdash; they partition by whatever additional dimensions the user includes in their query.</p>
+        </div>
+        <div class="card">
+          <h4>Know the Boundaries</h4>
+          <p>Variables and window functions can't be combined in the same dimension. Plan your view structure accordingly.</p>
+        </div>
+      </div>
+
+      <div class="highlight-box anim-fade" style="margin-top: 2rem;">
+        <p><strong>Try the hands-on lab:</strong> <code>dynamic-time-period-metrics/lab/</code> &mdash; includes setup SQL, sample data, and a notebook demonstrating all three patterns with runnable queries.</p>
+      </div>
+
+      <div class="context-box anim-fade">
+        <p><strong>References:</strong></p>
+        <ul style="margin-top: 0.5rem;">
+          <li><a href="https://docs.snowflake.com/en/sql-reference/sql/create-semantic-view#label-create-semantic-view-window-function" style="color: var(--accent);">CREATE SEMANTIC VIEW: Window Function Metrics</a></li>
+          <li><a href="https://docs.snowflake.com/en/user-guide/views-semantic/variables" style="color: var(--accent);">Using Variables in a Semantic View</a></li>
+          <li><a href="https://docs.snowflake.com/en/user-guide/views-semantic/querying" style="color: var(--accent);">Querying Semantic Views</a></li>
+        </ul>
+      </div>
+    </section>
+
+  </main>
+
+  <script>
+    // Progress bar
+    window.addEventListener('scroll', () => {
+      const scrollTop = window.scrollY;
+      const docHeight = document.documentElement.scrollHeight - window.innerHeight;
+      const progress = (scrollTop / docHeight) * 100;
+      document.querySelector('.progress-bar').style.width = progress + '%';
+    });
+
+    // Scroll animations
+    const observer = new IntersectionObserver((entries) => {
+      entries.forEach(entry => {
+        if (entry.isIntersecting) {
+          entry.target.classList.add('visible');
+        }
+      });
+    }, { threshold: 0.1 });
+
+    document.querySelectorAll('.anim-fade').forEach(el => observer.observe(el));
+
+    // Active nav link
+    const sections = document.querySelectorAll('.slide');
+    const navLinks = document.querySelectorAll('.sidebar a[href^="#"]');
+
+    window.addEventListener('scroll', () => {
+      let current = '';
+      sections.forEach(section => {
+        const sectionTop = section.offsetTop - 100;
+        if (window.scrollY >= sectionTop) {
+          current = section.getAttribute('id');
+        }
+      });
+      navLinks.forEach(link => {
+        link.classList.remove('active');
+        if (link.getAttribute('href') === '#' + current) {
+          link.classList.add('active');
+        }
+      });
+    });
+  </script>
+</body>
+</html>
