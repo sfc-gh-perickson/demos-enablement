@@ -18,6 +18,7 @@ An internal enablement repository for Snowflake sales engineers and account exec
   - [Server-Side Agent Routing](#server-side-agent-routing)
   - [PII Redaction](#pii-redaction)
   - [Label Studio on SPCS](#label-studio-on-spcs)
+  - [Dynamic Time-Period Metrics](#dynamic-time-period-metrics)
 - [Repository Structure](#repository-structure)
 - [Getting Started](#getting-started)
 - [Presentation Format](#presentation-format)
@@ -26,7 +27,7 @@ An internal enablement repository for Snowflake sales engineers and account exec
 
 ## Overview
 
-This repository contains ten enablement modules covering key Cortex AI and Snowflake ML topics:
+This repository contains eleven enablement modules covering key Cortex AI and Snowflake ML topics:
 
 | Module | Audience | Format | Slides |
 |--------|----------|--------|--------|
@@ -40,6 +41,7 @@ This repository contains ten enablement modules covering key Cortex AI and Snowf
 | Server-Side Agent Routing | SEs, Platform Engineers | Presentation + Hands-on Lab | [View](https://sfc-gh-perickson.github.io/demos-enablement/agent-routing/presentations/server-side-agent-routing.html) |
 | PII Redaction | SEs, Data Engineers, Compliance | Presentation + Hands-on Lab | [View](https://sfc-gh-perickson.github.io/demos-enablement/pii-redaction/presentations/pii-redaction.html) |
 | Label Studio on SPCS | SEs, ML Engineers, Platform Engineers | Presentation + Hands-on Lab | [View](https://sfc-gh-perickson.github.io/demos-enablement/label-studio-spcs/presentations/label-studio-spcs.html) |
+| Dynamic Time-Period Metrics | SEs, Analytics Engineers, Data Engineers | Presentation + Hands-on Lab | [View](https://sfc-gh-perickson.github.io/demos-enablement/dynamic-time-period-metrics/presentations/dynamic-time-period-metrics.html) |
 
 Each module includes an HTML slide deck and companion speaker notes. The evaluations, many-model-training, feature-store, cortex-ai-observability, cortex-agent-multi-tenancy, and label-studio-spcs modules also provide complete hands-on labs with SQL setup and notebooks.
 
@@ -318,6 +320,39 @@ The lab walks through building the container image, deploying Label Studio on SP
 
 ---
 
+### Dynamic Time-Period Metrics
+
+**Location:** `dynamic-time-period-metrics/`
+
+Demonstrates how to define metrics that calculate dynamically over adjustable time periods (monthly, quarterly, yearly) in Snowflake semantic views using variables, window function metrics, and combined patterns.
+
+**Topics covered:**
+- Variables for query-time grain switching (month/quarter/year)
+- Window function metrics (rolling averages, LAG, running totals)
+- `PARTITION BY EXCLUDING` for adaptive window partitioning
+- Combined pattern: multiple grain dimensions + window functions
+- Known limitations and workarounds
+
+**Contents:**
+
+| File | Description |
+|------|-------------|
+| [`presentations/dynamic-time-period-metrics.html`](https://sfc-gh-perickson.github.io/demos-enablement/dynamic-time-period-metrics/presentations/dynamic-time-period-metrics.html) | Slide deck (12 slides) |
+| `presentations/dynamic-time-period-metrics-speaker-notes.md` | Speaker notes with internal context |
+| `lab/setup.sql` | SQL setup script (database, sample data, 3 semantic views) |
+| `lab/dynamic-time-period-metrics-lab.ipynb` | Hands-on lab notebook (20-30 min) |
+
+#### Lab Prerequisites
+
+1. A Snowflake account with semantic views enabled
+2. A role with CREATE DATABASE and CREATE WAREHOUSE privileges
+3. Run `dynamic-time-period-metrics/lab/setup.sql` to create the `DYNAMIC_METRICS_DEMO` database
+4. Open `dynamic-time-period-metrics/lab/dynamic-time-period-metrics-lab.ipynb` in Snowflake Notebooks
+
+The lab walks through three patterns for dynamic time-period metrics: variable-based grain switching, window function metrics for rolling/comparative calcs, and a combined approach with multiple grain dimensions.
+
+---
+
 ## Repository Structure
 
 ```
@@ -348,6 +383,13 @@ enablement/
 │   └── presentations/
 │       ├── cortex-agent-versioning.html
 │       └── cortex-agent-versioning-speaker-notes.md
+├── dynamic-time-period-metrics/
+│   ├── lab/
+│   │   ├── setup.sql
+│   │   └── dynamic-time-period-metrics-lab.ipynb
+│   └── presentations/
+│       ├── dynamic-time-period-metrics.html
+│       └── dynamic-time-period-metrics-speaker-notes.md
 ├── evaluations/
 │   ├── rough_eval_notes.md
 │   ├── lab/
@@ -409,6 +451,7 @@ enablement/
    - **Agent Routing:** Run `agent-routing/lab/setup.sql` before starting the notebook
    - **PII Redaction:** Run `pii-redaction/lab/setup.sql` before starting the notebook
    - **Label Studio on SPCS:** Run `label-studio-spcs/lab/setup.sql` before starting the notebook
+   - **Dynamic Time-Period Metrics:** Run `dynamic-time-period-metrics/lab/setup.sql` before starting the notebook
 
 ---
 
