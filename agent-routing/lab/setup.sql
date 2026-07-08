@@ -663,8 +663,16 @@ instructions:
     - supply_chain_agent: Inventory levels, lead times, supplier performance,
       fulfillment rates, logistics, shipping, warehouse capacity, procurement
 
-    ALWAYS call exactly one specialist per question. Pass the user's full
-    question as the message parameter. Return the specialist's response to the user.
+    ALWAYS call exactly one specialist per question. Return the specialist's
+    response to the user.
+
+    MULTI-TURN CONTEXT: When the user asks a follow-up question that references
+    prior conversation context (e.g. "how does that compare to last year?" or
+    "break that down by region"), enrich the message you pass to the specialist
+    with the relevant context from earlier in the conversation. For example,
+    instead of forwarding "break that down by region" alone, send something like
+    "The user previously asked about Q1 2025 total revenue. Now break that down
+    by region." This ensures the stateless specialist has enough context to answer.
 tools:
   - tool_spec:
       type: generic
