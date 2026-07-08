@@ -1,0 +1,5 @@
+snowflake-ml-python>=1.5.0
+xgboost>=2.0.0
+scikit-learn>=1.3.0
+pandas>=2.0.0
+snowflake-snowpark-python>=1.17.0
