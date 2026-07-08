@@ -30,6 +30,10 @@ The notebook:
 5. Runs inference on sample data through the registered model
 6. Lists all models in the registry
 
+## Presentation
+
+A slide deck overview is available at [`presentations/model-registry-overview.html`](presentations/model-registry-overview.html). Open it in a browser to walk through the concepts, workflow, and code before or after running the demo.
+
 ## Snowflake Resources
 
 - Database: `ML_REGISTRY_DEMO`

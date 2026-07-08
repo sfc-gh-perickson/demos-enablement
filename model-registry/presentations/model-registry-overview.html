@@ -1,0 +1,498 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Snowflake Model Registry</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+
+    :root {
+      --bg: #0F1B2D;
+      --sidebar-bg: #1B2A4A;
+      --primary: #29B5E8;
+      --accent: #7C3AED;
+      --text: #E2E8F0;
+      --text-muted: #94A3B8;
+      --card-bg: #162236;
+      --border: #2D4A6F;
+      --green: #10B981;
+      --orange: #F59E0B;
+      --red: #EF4444;
+    }
+
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      font-family: 'Inter', sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.6;
+      overflow-x: hidden;
+    }
+
+    .progress-bar {
+      position: fixed;
+      top: 0;
+      left: 0;
+      height: 3px;
+      background: linear-gradient(90deg, var(--primary), var(--accent));
+      z-index: 1000;
+      transition: width 0.1s;
+    }
+
+    .sidebar {
+      position: fixed;
+      left: 0;
+      top: 0;
+      width: 260px;
+      height: 100vh;
+      background: var(--sidebar-bg);
+      padding: 2rem 1.5rem;
+      overflow-y: auto;
+      border-right: 1px solid var(--border);
+      z-index: 100;
+    }
+
+    .sidebar h2 {
+      font-size: 1rem;
+      font-weight: 600;
+      color: var(--primary);
+      margin-bottom: 1.5rem;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+
+    .sidebar a {
+      display: block;
+      color: var(--text-muted);
+      text-decoration: none;
+      padding: 0.5rem 0.75rem;
+      border-radius: 6px;
+      font-size: 0.85rem;
+      margin-bottom: 0.25rem;
+      transition: all 0.2s;
+    }
+
+    .sidebar a:hover,
+    .sidebar a.active {
+      color: var(--text);
+      background: rgba(41, 181, 232, 0.1);
+    }
+
+    .sidebar a.active {
+      border-left: 3px solid var(--primary);
+      padding-left: calc(0.75rem - 3px);
+    }
+
+    .main {
+      margin-left: 260px;
+      padding: 0;
+    }
+
+    .slide {
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      padding: 4rem 3rem;
+      max-width: 1200px;
+      margin: 0 auto;
+    }
+
+    .slide h1 {
+      font-size: 2.5rem;
+      font-weight: 700;
+      margin-bottom: 1rem;
+      background: linear-gradient(135deg, var(--primary), var(--accent));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+
+    .slide h2 {
+      font-size: 1.75rem;
+      font-weight: 600;
+      color: var(--text);
+      margin-bottom: 1.5rem;
+    }
+
+    .slide h3 {
+      font-size: 1.25rem;
+      font-weight: 500;
+      color: var(--text-muted);
+      margin-bottom: 1rem;
+    }
+
+    .slide p {
+      font-size: 1.1rem;
+      color: var(--text-muted);
+      max-width: 700px;
+      text-align: center;
+    }
+
+    .stat-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 1.5rem;
+      width: 100%;
+      margin: 2rem 0;
+    }
+
+    .stat-card {
+      background: var(--card-bg);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 1.5rem;
+      text-align: center;
+    }
+
+    .stat-card .value {
+      font-size: 2rem;
+      font-weight: 700;
+      color: var(--primary);
+    }
+
+    .stat-card .label {
+      font-size: 0.85rem;
+      color: var(--text-muted);
+      margin-top: 0.5rem;
+    }
+
+    .card-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+      gap: 1.5rem;
+      width: 100%;
+      margin: 2rem 0;
+    }
+
+    .card {
+      background: var(--card-bg);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 1.5rem;
+    }
+
+    .card h4 {
+      font-size: 1rem;
+      font-weight: 600;
+      color: var(--text);
+      margin-bottom: 0.75rem;
+    }
+
+    .card p {
+      font-size: 0.9rem;
+      color: var(--text-muted);
+      text-align: left;
+    }
+
+    .highlight-box {
+      background: rgba(41, 181, 232, 0.1);
+      border: 1px solid var(--primary);
+      border-radius: 12px;
+      padding: 1.5rem;
+      margin: 1.5rem 0;
+      width: 100%;
+    }
+
+    .slide ul {
+      list-style: none;
+      width: 100%;
+      max-width: 700px;
+    }
+
+    .slide ul li {
+      padding: 0.75rem 0;
+      padding-left: 1.5rem;
+      position: relative;
+      color: var(--text);
+      font-size: 1.05rem;
+    }
+
+    .slide ul li::before {
+      content: '';
+      position: absolute;
+      left: 0;
+      top: 50%;
+      transform: translateY(-50%);
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: var(--primary);
+    }
+
+    .code-block {
+      background: var(--card-bg);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 1.5rem;
+      width: 100%;
+      max-width: 800px;
+      margin: 1.5rem 0;
+      font-family: 'JetBrains Mono', 'Fira Code', monospace;
+      font-size: 0.85rem;
+      line-height: 1.8;
+      overflow-x: auto;
+      color: var(--text);
+    }
+
+    .code-block .comment { color: var(--text-muted); }
+    .code-block .keyword { color: var(--accent); }
+    .code-block .string { color: var(--green); }
+    .code-block .func { color: var(--primary); }
+
+    .flow-diagram {
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+      margin: 2rem 0;
+      flex-wrap: wrap;
+      justify-content: center;
+    }
+
+    .flow-step {
+      background: var(--card-bg);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 1.25rem 1.5rem;
+      text-align: center;
+      min-width: 160px;
+    }
+
+    .flow-step .step-num {
+      font-size: 0.75rem;
+      color: var(--primary);
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      margin-bottom: 0.5rem;
+    }
+
+    .flow-step .step-label {
+      font-size: 0.95rem;
+      font-weight: 500;
+      color: var(--text);
+    }
+
+    .flow-arrow {
+      font-size: 1.5rem;
+      color: var(--primary);
+    }
+
+    .anim-fade {
+      opacity: 0;
+      transform: translateY(20px);
+      transition: opacity 0.6s ease, transform 0.6s ease;
+    }
+
+    .anim-fade.visible {
+      opacity: 1;
+      transform: translateY(0);
+    }
+
+    @media (max-width: 900px) {
+      .sidebar { display: none; }
+      .main { margin-left: 0; }
+      .stat-grid { grid-template-columns: repeat(2, 1fr); }
+      .slide { padding: 2rem 1.5rem; }
+    }
+  </style>
+</head>
+<body>
+  <div class="progress-bar"></div>
+
+  <nav class="sidebar">
+    <h2>Model Registry</h2>
+    <a href="#hero">Overview</a>
+    <a href="#problem">The Problem</a>
+    <a href="#what-is-it">What Is It</a>
+    <a href="#workflow">Workflow</a>
+    <a href="#code">Code Walkthrough</a>
+    <a href="#capabilities">Capabilities</a>
+    <a href="#closing">Next Steps</a>
+  </nav>
+
+  <main class="main">
+
+    <section class="slide" id="hero">
+      <h1>Snowflake Model Registry</h1>
+      <p>Register, version, and serve ML models directly in Snowflake — no external infrastructure required.</p>
+      <div class="stat-grid" style="margin-top: 2rem;">
+        <div class="stat-card anim-fade">
+          <div class="value">1 Line</div>
+          <div class="label">To Register a Model</div>
+        </div>
+        <div class="stat-card anim-fade">
+          <div class="value">Native</div>
+          <div class="label">XGBoost, sklearn, PyTorch</div>
+        </div>
+        <div class="stat-card anim-fade">
+          <div class="value">Zero</div>
+          <div class="label">Data Movement for Inference</div>
+        </div>
+      </div>
+    </section>
+
+    <section class="slide" id="problem">
+      <h2>The Problem</h2>
+      <ul class="anim-fade">
+        <li>Models trained locally or in notebooks live as pickle files with no lineage</li>
+        <li>Moving data out of Snowflake for inference is slow and costly</li>
+        <li>Version tracking across environments is fragile and manual</li>
+        <li>Deploying models to production requires separate serving infrastructure</li>
+      </ul>
+    </section>
+
+    <section class="slide" id="what-is-it">
+      <h2>What Is the Model Registry?</h2>
+      <div class="card-grid anim-fade">
+        <div class="card">
+          <h4>Schema-Level Storage</h4>
+          <p>Any Snowflake schema can act as a registry. Models are first-class objects alongside tables and views.</p>
+        </div>
+        <div class="card">
+          <h4>Versioned Artifacts</h4>
+          <p>Each model has named versions with metadata, metrics, and dependency tracking built in.</p>
+        </div>
+        <div class="card">
+          <h4>Serverless Inference</h4>
+          <p>Run predictions directly in Snowflake via SQL or Python — the model executes where the data lives.</p>
+        </div>
+      </div>
+    </section>
+
+    <section class="slide" id="workflow">
+      <h2>Demo Workflow</h2>
+      <div class="flow-diagram anim-fade">
+        <div class="flow-step">
+          <div class="step-num">Step 1</div>
+          <div class="step-label">Train Model</div>
+        </div>
+        <div class="flow-arrow">&#8594;</div>
+        <div class="flow-step">
+          <div class="step-num">Step 2</div>
+          <div class="step-label">Save Pickle</div>
+        </div>
+        <div class="flow-arrow">&#8594;</div>
+        <div class="flow-step">
+          <div class="step-num">Step 3</div>
+          <div class="step-label">Load & Register</div>
+        </div>
+        <div class="flow-arrow">&#8594;</div>
+        <div class="flow-step">
+          <div class="step-num">Step 4</div>
+          <div class="step-label">Run Inference</div>
+        </div>
+      </div>
+      <div class="highlight-box anim-fade">
+        <strong>Key point:</strong> The model artifact goes from a local pickle file to a governed, versioned, callable object in Snowflake — in under 10 lines of Python.
+      </div>
+    </section>
+
+    <section class="slide" id="code">
+      <h2>Code Walkthrough</h2>
+      <h3>Register the model</h3>
+      <div class="code-block anim-fade">
+<span class="keyword">from</span> snowflake.ml.registry <span class="keyword">import</span> Registry<br><br>
+<span class="comment"># Open registry (any schema works)</span><br>
+reg = Registry(session=session,<br>
+&nbsp;&nbsp;&nbsp;&nbsp;database_name=<span class="string">"ML_REGISTRY_DEMO"</span>,<br>
+&nbsp;&nbsp;&nbsp;&nbsp;schema_name=<span class="string">"REGISTRY"</span>)<br><br>
+<span class="comment"># Register the XGBoost model</span><br>
+mv = reg.<span class="func">log_model</span>(<br>
+&nbsp;&nbsp;&nbsp;&nbsp;model,<br>
+&nbsp;&nbsp;&nbsp;&nbsp;model_name=<span class="string">"xgboost_breast_cancer"</span>,<br>
+&nbsp;&nbsp;&nbsp;&nbsp;version_name=<span class="string">"v1"</span>,<br>
+&nbsp;&nbsp;&nbsp;&nbsp;conda_dependencies=[<span class="string">"xgboost"</span>, <span class="string">"scikit-learn"</span>],<br>
+&nbsp;&nbsp;&nbsp;&nbsp;sample_input_data=X_sample,<br>
+)
+      </div>
+      <h3>Run inference</h3>
+      <div class="code-block anim-fade">
+<span class="comment"># Predict directly in Snowflake</span><br>
+results = mv.<span class="func">run</span>(X_sample.head(5))
+      </div>
+    </section>
+
+    <section class="slide" id="capabilities">
+      <h2>What You Get</h2>
+      <div class="card-grid anim-fade">
+        <div class="card">
+          <h4>Version Management</h4>
+          <p>Name versions, set defaults, compare metrics across iterations.</p>
+        </div>
+        <div class="card">
+          <h4>Dependency Tracking</h4>
+          <p>Conda and pip dependencies are stored with the model and resolved at inference time.</p>
+        </div>
+        <div class="card">
+          <h4>Signature Inference</h4>
+          <p>Input/output schemas are derived from sample data — no manual spec needed.</p>
+        </div>
+        <div class="card">
+          <h4>RBAC & Governance</h4>
+          <p>Models inherit Snowflake's role-based access control. Share across teams with standard grants.</p>
+        </div>
+      </div>
+    </section>
+
+    <section class="slide" id="closing">
+      <h2>Next Steps</h2>
+      <div class="card-grid anim-fade">
+        <div class="card">
+          <h4>Run the Demo</h4>
+          <p>Execute train_model.py, then walk through register_model.ipynb to see it end to end.</p>
+        </div>
+        <div class="card">
+          <h4>Try Your Own Model</h4>
+          <p>Swap in any sklearn, XGBoost, LightGBM, or PyTorch model — the API is the same.</p>
+        </div>
+        <div class="card">
+          <h4>Explore Further</h4>
+          <p>Add metrics tracking, model comparisons, or integrate with Snowflake ML pipelines.</p>
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <script>
+    const progressBar = document.querySelector('.progress-bar');
+    window.addEventListener('scroll', () => {
+      const scrollTop = window.scrollY;
+      const docHeight = document.documentElement.scrollHeight - window.innerHeight;
+      progressBar.style.width = (scrollTop / docHeight * 100) + '%';
+    });
+
+    const observer = new IntersectionObserver((entries) => {
+      entries.forEach(entry => {
+        if (entry.isIntersecting) {
+          entry.target.classList.add('visible');
+        }
+      });
+    }, { threshold: 0.1 });
+
+    document.querySelectorAll('.anim-fade').forEach(el => observer.observe(el));
+
+    const sections = document.querySelectorAll('.slide');
+    const navLinks = document.querySelectorAll('.sidebar a');
+
+    window.addEventListener('scroll', () => {
+      let current = '';
+      sections.forEach(section => {
+        const sectionTop = section.offsetTop - 200;
+        if (window.scrollY >= sectionTop) {
+          current = section.getAttribute('id');
+        }
+      });
+      navLinks.forEach(link => {
+        link.classList.remove('active');
+        if (link.getAttribute('href') === '#' + current) {
+          link.classList.add('active');
+        }
+      });
+    });
+  </script>
+</body>
+</html>

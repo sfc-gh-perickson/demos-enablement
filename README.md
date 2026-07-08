@@ -19,6 +19,7 @@ An internal enablement repository for Snowflake sales engineers and account exec
   - [PII Redaction](#pii-redaction)
   - [Label Studio on SPCS](#label-studio-on-spcs)
   - [Dynamic Time-Period Metrics](#dynamic-time-period-metrics)
+  - [Model Registry](#model-registry)
 - [Repository Structure](#repository-structure)
 - [Getting Started](#getting-started)
 - [Presentation Format](#presentation-format)
@@ -27,7 +28,7 @@ An internal enablement repository for Snowflake sales engineers and account exec
 
 ## Overview
 
-This repository contains eleven enablement modules covering key Cortex AI and Snowflake ML topics:
+This repository contains twelve enablement modules covering key Cortex AI and Snowflake ML topics:
 
 | Module | Audience | Format | Slides |
 |--------|----------|--------|--------|
@@ -42,6 +43,7 @@ This repository contains eleven enablement modules covering key Cortex AI and Sn
 | PII Redaction | SEs, Data Engineers, Compliance | Presentation + Hands-on Lab | [View](https://sfc-gh-perickson.github.io/demos-enablement/pii-redaction/presentations/pii-redaction.html) |
 | Label Studio on SPCS | SEs, ML Engineers, Platform Engineers | Presentation + Hands-on Lab | [View](https://sfc-gh-perickson.github.io/demos-enablement/label-studio-spcs/presentations/label-studio-spcs.html) |
 | Dynamic Time-Period Metrics | SEs, Analytics Engineers, Data Engineers | Presentation + Hands-on Lab | [View](https://sfc-gh-perickson.github.io/demos-enablement/dynamic-time-period-metrics/presentations/dynamic-time-period-metrics.html) |
+| Model Registry | SEs, Data Scientists, ML Engineers | Presentation + Hands-on Lab | [View](https://sfc-gh-perickson.github.io/demos-enablement/model-registry/presentations/model-registry-overview.html) |
 
 Each module includes an HTML slide deck and companion speaker notes. The evaluations, many-model-training, feature-store, cortex-ai-observability, cortex-agent-multi-tenancy, and label-studio-spcs modules also provide complete hands-on labs with SQL setup and notebooks.
 
@@ -353,6 +355,39 @@ The lab walks through three patterns for dynamic time-period metrics: variable-b
 
 ---
 
+### Model Registry
+
+**Location:** `model-registry/`
+
+Demonstrates uploading a pre-trained model artifact (XGBoost pickle) to Snowflake's Model Registry and running inference directly in Snowflake without moving data out.
+
+**Topics covered:**
+- Training and serializing an XGBoost model locally
+- Connecting to Snowflake and creating a registry schema
+- Registering a model with `snowflake-ml-python`
+- Running serverless inference via the registered model version
+- Version management and model exploration
+
+**Contents:**
+
+| File | Description |
+|------|-------------|
+| [`presentations/model-registry-overview.html`](https://sfc-gh-perickson.github.io/demos-enablement/model-registry/presentations/model-registry-overview.html) | Slide deck (7 slides) |
+| `train_model.py` | Train XGBoost classifier and save as pickle |
+| `register_model.ipynb` | Hands-on notebook: schema setup, registration, inference |
+| `requirements.txt` | Python dependencies |
+
+#### Lab Prerequisites
+
+1. A Snowflake account with ML features enabled (Model Registry)
+2. Python environment with `pip install -r model-registry/requirements.txt`
+3. Run `python model-registry/train_model.py` to generate the model artifact
+4. Open `model-registry/register_model.ipynb` and fill in connection parameters
+
+The notebook creates the `ML_REGISTRY_DEMO.REGISTRY` schema, loads the pickle, registers it, and runs inference end to end.
+
+---
+
 ## Repository Structure
 
 ```
@@ -430,6 +465,12 @@ enablement/
 │   └── presentations/
 │       ├── many-model-training.html
 │       └── many-model-training-speaker-notes.md
+├── model-registry/
+│   ├── train_model.py
+│   ├── register_model.ipynb
+│   ├── requirements.txt
+│   └── presentations/
+│       └── model-registry-overview.html
 └── semantic-view-description/
     └── presentations/
         ├── semantic-view-description-quality.html
@@ -452,6 +493,7 @@ enablement/
    - **PII Redaction:** Run `pii-redaction/lab/setup.sql` before starting the notebook
    - **Label Studio on SPCS:** Run `label-studio-spcs/lab/setup.sql` before starting the notebook
    - **Dynamic Time-Period Metrics:** Run `dynamic-time-period-metrics/lab/setup.sql` before starting the notebook
+   - **Model Registry:** Run `python model-registry/train_model.py` then open `model-registry/register_model.ipynb`
 
 ---
 
