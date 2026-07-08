@@ -550,12 +550,14 @@
     <a href="#metrics">Rubrics & Metrics</a>
     <a href="#llm-judge">LLM-as-a-Judge</a>
     <div class="section-label">Practice</div>
-    <a href="#why-evals">Why Not Skip Evals?</a>
-    <a href="#versioning">Agent Versioning</a>
-    <a href="#running-evals">Running Evaluations</a>
-    <a href="#iterating">Iterating on Agents</a>
+    <a href="#build-agent">Build the Agent</a>
+    <a href="#build-dataset">Build the Dataset</a>
+    <a href="#run-eval">Run the Evaluation</a>
+    <a href="#iterate">Inspect & Iterate</a>
+    <a href="#version-promote">Version & Promote</a>
+    <a href="#regression">Scheduled Regression</a>
+    <a href="#feedback">Human Feedback</a>
     <a href="#cicd">CI/CD Quality Gates</a>
-    <a href="#production">Production & Monitoring</a>
     <a href="#closing">Key Takeaways</a>
   </nav>
 
@@ -564,24 +566,9 @@
     <!-- Slide 1: Hero -->
     <section class="slide" id="hero">
       <h1>Evaluating Cortex Agents</h1>
-      <p>A comprehensive guide to measuring, improving, and trusting your AI agents in production &mdash; from evaluation theory through deployment best practices.</p>
-      <div class="stat-grid anim-fade" style="margin-top: 2rem;">
-        <div class="stat-card">
-          <div class="value">Full Trace</div>
-          <div class="label">Not Just Final Answers</div>
-        </div>
-        <div class="stat-card">
-          <div class="value">Versioned</div>
-          <div class="label">Safe Iteration & Rollback</div>
-        </div>
-        <div class="stat-card">
-          <div class="value">Automated</div>
-          <div class="label">CI/CD Quality Gates</div>
-        </div>
-        <div class="stat-card">
-          <div class="value">Native</div>
-          <div class="label">Snowflake Integration</div>
-        </div>
+      <p>A hands-on guide to measuring, improving, and trusting your AI agents in production.</p>
+      <div class="highlight-box anim-fade" style="margin-top: 2rem;">
+        <p><strong>Scenario:</strong> You're building a CMO-facing assistant that answers questions about campaign performance, budget allocation, and marketing strategy. The agent uses three tools: <strong>Cortex Analyst</strong> (structured data), <strong>Cortex Search</strong> (strategy documents), and an <strong>Agent Skill</strong> (executive summaries).</p>
       </div>
       <div class="context-box anim-fade" style="margin-top: 1rem; text-align: center;">
         <p style="text-align: center;"><strong>Two parts:</strong> Theory (why and what to evaluate) + Practice (how to evaluate and iterate in Snowflake)</p>
@@ -675,37 +662,37 @@
     <!-- Slide: Evaluating Agent Tools & Skills -->
     <section class="slide" id="agent-tools">
       <h2>Evaluating Agent Tools & Skills</h2>
-      <p style="margin-bottom: 2rem;">Cortex Agents compose multiple tool types to answer queries. Each tool introduces distinct failure modes that require targeted evaluation strategies.</p>
+      <p style="margin-bottom: 2rem;">Our CMO Assistant composes three tool types. Each introduces distinct failure modes that require targeted evaluation strategies.</p>
 
       <div class="card-grid anim-fade" style="grid-template-columns: 1fr 1fr;">
         <div class="card" style="border-top: 3px solid var(--primary);">
-          <h4>Cortex Search</h4>
-          <p style="margin-bottom: 0.75rem;">RAG-based retrieval over unstructured data (documents, knowledge bases, support articles).</p>
+          <h4>campaign_analytics (Cortex Analyst)</h4>
+          <p style="margin-bottom: 0.75rem;">Queries structured campaign performance data &mdash; spend, revenue, impressions, clicks, conversions, ROI, CPC, and CPA by channel and time period.</p>
+          <p><strong>Evaluate:</strong></p>
+          <ul>
+            <li>Was the generated SQL correct and scoped to the right time period?</li>
+            <li>Did the agent use this tool for quantitative questions?</li>
+            <li>Were results interpreted accurately (e.g., ROI expressed as a multiplier)?</li>
+          </ul>
+        </div>
+        <div class="card" style="border-top: 3px solid var(--green);">
+          <h4>strategy_search (Cortex Search)</h4>
+          <p style="margin-bottom: 0.75rem;">Retrieves marketing strategy documents &mdash; budget allocation methodology, attribution models, performance benchmarks, and planning briefs.</p>
           <p><strong>Evaluate:</strong></p>
           <ul>
             <li>Was the right context retrieved? (retrieval relevance)</li>
             <li>Did the agent ground its answer in retrieved content? (groundedness)</li>
-            <li>Were irrelevant passages filtered out? (precision)</li>
-          </ul>
-        </div>
-        <div class="card" style="border-top: 3px solid var(--green);">
-          <h4>Cortex Analyst (Semantic Views)</h4>
-          <p style="margin-bottom: 0.75rem;">Structured data access via natural language to SQL generation over semantic models.</p>
-          <p><strong>Evaluate:</strong></p>
-          <ul>
-            <li>Was the correct semantic view selected?</li>
-            <li>Did the generated SQL produce accurate results? (answer correctness)</li>
-            <li>Were verified queries leveraged when available?</li>
+            <li>Was this tool used for qualitative/strategy questions?</li>
           </ul>
         </div>
         <div class="card" style="border-top: 3px solid var(--accent);">
-          <h4>Agent Skills</h4>
-          <p style="margin-bottom: 0.75rem;">Custom tools defined via markdown or code that extend the agent with domain-specific capabilities.</p>
+          <h4>executive_summary (Agent Skill)</h4>
+          <p style="margin-bottom: 0.75rem;">Formats responses as executive summaries &mdash; headline insight, bullet points with key findings, and a recommended action.</p>
           <p><strong>Evaluate:</strong></p>
           <ul>
-            <li>Was the correct skill invoked for the task?</li>
-            <li>Were parameters passed correctly?</li>
-            <li>Did the skill output get interpreted and communicated accurately?</li>
+            <li>Was data gathered before formatting?</li>
+            <li>Was the output concise and board-appropriate?</li>
+            <li>Did the skill get invoked for summary/brief requests?</li>
           </ul>
         </div>
         <div class="card" style="border-top: 3px solid var(--orange);">
@@ -714,18 +701,18 @@
           <p><strong>Evaluate:</strong></p>
           <ul>
             <li>Did the agent choose the right tool for the query intent?</li>
-            <li>Were multi-tool queries decomposed correctly?</li>
-            <li>Was the orchestration efficient (no redundant calls)?</li>
+            <li>Were multi-tool queries decomposed correctly? (e.g., "compare spend to strategy" needs both analytics + search)</li>
+            <li>For out-of-scope questions, did it avoid calling tools entirely?</li>
           </ul>
         </div>
       </div>
 
       <div class="highlight-box anim-fade">
-        <p><strong>Implication for evaluation datasets:</strong> Your eval set should include queries that exercise each tool type individually AND queries that require multi-tool coordination. A dataset focused only on search queries won't catch failures in SQL generation or skill invocation.</p>
+        <p><strong>Implication for evaluation datasets:</strong> Your eval set should include queries that exercise each tool individually (single_tool), queries requiring multi-tool coordination (multi_tool), and queries the agent should refuse (refusal). A dataset focused only on one intent type won't catch failures in the others.</p>
       </div>
 
       <div class="context-box anim-fade">
-        <p><strong>Semantic View quality matters:</strong> If your semantic view has poor descriptions, ambiguous metrics, or missing verified queries, the agent will generate incorrect SQL regardless of how good the orchestration LLM is. Evaluate your semantic view quality independently using description audits and verified query coverage.</p>
+        <p><strong>Semantic View quality matters:</strong> If your semantic view (e.g., <code>CMO_ANALYTICS</code>) has poor descriptions, ambiguous metrics, or missing verified queries, the agent will generate incorrect SQL regardless of how good the orchestration LLM is. Evaluate your semantic view quality independently.</p>
       </div>
     </section>
 
@@ -736,21 +723,21 @@
 
       <div class="card-grid anim-fade">
         <div class="card">
-          <h4>Represent All Intent Types</h4>
+          <h4>Cover All Intent Types</h4>
           <ul>
-            <li>Happy paths (common, expected usage)</li>
-            <li>Edge cases and bad paths</li>
-            <li>High-risk queries (financial, compliance)</li>
-            <li>Out-of-scope / refusal scenarios</li>
+            <li><strong>Happy paths</strong> &mdash; common questions the agent should handle well (single tool)</li>
+            <li><strong>Multi-tool queries</strong> &mdash; questions requiring coordination between tools</li>
+            <li><strong>Edge cases</strong> &mdash; specific, narrow queries (e.g., "CPA for email in March 2024")</li>
+            <li><strong>Out-of-scope / refusal</strong> &mdash; questions the agent should decline</li>
           </ul>
         </div>
         <div class="card">
           <h4>Prioritize High-Stakes Areas</h4>
-          <p>Measure not only macro correctness but also intent-level performance. You need confidence that the agent behaves correctly in high-value, high-stakes scenarios &mdash; not just on average.</p>
+          <p>Measure not only macro correctness but also intent-level performance. You need confidence that the agent behaves correctly in high-value, high-stakes scenarios &mdash; not just on average. Tag each question with its <code>intent</code> and <code>process</code> (complexity tier) to enable granular analysis.</p>
         </div>
         <div class="card">
           <h4>Source Questions Strategically</h4>
-          <p>Curate questions from SMEs who know the business domain, use synthetic generation to cover edge cases, or mine production logs if available. All three approaches are valid &mdash; the key is covering the full intent distribution, not where the questions originated.</p>
+          <p>Curate questions from SMEs who know the business domain, use synthetic generation to cover edge cases, or mine production logs if available. All three approaches are valid &mdash; the key is covering the full intent distribution.</p>
         </div>
       </div>
 
@@ -758,24 +745,28 @@
         <div class="card">
           <h4>Ground Truth Best Practices</h4>
           <ul>
-            <li>Specific enough to validate, not so specific that non-determinism causes false negatives</li>
-            <li>Anchor to fixed time periods to avoid staleness</li>
             <li>Describe what correct looks like, not just a single "right answer"</li>
+            <li>Include acceptable tolerance (e.g., "Values within &plusmn;1% are acceptable")</li>
+            <li>Anchor to fixed time periods to avoid staleness</li>
             <li>Include what the response should NOT contain</li>
+            <li>Add metadata: <code>intent</code> (get_metric, compare_channels, summarize, out_of_scope) and <code>process</code> (single_tool, multi_tool, refusal)</li>
           </ul>
         </div>
         <div class="card">
           <h4>Dataset Format (Snowflake)</h4>
-          <pre style="font-size: 0.8rem; margin: 0.5rem 0;"><span class="keyword">CREATE TABLE</span> eval_data (
-  input_query <span class="function">VARCHAR</span>,
-  ground_truth <span class="function">VARIANT</span>
+          <pre style="font-size: 0.8rem; margin: 0.5rem 0;"><span class="keyword">CREATE TABLE</span> EVAL_QUESTIONS (
+  INPUT_QUERY   <span class="function">VARCHAR</span>,
+  GROUND_TRUTH  <span class="function">VARIANT</span>
 );
 
-<span class="keyword">INSERT INTO</span> eval_data <span class="keyword">SELECT</span>
-  <span class="string">'How many active customers?'</span>,
+<span class="comment">-- Ground truth is a JSON object with metadata</span>
+<span class="keyword">INSERT INTO</span> EVAL_QUESTIONS <span class="keyword">SELECT</span>
+  <span class="string">'What was total spend in 2024?'</span>,
   <span class="function">PARSE_JSON</span>(<span class="string">'{
-    "ground_truth_output": "1,000 active
-     customers as of Dec 31, 2025..."
+    "ground_truth_output": "Total marketing
+     spend was approximately $1,726,500...",
+    "intent": "get_metric",
+    "process": "single_tool"
   }'</span>);</pre>
         </div>
       </div>
@@ -784,36 +775,41 @@
     <!-- Slide 5: Rubrics & Metrics -->
     <section class="slide" id="metrics">
       <h2>Evaluation Rubrics & Metrics</h2>
-      <p style="margin-bottom: 2rem;">A rubric is a collection of metrics that score the agent's performance. Choose metrics aligned with your specific business requirements.</p>
+      <p style="margin-bottom: 2rem;">A rubric is a collection of metrics that score the agent's performance. For the CMO Assistant, we use three metrics that cover correctness, reasoning quality, and tool selection.</p>
 
       <div class="two-col anim-fade">
         <div>
-          <h3>Built-in System Metrics</h3>
+          <h3>Our Evaluation Rubric</h3>
           <table>
-            <thead><tr><th>Metric</th><th>Type</th><th>Requires</th></tr></thead>
+            <thead><tr><th>Metric</th><th>Type</th><th>What It Checks</th></tr></thead>
             <tbody>
               <tr>
-                <td><strong>Answer Correctness</strong></td>
+                <td><strong>answer_correctness</strong></td>
                 <td><span class="badge-blue">Ground truth</span></td>
-                <td>Expected output</td>
+                <td>Compares agent output to expected answer</td>
               </tr>
               <tr>
-                <td><strong>Logical Consistency</strong></td>
+                <td><strong>logical_consistency</strong></td>
                 <td><span class="badge-purple">Reference-free</span></td>
-                <td>Nothing extra</td>
+                <td>Internal coherence of planning and execution</td>
+              </tr>
+              <tr>
+                <td><strong>tool_selection</strong></td>
+                <td><span class="badge-orange">Custom</span></td>
+                <td>Did the agent choose the right tool(s)?</td>
               </tr>
             </tbody>
           </table>
-          <p style="text-align: left; margin-top: 1rem; font-size: 0.9rem; color: var(--text-muted);">Logical consistency evaluates the full execution trace: instructions, planning, and tool calls for internal coherence &mdash; no ground truth needed.</p>
+          <p style="text-align: left; margin-top: 1rem; font-size: 0.9rem; color: var(--text-muted);">Logical consistency evaluates the full execution trace for internal coherence &mdash; no ground truth needed. Custom metrics let you evaluate domain-specific behavior.</p>
         </div>
         <div>
           <h3>Custom Metric Examples</h3>
           <div class="card" style="margin-top: 0.5rem;">
             <ul>
+              <li><strong>Tool selection accuracy</strong> &mdash; chose the right tool for the task</li>
               <li><strong>Brand compliance</strong> &mdash; speaking in voice, no competitor mentions</li>
               <li><strong>Context relevance</strong> &mdash; did RAG retrieve correct documents</li>
               <li><strong>Groundedness</strong> &mdash; claims supported by retrieved context</li>
-              <li><strong>Tool selection accuracy</strong> &mdash; chose the right tool for the task</li>
               <li><strong>Response completeness</strong> &mdash; addressed all parts of the query</li>
               <li><strong>Citation quality</strong> &mdash; references point to real sources</li>
             </ul>
@@ -821,21 +817,32 @@
         </div>
       </div>
 
-      <pre class="anim-fade"><span class="comment"># Custom metric YAML configuration</span>
+      <pre class="anim-fade"><span class="comment"># Custom tool_selection metric for the CMO Assistant</span>
 <span class="keyword">metrics:</span>
-  - <span class="keyword">name:</span> <span class="string">"groundedness"</span>
+  - <span class="string">"answer_correctness"</span>
+  - <span class="string">"logical_consistency"</span>
+  - <span class="keyword">name:</span> <span class="string">"tool_selection"</span>
     <span class="keyword">score_ranges:</span>
-      <span class="keyword">min_score:</span> [0, 0.33]
-      <span class="keyword">median_score:</span> [0.34, 0.66]
-      <span class="keyword">max_score:</span> [0.67, 1]
+      <span class="keyword">min_score:</span> [1, 3]
+      <span class="keyword">median_score:</span> [4, 6]
+      <span class="keyword">max_score:</span> [7, 10]
     <span class="keyword">prompt:</span> |
-      You are evaluating the groundedness of an AI agent's response.
-      User Query: <span class="function">{{input}}</span>
-      Agent Response: <span class="function">{{output}}</span>
-      Expected Answer: <span class="function">{{ground_truth}}</span>
+      Evaluate whether the agent selected the correct tool(s) for the user's query.
+      User query: <span class="function">{{input}}</span>
+      Tools used: <span class="function">{{tool_info}}</span>
+      Expected behavior: <span class="function">{{ground_truth}}</span>
+      Agent response: <span class="function">{{output}}</span>
 
-      Rate whether each statement in the response is supported
-      by the tool outputs and retrieved data in the execution trace...</pre>
+      Rate from 1-10:
+      1-3 = Wrong tool selected or failed to use a tool when needed
+      4-6 = Partially correct (right primary tool but missed secondary)
+      7-10 = Optimal tool selection for the query intent
+
+      Criteria:
+      - campaign_analytics for quantitative questions (spend, revenue, ROI)?
+      - strategy_search for qualitative questions (methodology, guidelines)?
+      - Both tools for multi-faceted questions?
+      - No tools called for out-of-scope questions?</pre>
 
       <div class="highlight-box anim-fade">
         <p><strong>Template variables available:</strong> <code>{{input}}</code>, <code>{{output}}</code>, <code>{{ground_truth}}</code>, <code>{{tool_info}}</code>, <code>{{duration}}</code>, <code>{{span_type}}</code>, <code>{{llm_model}}</code>, <code>{{error}}</code>, <code>{{status}}</code> &mdash; the full agent execution trace is always provided to the LLM judge as context.</p>
@@ -887,59 +894,215 @@
       <h1>Practice: How to Evaluate and Iterate</h1>
     </section>
 
-    <!-- Slide: Monitoring is Not Evaluation -->
-    <section class="slide" id="why-evals">
-      <h2>Monitoring is Not Evaluation</h2>
-      <p style="margin-bottom: 2rem;">Teams often delay or skip evaluation for reasons that don't hold up under scrutiny. If your agent is critical enough to deploy, it's critical enough to evaluate.</p>
+    <!-- Section 1: Build the Agent -->
+    <section class="slide" id="build-agent">
+      <h2>Build the Agent</h2>
+      <p style="margin-bottom: 2rem;">The CMO Assistant is a multi-tool Cortex Agent with orchestration instructions that guide tool selection and response formatting.</p>
 
-      <div class="card-grid anim-fade" style="grid-template-columns: 1fr 1fr 1fr;">
-        <div class="card">
-          <h4 style="color: var(--red);">"It costs too much"</h4>
-          <p style="margin-bottom: 0.75rem; font-style: italic;">"We paused evals because of the cost of LLM judge calls."</p>
-          <p><strong>Reality:</strong> A 50-question eval with 3 metrics = ~150 judge calls. That's a fraction of a cent per question. Compare this to the cost of a wrong business decision delivered confidently to thousands of users. If the agent is business-critical, the cost of NOT evaluating is orders of magnitude higher.</p>
+      <pre class="anim-fade"><span class="keyword">CREATE AGENT</span> CMO_ASSISTANT
+FROM SPECIFICATION $$
+<span class="keyword">models:</span>
+  <span class="keyword">orchestration:</span> auto
+<span class="keyword">instructions:</span>
+  <span class="keyword">response:</span> |
+    You are a CMO assistant that helps marketing leaders understand
+    campaign performance, budget allocation, and strategic recommendations.
+    Be concise and data-driven. Express ROI as a multiplier (e.g., 3.2x).
+  <span class="keyword">orchestration:</span> |
+    For quantitative questions (spend, revenue, ROI), use campaign_analytics.
+    For qualitative questions (strategy, methodology), use strategy_search.
+    For executive summaries, gather data first, then format as a brief.
+<span class="keyword">tools:</span>
+  - <span class="keyword">tool_spec:</span>
+      <span class="keyword">type:</span> cortex_analyst_text_to_sql
+      <span class="keyword">name:</span> campaign_analytics
+      <span class="keyword">description:</span> <span class="string">"Query structured campaign performance data..."</span>
+  - <span class="keyword">tool_spec:</span>
+      <span class="keyword">type:</span> cortex_search
+      <span class="keyword">name:</span> strategy_search
+      <span class="keyword">description:</span> <span class="string">"Search marketing strategy documents..."</span>
+<span class="keyword">tool_resources:</span>
+  <span class="keyword">campaign_analytics:</span>
+    <span class="keyword">semantic_view:</span> CMO_EVAL_LAB.PUBLIC.CMO_ANALYTICS
+  <span class="keyword">strategy_search:</span>
+    <span class="keyword">name:</span> CMO_EVAL_LAB.PUBLIC.STRATEGY_SEARCH_SVC
+$$</pre>
+
+      <div class="highlight-box anim-fade">
+        <p><strong>Key design choices:</strong> The orchestration instructions are intentionally brief in v1. We'll use evaluation results to identify where more explicit guidance is needed, then iterate.</p>
+      </div>
+    </section>
+
+    <!-- Section 2: Build the Dataset -->
+    <section class="slide" id="build-dataset">
+      <h2>Build the Evaluation Dataset</h2>
+      <p style="margin-bottom: 2rem;">12 questions covering the full intent distribution. Each question is tagged with its <code>intent</code> and <code>process</code> (complexity tier) for granular analysis.</p>
+
+      <div class="card-grid anim-fade" style="grid-template-columns: repeat(4, 1fr);">
+        <div class="card" style="border-top: 3px solid var(--green);">
+          <h4>Happy Paths</h4>
+          <p>7 questions</p>
+          <p style="font-size: 0.85rem; color: var(--text-muted);">Common questions using a single tool correctly</p>
         </div>
-        <div class="card">
-          <h4 style="color: var(--red);">"VQRs make evals redundant"</h4>
-          <p style="margin-bottom: 0.75rem; font-style: italic;">"Once we add verified queries, the eval dataset is just testing cached answers."</p>
-          <p><strong>Reality:</strong> VQRs are a <em>production guardrail</em> that ensures determinism on known high-value queries. Evaluations measure <em>reasoning quality</em> on novel queries, tool selection across the long tail, multi-step coordination, and behavior on inputs your VQRs don't cover. They serve fundamentally different purposes.</p>
+        <div class="card" style="border-top: 3px solid var(--primary);">
+          <h4>Multi-Tool</h4>
+          <p>3 questions</p>
+          <p style="font-size: 0.85rem; color: var(--text-muted);">Require coordination between analytics + search</p>
         </div>
-        <div class="card">
-          <h4 style="color: var(--red);">"Our monitoring dashboard is enough"</h4>
-          <p style="margin-bottom: 0.75rem; font-style: italic;">"We track latency, SQL failure rates, and tool distribution."</p>
-          <p><strong>Reality:</strong> Monitoring measures <em>operational health</em> &mdash; did the SQL execute? How long did it take? Evaluation measures <em>correctness</em> &mdash; did the SQL return the right answer? A query that executes successfully but returns wrong results is invisible to monitoring. Only evaluation catches it.</p>
+        <div class="card" style="border-top: 3px solid var(--orange);">
+          <h4>Edge Cases</h4>
+          <p>Included in happy paths</p>
+          <p style="font-size: 0.85rem; color: var(--text-muted);">Specific narrow queries (e.g., "CPA for email in March")</p>
+        </div>
+        <div class="card" style="border-top: 3px solid var(--red);">
+          <h4>Refusals</h4>
+          <p>2 questions</p>
+          <p style="font-size: 0.85rem; color: var(--text-muted);">Out-of-scope questions the agent should decline</p>
         </div>
       </div>
 
       <div class="two-col anim-fade">
-        <div class="highlight-box">
-          <p><strong>What monitoring tells you</strong></p>
-          <ul style="font-size: 0.9rem; margin-top: 0.5rem;">
-            <li>SQL execution success/failure rates</li>
-            <li>Latency and token consumption</li>
-            <li>Tool call distribution and frequency</li>
-            <li>Error rates and availability</li>
+        <div class="card">
+          <h4>Example Questions</h4>
+          <ul>
+            <li><strong>single_tool:</strong> "What was total spend across all channels in 2024?"</li>
+            <li><strong>single_tool:</strong> "What is our attribution methodology?"</li>
+            <li><strong>multi_tool:</strong> "How does our Q4 spend compare to strategy recommendations?"</li>
+            <li><strong>refusal:</strong> "What did our competitors spend on marketing last year?"</li>
           </ul>
         </div>
-        <div class="context-box">
-          <p><strong>What only evaluation tells you</strong></p>
-          <ul style="font-size: 0.9rem; margin-top: 0.5rem;">
-            <li>Was the answer actually correct?</li>
-            <li>Did the agent select the right tool for this query?</li>
-            <li>Was the reasoning path sound or did it get lucky?</li>
-            <li>How does behavior change on novel inputs outside VQR coverage?</li>
-          </ul>
+        <div class="card">
+          <h4>Ground Truth Format</h4>
+          <pre style="font-size: 0.8rem; margin: 0.5rem 0;"><span class="function">PARSE_JSON</span>(<span class="string">'{
+  "ground_truth_output": "Total spend was
+    approximately $1,726,500. Values within
+    +/-1% are acceptable.",
+  "intent": "get_metric",
+  "process": "single_tool"
+}'</span>)</pre>
         </div>
       </div>
 
-      <div class="warning-box anim-fade">
-        <p><strong>The real question isn't "can we afford to evaluate?"</strong> &mdash; it's "can we afford to serve business users with an agent whose correctness we haven't measured?" Every agent that's worth deploying is worth evaluating.</p>
+      <div class="context-box anim-fade">
+        <p><strong>Why metadata matters:</strong> The <code>intent</code> and <code>process</code> fields let you slice evaluation results by complexity tier and query type. You can identify that the agent scores well on single-tool queries but poorly on multi-tool coordination &mdash; a signal invisible in aggregate scores.</p>
       </div>
     </section>
 
-    <!-- Slide 7: Agent Versioning -->
-    <section class="slide" id="versioning">
-      <h2>Agent Versioning for Safe Iteration</h2>
-      <p style="margin-bottom: 1.5rem;">Evaluation without version control is like testing without source control. Versioning gives you immutable checkpoints to compare, promote, and rollback.</p>
+    <!-- Section 3: Run the Evaluation -->
+    <section class="slide" id="run-eval">
+      <h2>Run the Evaluation</h2>
+      <p style="margin-bottom: 2rem;">Three paths to run evaluations: Snowsight UI, SQL, or Cortex Code. All produce the same results.</p>
+
+      <div class="three-col anim-fade">
+        <div class="card">
+          <h4>Snowsight UI</h4>
+          <p>AI & ML &rarr; Agents &rarr; Select agent &rarr; Evaluations tab &rarr; New evaluation run.</p>
+        </div>
+        <div class="card">
+          <h4>SQL</h4>
+          <p>Programmatic via <code>EXECUTE_AI_EVALUATION</code>. Best for CI/CD pipelines and scheduled testing.</p>
+        </div>
+        <div class="card">
+          <h4>Cortex Code</h4>
+          <p>"Help me evaluate my agent" &mdash; generates datasets, runs evals, and suggests optimizations.</p>
+        </div>
+      </div>
+
+      <pre class="anim-fade"><span class="comment"># Evaluation config YAML — uploaded to a stage</span>
+<span class="keyword">evaluation:</span>
+  <span class="keyword">agent_params:</span>
+    <span class="keyword">agent_name:</span> <span class="string">"CMO_ASSISTANT"</span>
+    <span class="keyword">agent_type:</span> <span class="string">"CORTEX AGENT"</span>
+  <span class="keyword">source_metadata:</span>
+    <span class="keyword">type:</span> <span class="string">"dataset"</span>
+    <span class="keyword">dataset_name:</span> <span class="string">"CMO_EVAL_DATASET"</span>
+
+<span class="keyword">metrics:</span>
+  - <span class="string">"answer_correctness"</span>
+  - <span class="string">"logical_consistency"</span>
+  - <span class="keyword">name:</span> <span class="string">"tool_selection"</span>
+    <span class="keyword">score_ranges:</span>
+      <span class="keyword">min_score:</span> [1, 3]
+      <span class="keyword">median_score:</span> [4, 6]
+      <span class="keyword">max_score:</span> [7, 10]
+    <span class="keyword">prompt:</span> |
+      Evaluate whether the agent selected the correct tool(s)...</pre>
+
+      <pre class="anim-fade"><span class="comment">-- Start the baseline evaluation run</span>
+<span class="keyword">CALL</span> <span class="function">EXECUTE_AI_EVALUATION</span>(
+  <span class="string">'START'</span>,
+  <span class="function">OBJECT_CONSTRUCT</span>(<span class="string">'run_name'</span>, <span class="string">'baseline-v1'</span>),
+  <span class="string">'@CMO_EVAL_LAB.PUBLIC.EVAL_STAGE/eval_config.yaml'</span>
+);
+
+<span class="comment">-- Poll status (re-run until COMPLETED)</span>
+<span class="keyword">CALL</span> <span class="function">EXECUTE_AI_EVALUATION</span>(
+  <span class="string">'STATUS'</span>,
+  <span class="function">OBJECT_CONSTRUCT</span>(<span class="string">'run_name'</span>, <span class="string">'baseline-v1'</span>),
+  <span class="string">'@CMO_EVAL_LAB.PUBLIC.EVAL_STAGE/eval_config.yaml'</span>
+);</pre>
+    </section>
+
+    <!-- Section 4: Inspect & Iterate -->
+    <section class="slide" id="iterate">
+      <h2>Inspect Results & Iterate</h2>
+      <p style="margin-bottom: 2rem;">Use evaluation results to identify the weakest areas, then make a targeted improvement. One change at a time.</p>
+
+      <div class="two-col anim-fade">
+        <div class="card">
+          <h4>Identify Failure Modes</h4>
+          <p style="margin-bottom: 0.75rem;">Common weaknesses for our CMO Agent baseline:</p>
+          <ul>
+            <li><strong>Multi-tool coordination</strong> &mdash; the agent doesn't combine analytics + search for comparison questions</li>
+            <li><strong>Out-of-scope handling</strong> &mdash; the agent attempts to answer questions it should refuse</li>
+          </ul>
+          <pre style="font-size: 0.75rem; margin-top: 0.75rem;"><span class="comment">-- Slice results by process tier</span>
+<span class="keyword">SELECT</span>
+  GROUND_TRUTH:process::VARCHAR AS PROCESS,
+  METRIC_NAME,
+  <span class="function">ROUND</span>(<span class="function">AVG</span>(EVAL_AGG_SCORE), 2) AS SCORE
+<span class="keyword">FROM TABLE</span>(<span class="function">GET_AI_EVALUATION_DATA</span>(...))
+<span class="keyword">GROUP BY ALL ORDER BY</span> SCORE</pre>
+        </div>
+        <div class="card">
+          <h4>Investigation Signals</h4>
+          <ul>
+            <li>Low answer correctness &rarr; improve instructions/tools</li>
+            <li>Low logical consistency &rarr; simplify system prompt</li>
+            <li>Low tool selection &rarr; add explicit routing rules</li>
+            <li>Production failures &rarr; add those queries to eval set</li>
+          </ul>
+          <p style="margin-top: 0.75rem; font-size: 0.9rem; color: var(--text-muted);"><strong>Read the explanations:</strong> LLM judges produce explanations for each score. Use these to understand <em>what went wrong</em> rather than guessing at improvements.</p>
+        </div>
+      </div>
+
+      <pre class="anim-fade"><span class="comment">-- Fix: Add explicit TOOL SELECTION RULES to orchestration instructions</span>
+<span class="keyword">ALTER AGENT</span> CMO_ASSISTANT <span class="keyword">MODIFY LIVE VERSION SET SPECIFICATION</span> = $$
+...
+<span class="keyword">instructions:</span>
+  <span class="keyword">orchestration:</span> |
+    TOOL SELECTION RULES (follow strictly):
+    1. QUANTITATIVE questions (spend, revenue, ROI) -> campaign_analytics
+    2. QUALITATIVE questions (strategy, methodology) -> strategy_search
+    3. COMPARISON questions referencing data AND strategy -> use BOTH tools
+    4. EXECUTIVE SUMMARY requests -> gather data first, then format
+    5. OUT-OF-SCOPE questions -> DO NOT call any tool. Politely decline.
+
+    MULTI-TOOL COORDINATION:
+    - When a question requires both data and context, ALWAYS call both tools.
+    - Example: "How does spend compare to strategy?" needs analytics + search.
+...
+$$</pre>
+
+      <div class="highlight-box anim-fade">
+        <p><strong>Then re-evaluate:</strong> Commit the change, run the evaluation again with a new run name (<code>improved-v2</code>), and compare scores side-by-side. Look for improvement in multi_tool and refusal process tiers specifically.</p>
+      </div>
+    </section>
+
+    <!-- Section 5: Version & Promote -->
+    <section class="slide" id="version-promote">
+      <h2>Version & Promote</h2>
+      <p style="margin-bottom: 1.5rem;">With the improved version showing better scores, promote it to production using the alias system. Application code that references the <code>production</code> alias picks up the new version automatically.</p>
 
       <div class="anim-fade" style="width: 100%; overflow-x: auto;">
         <table>
@@ -991,131 +1154,150 @@
         </div>
       </div>
 
-      <pre class="anim-fade"><span class="comment">-- Make changes on the live version</span>
-<span class="keyword">ALTER AGENT</span> my_agent <span class="keyword">SET</span>
-  <span class="keyword">INSTRUCTIONS</span> = <span class="string">'Updated system prompt...'</span>;
+      <pre class="anim-fade"><span class="comment">-- Commit the improved version as an immutable snapshot</span>
+<span class="keyword">ALTER AGENT</span> CMO_ASSISTANT <span class="keyword">COMMIT</span>
+  <span class="keyword">COMMENT</span> = <span class="string">'Improved multi-tool orchestration and explicit out-of-scope handling'</span>;
 
-<span class="comment">-- Commit to create an immutable snapshot for evaluation</span>
-<span class="keyword">ALTER AGENT</span> my_agent <span class="keyword">COMMIT</span>
-  <span class="keyword">COMMENT</span> = <span class="string">'Improved tool selection logic'</span>;
+<span class="comment">-- Promote: assign the 'production' alias to the latest committed version</span>
+<span class="keyword">ALTER AGENT</span> CMO_ASSISTANT
+  <span class="keyword">MODIFY VERSION</span> VERSION$2 <span class="keyword">SET ALIAS</span> = <span class="string">production</span>;
 
-<span class="comment">-- Promote after evaluation passes</span>
-<span class="keyword">ALTER AGENT</span> my_agent
-  <span class="keyword">MODIFY VERSION</span> VERSION$4 <span class="keyword">SET ALIAS</span> = <span class="string">production</span>;</pre>
+<span class="comment">-- Test: DATA_AGENT_RUN routes through the alias automatically</span>
+<span class="keyword">SELECT</span> <span class="function">SNOWFLAKE.CORTEX.DATA_AGENT_RUN</span>(
+  <span class="string">'CMO_EVAL_LAB.PUBLIC.CMO_ASSISTANT'</span>,
+  $${{"messages": [{{"role": "user", "content": [...]}}]}}$$
+);</pre>
 
       <div class="warning-box anim-fade">
         <p><strong>Important:</strong> Always use <code>ALTER AGENT</code> to iterate. <code>CREATE OR REPLACE AGENT</code> is destructive &mdash; it deletes all past evaluation runs, monitoring traces, and version history.</p>
       </div>
     </section>
 
-    <!-- Slide 8: Running Evaluations -->
-    <section class="slide" id="running-evals">
-      <h2>Running Evaluations in Snowflake</h2>
-      <p style="margin-bottom: 2rem;">Three paths to run evaluations: Snowsight UI, SQL, or Cortex Code. All produce the same results.</p>
+    <!-- Section 6: Scheduled Regression Detection -->
+    <section class="slide" id="regression">
+      <h2>Scheduled Regression Detection</h2>
+      <p style="margin-bottom: 2rem;">CI/CD catches regressions from your code changes. Scheduled testing catches regressions from <em>external</em> factors: model updates, data drift, and tool configuration changes.</p>
 
-      <div class="three-col anim-fade">
-        <div class="card">
-          <h4>Snowsight UI</h4>
-          <p>AI & ML &rarr; Agents &rarr; Select agent &rarr; Evaluations tab &rarr; New evaluation run. Visual interface for selecting datasets, metrics, and viewing results.</p>
+      <div class="flow-diagram anim-fade">
+        <div class="flow-step">
+          <div class="step-label">Daily</div>
+          <div class="step-title">Task Runs Eval</div>
         </div>
-        <div class="card">
-          <h4>SQL</h4>
-          <p>Programmatic via <code>EXECUTE_AI_EVALUATION</code>. Best for CI/CD pipelines and scheduled evaluation tasks. Uses a YAML config file on a stage.</p>
+        <div class="flow-arrow">&rarr;</div>
+        <div class="flow-step">
+          <div class="step-label">Store</div>
+          <div class="step-title">Score History</div>
         </div>
-        <div class="card">
-          <h4>Cortex Code</h4>
-          <p>"Help me evaluate my agent DB.SCHEMA.AGENT" &mdash; generates datasets, runs evals, and suggests optimizations in one flow.</p>
+        <div class="flow-arrow">&rarr;</div>
+        <div class="flow-step active">
+          <div class="step-label">Compare</div>
+          <div class="step-title">Detect Drop</div>
         </div>
-      </div>
-
-      <pre class="anim-fade"><span class="comment"># Full evaluation YAML configuration</span>
-<span class="keyword">dataset:</span>
-  <span class="keyword">dataset_type:</span> <span class="string">"CORTEX AGENT"</span>
-  <span class="keyword">table_name:</span> <span class="string">"EVALS_DB.EVALS_SCHEMA.EVALUATION_DATA"</span>
-  <span class="keyword">dataset_name:</span> <span class="string">"MY_EVAL_DATASET"</span>
-  <span class="keyword">column_mapping:</span>
-    <span class="keyword">query_text:</span> <span class="string">"input_query"</span>
-    <span class="keyword">ground_truth:</span> <span class="string">"expected_output"</span>
-
-<span class="keyword">evaluation:</span>
-  <span class="keyword">agent_params:</span>
-    <span class="keyword">agent_name:</span> <span class="string">"my_agent"</span>
-    <span class="keyword">agent_type:</span> <span class="string">"CORTEX AGENT"</span>
-  <span class="keyword">source_metadata:</span>
-    <span class="keyword">type:</span> <span class="string">"dataset"</span>
-    <span class="keyword">dataset_name:</span> <span class="string">"MY_EVAL_DATASET"</span>
-
-<span class="keyword">metrics:</span>
-  - <span class="string">"answer_correctness"</span>
-  - <span class="string">"logical_consistency"</span>
-  - <span class="keyword">name:</span> <span class="string">"groundedness"</span>
-    <span class="keyword">score_ranges:</span>
-      <span class="keyword">min_score:</span> [0, 0.33]
-      <span class="keyword">median_score:</span> [0.34, 0.66]
-      <span class="keyword">max_score:</span> [0.67, 1]
-    <span class="keyword">prompt:</span> |
-      Evaluate whether each claim is supported by context...</pre>
-
-      <pre class="anim-fade"><span class="comment">-- Start the evaluation run via SQL</span>
-<span class="keyword">CALL</span> <span class="function">EXECUTE_AI_EVALUATION</span>(
-  <span class="string">'START'</span>,
-  <span class="function">OBJECT_CONSTRUCT</span>(<span class="string">'run_name'</span>, <span class="string">'v4-candidate-run'</span>),
-  <span class="string">'@evals_db.evals_schema.config/eval_config.yaml'</span>
-);
-
-<span class="comment">-- Check evaluation status</span>
-<span class="keyword">CALL</span> <span class="function">EXECUTE_AI_EVALUATION</span>(
-  <span class="string">'STATUS'</span>,
-  <span class="function">OBJECT_CONSTRUCT</span>(<span class="string">'run_name'</span>, <span class="string">'v4-candidate-run'</span>),
-  <span class="string">'@evals_db.evals_schema.config/eval_config.yaml'</span>
-);</pre>
-    </section>
-
-    <!-- Slide 9: Iterating -->
-    <section class="slide" id="iterating">
-      <h2>Iterating on Your Agent</h2>
-      <p style="margin-bottom: 2rem;">Once evaluation metrics are aligned with human judgment, you can iterate quickly with automated feedback for each change.</p>
-
-      <div class="card-grid anim-fade">
-        <div class="card">
-          <h4>One Change at a Time</h4>
-          <p>Isolate the effect of each change. Run an evaluation after every modification. Use version comments to document what changed.</p>
-          <pre style="font-size: 0.8rem; margin-top: 0.75rem;"><span class="keyword">ALTER AGENT</span> my_agent <span class="keyword">COMMIT</span>
-  <span class="keyword">COMMENT</span> = <span class="string">'Added explicit tool
-  selection instructions'</span>;</pre>
-        </div>
-        <div class="card">
-          <h4>Choosing the Orchestration LLM</h4>
-          <p>Start with a powerful SOTA model (e.g., Claude Opus) to determine maximum performance. Then benchmark cheaper models against that ceiling. Pin a specific model for reproducibility &mdash; avoid <code>auto</code>.</p>
-        </div>
-        <div class="card">
-          <h4>Reading Evaluation Explanations</h4>
-          <p>LLM judges produce explanations for each score. Use these to understand <em>what went wrong</em> and determine targeted fixes rather than guessing at improvements.</p>
+        <div class="flow-arrow">&rarr;</div>
+        <div class="flow-step">
+          <div class="step-label">Alert</div>
+          <div class="step-title">Notify Team</div>
         </div>
       </div>
 
       <div class="two-col anim-fade">
-        <div class="highlight-box">
-          <p><strong>Goal Setting: Consistency Over Perfection</strong></p>
-          <p style="margin-top: 0.5rem; font-size: 0.9rem;">A score of 100% typically signals your dataset is too easy. An unstable score (80% &rarr; 65% &rarr; 90%) suggests the agent lacks consistency &mdash; add more explicit instructions or verified queries. A stable score is more meaningful than a high one.</p>
+        <div class="card">
+          <h4>Score History Table</h4>
+          <pre style="font-size: 0.8rem;"><span class="keyword">CREATE TABLE</span> EVAL_SCORE_HISTORY (
+  RUN_NAME      <span class="function">VARCHAR</span>,
+  RUN_TIMESTAMP <span class="function">TIMESTAMP_TZ</span>,
+  METRIC_NAME   <span class="function">VARCHAR</span>,
+  AVG_SCORE     <span class="function">FLOAT</span>,
+  MIN_SCORE     <span class="function">FLOAT</span>,
+  MAX_SCORE     <span class="function">FLOAT</span>,
+  NUM_RECORDS   <span class="function">INT</span>
+);</pre>
+          <p style="margin-top: 0.75rem; font-size: 0.85rem; color: var(--text-muted);">After each eval run, insert aggregated scores. This creates a time-series of agent quality you can trend and alert on.</p>
         </div>
-        <div class="context-box">
-          <p><strong>What to Change (Investigation Signals)</strong></p>
-          <ul style="font-size: 0.9rem; margin-top: 0.5rem;">
-            <li>Low answer correctness &rarr; improve instructions/tools</li>
-            <li>Low logical consistency &rarr; simplify system prompt</li>
-            <li>Low groundedness &rarr; improve search/retrieval</li>
-            <li>Low tool selection &rarr; better tool descriptions</li>
-            <li>Production failures &rarr; add those queries to eval set</li>
-          </ul>
+        <div class="card">
+          <h4>Snowflake Task</h4>
+          <pre style="font-size: 0.8rem;"><span class="keyword">CREATE TASK</span> DAILY_EVAL_CHECK
+  <span class="keyword">WAREHOUSE</span> = CMO_EVAL_WH
+  <span class="keyword">SCHEDULE</span> = <span class="string">'1440 MINUTE'</span>
+<span class="keyword">AS CALL</span> RUN_EVAL_AND_STORE_SCORES(
+  <span class="string">'daily-'</span> || <span class="function">TO_CHAR</span>(
+    <span class="function">CURRENT_DATE</span>(), <span class="string">'YYYYMMDD'</span>)
+);</pre>
+          <p style="margin-top: 0.75rem; font-size: 0.85rem; color: var(--text-muted);">The stored procedure runs EXECUTE_AI_EVALUATION, waits for completion, then inserts scores into the history table.</p>
         </div>
+      </div>
+
+      <pre class="anim-fade"><span class="comment">-- Regression detection: compare latest run to previous</span>
+<span class="keyword">WITH</span> latest <span class="keyword">AS</span> (
+  <span class="keyword">SELECT</span> METRIC_NAME, AVG_SCORE
+  <span class="keyword">FROM</span> EVAL_SCORE_HISTORY
+  <span class="keyword">WHERE</span> RUN_TIMESTAMP = (<span class="keyword">SELECT MAX</span>(RUN_TIMESTAMP) <span class="keyword">FROM</span> EVAL_SCORE_HISTORY)
+),
+previous <span class="keyword">AS</span> (
+  <span class="keyword">SELECT</span> METRIC_NAME, AVG_SCORE
+  <span class="keyword">FROM</span> EVAL_SCORE_HISTORY
+  <span class="keyword">WHERE</span> RUN_TIMESTAMP = (<span class="keyword">SELECT MAX</span>(RUN_TIMESTAMP) <span class="keyword">FROM</span> EVAL_SCORE_HISTORY
+    <span class="keyword">WHERE</span> RUN_TIMESTAMP < (<span class="keyword">SELECT MAX</span>(RUN_TIMESTAMP) <span class="keyword">FROM</span> EVAL_SCORE_HISTORY))
+)
+<span class="keyword">SELECT</span> l.METRIC_NAME, previous.AVG_SCORE <span class="keyword">AS</span> PREV, l.AVG_SCORE <span class="keyword">AS</span> CURRENT,
+  <span class="function">ROUND</span>(l.AVG_SCORE - previous.AVG_SCORE, 4) <span class="keyword">AS</span> DELTA
+<span class="keyword">FROM</span> latest l <span class="keyword">JOIN</span> previous <span class="keyword">ON</span> l.METRIC_NAME = previous.METRIC_NAME
+<span class="keyword">WHERE</span> l.AVG_SCORE < previous.AVG_SCORE - 0.05 <span class="comment">-- 5% drop threshold</span></pre>
+
+      <div class="warning-box anim-fade">
+        <p><strong>Key distinction:</strong> Monitoring measures <em>operational health</em> (did the SQL execute? how long?). Scheduled evaluation measures <em>correctness</em> (did it return the right answer?). A query that executes successfully but returns wrong results is invisible to monitoring.</p>
       </div>
     </section>
 
-    <!-- Slide 10: CI/CD Quality Gates -->
+    <!-- Section 7: Human Feedback -->
+    <section class="slide" id="feedback">
+      <h2>Human Feedback Integration</h2>
+      <p style="margin-bottom: 2rem;">LLM-as-judge gives you scalable automated scoring. Human feedback tells you what <em>users actually experience</em>. Connect both to close the improvement loop.</p>
+
+      <div class="card-grid anim-fade">
+        <div class="card">
+          <h4>Query Observability Events</h4>
+          <p>All agent activity including user feedback is captured in:</p>
+          <p style="margin-top: 0.5rem;"><code>SNOWFLAKE.LOCAL.AI_OBSERVABILITY_EVENTS</code></p>
+          <p style="margin-top: 0.5rem; font-size: 0.85rem; color: var(--text-muted);">Filter for <code>RECORD:name = 'CORTEX_AGENT_FEEDBACK'</code> to find thumbs-up/thumbs-down signals with optional text messages.</p>
+        </div>
+        <div class="card">
+          <h4>Classify Negative Feedback</h4>
+          <p>Use <code>CORTEX.COMPLETE</code> to automatically categorize negative feedback text into failure buckets:</p>
+          <ul>
+            <li>Wrong tool selected</li>
+            <li>Incomplete answer</li>
+            <li>Format/style issue</li>
+            <li>Hallucinated content</li>
+          </ul>
+        </div>
+        <div class="card">
+          <h4>Active Sampling</h4>
+          <p>Identify negative-feedback sessions, pull the full trace, and promote those queries into your evaluation dataset as new test cases.</p>
+          <p style="margin-top: 0.5rem; font-size: 0.85rem; color: var(--text-muted);">Production failures become the highest-value eval questions &mdash; they represent real user pain points.</p>
+        </div>
+      </div>
+
+      <pre class="anim-fade"><span class="comment">-- Query user feedback from observability events</span>
+<span class="keyword">SELECT</span>
+  RECORD:<span class="string">'cortex_agent.request_id'</span>::VARCHAR <span class="keyword">AS</span> REQUEST_ID,
+  RECORD:<span class="string">'cortex_agent_feedback.positive'</span>::BOOLEAN <span class="keyword">AS</span> POSITIVE,
+  RECORD:<span class="string">'cortex_agent_feedback.feedback_message'</span>::VARCHAR <span class="keyword">AS</span> MESSAGE,
+  RECORD_ATTRIBUTES:<span class="string">'snow.cortex.agent.name'</span>::VARCHAR <span class="keyword">AS</span> AGENT_NAME
+<span class="keyword">FROM TABLE</span>(<span class="function">SNOWFLAKE.LOCAL.GET_AI_OBSERVABILITY_EVENTS</span>(
+  <span class="function">DATEADD</span>(<span class="string">'day'</span>, -7, <span class="function">CURRENT_TIMESTAMP</span>()), <span class="function">CURRENT_TIMESTAMP</span>()
+))
+<span class="keyword">WHERE</span> RECORD:<span class="string">'name'</span> = <span class="string">'CORTEX_AGENT_FEEDBACK'</span></pre>
+
+      <div class="highlight-box anim-fade">
+        <p><strong>The improvement cycle:</strong> Negative feedback &rarr; classify failure type &rarr; add question to eval dataset &rarr; iterate agent instructions &rarr; re-evaluate &rarr; promote. Every thumbs-down is an opportunity to strengthen your evaluation suite.</p>
+      </div>
+    </section>
+
+    <!-- Section 8: CI/CD Quality Gates -->
     <section class="slide" id="cicd">
       <h2>CI/CD Quality Gates</h2>
-      <p style="margin-bottom: 2rem;">Integrate agent evaluations into your development pipeline. Treat agent quality like code quality &mdash; with automated gates that prevent regressions.</p>
+      <p style="margin-bottom: 2rem;">Treat agent quality like code quality. The recommended pattern: <strong>dbt seeds</strong> for the eval dataset (version-controlled in git) and <strong>GitHub Actions</strong> with the Snowflake CLI to trigger evals on every PR.</p>
 
       <div class="flow-diagram anim-fade">
         <div class="flow-step">
@@ -1125,22 +1307,22 @@
         <div class="flow-arrow">&rarr;</div>
         <div class="flow-step">
           <div class="step-label">2</div>
-          <div class="step-title">Deploy Candidate</div>
-        </div>
-        <div class="flow-arrow">&rarr;</div>
-        <div class="flow-step active">
-          <div class="step-label">3</div>
-          <div class="step-title">Run Evals</div>
+          <div class="step-title">Deploy Staging</div>
         </div>
         <div class="flow-arrow">&rarr;</div>
         <div class="flow-step">
+          <div class="step-label">3</div>
+          <div class="step-title">dbt Seed</div>
+        </div>
+        <div class="flow-arrow">&rarr;</div>
+        <div class="flow-step active">
           <div class="step-label">4</div>
-          <div class="step-title">Quality Gate</div>
+          <div class="step-title">Run Eval</div>
         </div>
         <div class="flow-arrow">&rarr;</div>
         <div class="flow-step">
           <div class="step-label">5</div>
-          <div class="step-title">Merge/Block</div>
+          <div class="step-title">Pass / Fail</div>
         </div>
       </div>
 
@@ -1151,200 +1333,82 @@
             <ul>
               <li>Agent specification YAML</li>
               <li>Semantic View definitions</li>
-              <li>Evaluation configuration YAML</li>
-              <li>Evaluation dataset definitions</li>
+              <li>Evaluation config YAML</li>
+              <li>Eval dataset as dbt seed CSV</li>
               <li>Custom metric prompts</li>
             </ul>
-            <p style="margin-top: 0.75rem;">Git history provides an audit trail. PRs provide review before any modification reaches shared environments.</p>
+            <p style="margin-top: 0.75rem;">Uses <code>snowflakedb/snowflake-cli-action@v2.0</code> with OIDC authentication for secure, keyless CI/CD.</p>
           </div>
         </div>
         <div>
-          <h3>Progressive Thresholds</h3>
-          <table style="margin-top: 0.5rem;">
-            <thead><tr><th>Environment</th><th>Gate</th><th>Threshold</th></tr></thead>
-            <tbody>
-              <tr><td>Dev</td><td><span class="badge-green">Advisory</span></td><td>Lenient &mdash; warn only</td></tr>
-              <tr><td>QA / UAT</td><td><span class="badge-orange">Hard gate</span></td><td>e.g., correctness &ge; 0.70</td></tr>
-              <tr><td>Production</td><td><span class="badge-red">Strict</span></td><td>e.g., correctness &ge; 0.80</td></tr>
-            </tbody>
-          </table>
-          <p style="text-align: left; margin-top: 0.75rem; font-size: 0.85rem; color: var(--text-muted);">Set thresholds based on observed baselines from multiple eval runs, not aspirational targets.</p>
+          <h3>Threshold Gate Query</h3>
+          <pre style="font-size: 0.75rem; margin-top: 0.5rem;"><span class="keyword">SELECT</span>
+  METRIC_NAME,
+  <span class="function">ROUND</span>(<span class="function">AVG</span>(EVAL_AGG_SCORE), 4) <span class="keyword">AS</span> SCORE,
+  <span class="keyword">CASE</span>
+    <span class="keyword">WHEN</span> METRIC_NAME = <span class="string">'answer_correctness'</span>
+      <span class="keyword">AND</span> AVG_SCORE < 0.70 <span class="keyword">THEN</span> <span class="string">'FAIL'</span>
+    <span class="keyword">WHEN</span> METRIC_NAME = <span class="string">'logical_consistency'</span>
+      <span class="keyword">AND</span> AVG_SCORE < 0.60 <span class="keyword">THEN</span> <span class="string">'FAIL'</span>
+    <span class="keyword">WHEN</span> METRIC_NAME = <span class="string">'tool_selection'</span>
+      <span class="keyword">AND</span> AVG_SCORE < 0.65 <span class="keyword">THEN</span> <span class="string">'FAIL'</span>
+    <span class="keyword">ELSE</span> <span class="string">'PASS'</span>
+  <span class="keyword">END AS</span> GATE_STATUS
+<span class="keyword">FROM TABLE</span>(<span class="function">GET_AI_EVALUATION_DATA</span>(...))
+<span class="keyword">GROUP BY</span> METRIC_NAME</pre>
         </div>
       </div>
 
       <div class="two-col anim-fade">
+        <div class="card">
+          <h4>Progressive Thresholds</h4>
+          <table style="margin-top: 0.5rem;">
+            <thead><tr><th>Environment</th><th>Gate</th><th>Threshold</th></tr></thead>
+            <tbody>
+              <tr><td>Dev</td><td><span class="badge-green">Advisory</span></td><td>Warn only</td></tr>
+              <tr><td>QA / UAT</td><td><span class="badge-orange">Hard gate</span></td><td>correctness &ge; 0.70</td></tr>
+              <tr><td>Production</td><td><span class="badge-red">Strict</span></td><td>correctness &ge; 0.80</td></tr>
+            </tbody>
+          </table>
+          <p style="text-align: left; margin-top: 0.75rem; font-size: 0.85rem; color: var(--text-muted);">Set thresholds based on observed baselines, not aspirational targets.</p>
+        </div>
         <div class="card">
           <h4>CI/CD Tips</h4>
           <ul>
             <li><strong>Pin the LLM</strong> &mdash; use a specific model for reproducibility</li>
             <li><strong>Dedicated warehouse</strong> &mdash; avoid contention, simplify cost tracking</li>
             <li><strong>Version datasets</strong> &mdash; same dataset across all pipeline runs</li>
-            <li><strong>Budget for judge costs</strong> &mdash; 20 questions x 3 metrics = 60 judge calls/run</li>
+            <li><strong>Budget for judge costs</strong> &mdash; 12 questions x 3 metrics = 36 judge calls/run</li>
           </ul>
-        </div>
-        <div class="card">
-          <h4>Scheduled Cadence Testing</h4>
-          <p>CI/CD catches regressions from agent config changes. Scheduled testing catches regressions from <em>external</em> factors:</p>
-          <ul>
-            <li>Model updates/rotation</li>
-            <li>Underlying data changes</li>
-            <li>Tool configuration drift</li>
-          </ul>
-          <pre style="font-size: 0.75rem; margin-top: 0.75rem;"><span class="keyword">CREATE TASK</span> daily_eval_run
-  <span class="keyword">WAREHOUSE</span> = COMPUTE_WH
-  <span class="keyword">SCHEDULE</span> = <span class="string">'1440 MINUTE'</span>
-<span class="keyword">AS CALL</span> <span class="function">EXECUTE_AI_EVALUATION</span>(...);</pre>
         </div>
       </div>
     </section>
 
-    <!-- Slide 11: Production & Monitoring -->
-    <section class="slide" id="production">
-      <h2>Production Deployment & Monitoring</h2>
-      <p style="margin-bottom: 2rem;">Evaluations don't stop at deployment. Production monitoring closes the loop between real-world usage and your evaluation suite.</p>
-
-      <div class="flow-diagram anim-fade">
-        <div class="flow-step">
-          <div class="step-label">Deploy</div>
-          <div class="step-title">Alias Promotion</div>
-        </div>
-        <div class="flow-arrow">&rarr;</div>
-        <div class="flow-step">
-          <div class="step-label">Observe</div>
-          <div class="step-title">Monitor Metrics</div>
-        </div>
-        <div class="flow-arrow">&rarr;</div>
-        <div class="flow-step active">
-          <div class="step-label">Alert</div>
-          <div class="step-title">Detect Regression</div>
-        </div>
-        <div class="flow-arrow">&rarr;</div>
-        <div class="flow-step">
-          <div class="step-label">Act</div>
-          <div class="step-title">Rollback / Fix</div>
-        </div>
-      </div>
-
-      <div class="card-grid anim-fade">
-        <div class="card">
-          <h4>Deployment Strategies</h4>
-          <ul>
-            <li><strong>Alias promotion</strong> &mdash; single command, zero client changes</li>
-            <li><strong>Shadow testing</strong> &mdash; run candidate alongside production, compare offline</li>
-            <li><strong>A/B split</strong> &mdash; cohort-based routing via app layer</li>
-            <li><strong>Instant rollback</strong> &mdash; reassign alias to prior version</li>
-          </ul>
-        </div>
-        <div class="card">
-          <h4>What to Monitor</h4>
-          <ul>
-            <li>Usage and adoption patterns</li>
-            <li>Latency percentiles (P50, P95, P99)</li>
-            <li>Token cost per conversation</li>
-            <li>Reliability (error rate)</li>
-            <li>Tool execution patterns</li>
-            <li>User feedback (thumbs up/down)</li>
-            <li>Conversation completion rate</li>
-          </ul>
-        </div>
-        <div class="card">
-          <h4>Observability Infrastructure</h4>
-          <p>All agent activity is captured in:</p>
-          <p style="margin-top: 0.5rem;"><code>SNOWFLAKE.LOCAL.AI_OBSERVABILITY_EVENTS</code></p>
-          <p style="margin-top: 0.75rem;">Query with SQL for custom dashboards. Data includes execution traces, user feedback, planning steps, and tool outputs.</p>
-        </div>
-      </div>
-
-      <div class="two-col anim-fade">
-        <div class="card">
-          <h4>Production Alerts</h4>
-          <pre style="font-size: 0.75rem;"><span class="comment">-- Alert on eval accuracy drop</span>
-<span class="keyword">CREATE ALERT</span> eval_threshold_alert
-  <span class="keyword">WAREHOUSE</span> = my_wh
-  <span class="keyword">SCHEDULE</span> = <span class="string">'1 HOUR'</span>
-  <span class="keyword">IF</span> (<span class="keyword">EXISTS</span> (
-    <span class="keyword">SELECT</span> * <span class="keyword">FROM TABLE</span>(
-      <span class="function">SNOWFLAKE.LOCAL.GET_AI_EVALUATION_DATA</span>(
-        <span class="string">'db'</span>,<span class="string">'schema'</span>,<span class="string">'agent'</span>,
-        <span class="string">'CORTEX AGENT'</span>,<span class="string">'prod-run'</span>))
-    <span class="keyword">WHERE</span> METRIC_NAME = <span class="string">'answer_correctness'</span>
-      <span class="keyword">AND</span> EVAL_AGG_SCORE < 0.7
-  ))
-  <span class="keyword">THEN CALL</span> <span class="function">SYSTEM$SEND_SNOWFLAKE_NOTIFICATION</span>(...);</pre>
-        </div>
-        <div class="card">
-          <h4>From Evaluations to Guardrails</h4>
-          <p>Once LLM judges are aligned to expert judgment, extend their use beyond offline evaluation:</p>
-          <ul>
-            <li><strong>Offline monitoring</strong> &mdash; sample production traffic, score with judges, track trends</li>
-            <li><strong>Real-time guardrails</strong> &mdash; distill critical judges into smaller, faster ML models</li>
-            <li><strong>Feedback prioritization</strong> &mdash; focus review on negative feedback + low-scoring traces</li>
-          </ul>
-          <p style="margin-top: 0.75rem;">Production failures become new evaluation dataset entries, completing the improvement cycle.</p>
-        </div>
-      </div>
-    </section>
-
-    <!-- Slide 12: Closing -->
+    <!-- Closing: Key Takeaways -->
     <section class="slide" id="closing">
-      <h2>The Evaluation Lifecycle</h2>
+      <h2>What You Accomplished</h2>
 
-      <div class="anim-fade" style="display: grid; grid-template-columns: repeat(6, 1fr); gap: 0.75rem; width: 100%; margin: 2rem 0;">
-        <div class="flow-step">
-          <div class="step-label">1</div>
-          <div class="step-title">Build Dataset</div>
-        </div>
-        <div class="flow-step">
-          <div class="step-label">2</div>
-          <div class="step-title">Define Metrics</div>
-        </div>
-        <div class="flow-step">
-          <div class="step-label">3</div>
-          <div class="step-title">Run Evals</div>
-        </div>
-        <div class="flow-step">
-          <div class="step-label">4</div>
-          <div class="step-title">Iterate Agent</div>
-        </div>
-        <div class="flow-step active">
-          <div class="step-label">5</div>
-          <div class="step-title">Deploy & Monitor</div>
-        </div>
-        <div class="flow-step">
-          <div class="step-label">6</div>
-          <div class="step-title">Feedback</div>
-        </div>
-      </div>
-
-      <div class="card-grid anim-fade" style="margin-top: 2rem;">
-        <div class="card">
-          <h4>Key Takeaways</h4>
-          <ul>
-            <li>Evaluate the <strong>full reasoning chain</strong>, not just the final answer</li>
-            <li>Use the GPA framework: Goal, Plan, Action alignment</li>
-            <li>Start with real user queries &mdash; synthetic data is a fallback</li>
-            <li>Calibrate LLM judges to 80%+ correlation with human experts</li>
-            <li>One change at a time; evaluate after each change</li>
-            <li>Combine CI/CD gates with scheduled cadence testing</li>
-          </ul>
-        </div>
-        <div class="card">
-          <h4>Getting Started</h4>
-          <ul>
-            <li><strong>Step 1:</strong> Build 50-100 representative Q&A pairs from user logs</li>
-            <li><strong>Step 2:</strong> Run your first evaluation with built-in metrics</li>
-            <li><strong>Step 3:</strong> Set up agent versioning with aliases (dev/uat/prod)</li>
-            <li><strong>Step 4:</strong> Add a custom metric for your domain</li>
-            <li><strong>Step 5:</strong> Integrate evaluations into your CI/CD pipeline</li>
-            <li><strong>Step 6:</strong> Set up production alerts and scheduled testing</li>
-          </ul>
-        </div>
+      <div class="anim-fade" style="width: 100%; overflow-x: auto; margin: 2rem 0;">
+        <table>
+          <thead><tr><th>Step</th><th>What You Did</th></tr></thead>
+          <tbody>
+            <tr><td><strong>Build</strong></td><td>Created a multi-tool agent (Analyst + Search + Skill)</td></tr>
+            <tr><td><strong>Dataset</strong></td><td>Designed 12 eval questions covering happy paths, multi-tool, edge cases, and refusals</td></tr>
+            <tr><td><strong>Metrics</strong></td><td>Used 2 built-in metrics + 1 custom tool_selection metric</td></tr>
+            <tr><td><strong>Evaluate</strong></td><td>Ran a baseline evaluation and inspected per-question scores</td></tr>
+            <tr><td><strong>Iterate</strong></td><td>Identified weak areas and improved orchestration instructions</td></tr>
+            <tr><td><strong>Compare</strong></td><td>Ran a second evaluation and compared scores side-by-side</td></tr>
+            <tr><td><strong>Promote</strong></td><td>Committed the improved version and assigned the production alias</td></tr>
+            <tr><td><strong>Automate</strong></td><td>Set up scheduled regression detection with Tasks and score history</td></tr>
+            <tr><td><strong>Feedback</strong></td><td>Built a human feedback pipeline with CORTEX.COMPLETE classification</td></tr>
+            <tr><td><strong>CI/CD</strong></td><td>Designed threshold gates for automated PR quality checks</td></tr>
+          </tbody>
+        </table>
       </div>
 
       <div class="highlight-box anim-fade" style="text-align: center;">
         <p style="text-align: center;"><strong>Evaluation is not a one-time gate &mdash; it's a continuous improvement loop.</strong> Every production failure becomes a new test case. Every iteration builds on versioned, measurable progress.</p>
       </div>
-
 
     </section>
 
