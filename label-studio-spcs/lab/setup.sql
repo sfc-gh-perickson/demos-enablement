@@ -122,16 +122,18 @@ CREATE COMPUTE POOL IF NOT EXISTS LABEL_STUDIO_POOL
 -- ─────────────────────────────────────────────────────────────────────────────
 -- Allows the Label Studio service to reach PyPI for any runtime dependencies.
 
-CREATE OR REPLACE NETWORK RULE PYPI_NETWORK_RULE
-    MODE = EGRESS
-    TYPE = HOST_PORT
-    VALUE_LIST = ('pypi.org', 'files.pythonhosted.org')
-    COMMENT = 'Egress rule for PyPI package downloads';
-
+CREATE OR REPLACE NETWORK RULE LABEL_STUDIO_EGRESS_RULE
+        MODE = EGRESS
+        TYPE = HOST_PORT
+        VALUE_LIST = (
+            'pypi.org',
+            'files.pythonhosted.org',
+            'em7kgv3ijze4zlnw26unn6quvq.sfsenorthamerica-perickson-aws1.us-east-2.aws.postgres.snowflake.app:5432'
+        );
+    -- Single EAI referencing the one rule
 CREATE OR REPLACE EXTERNAL ACCESS INTEGRATION LABEL_STUDIO_EAI
-    ALLOWED_NETWORK_RULES = (PYPI_NETWORK_RULE)
-    ENABLED = TRUE
-    COMMENT = 'External access integration for Label Studio (PyPI egress)';
+    ALLOWED_NETWORK_RULES = (LABEL_STUDIO_EGRESS_RULE)
+    ENABLED = TRUE;
 
 -- ─────────────────────────────────────────────────────────────────────────────
 -- 8b. EXTERNAL ACCESS FOR POSTGRES QUERIES

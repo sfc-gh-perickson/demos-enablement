@@ -39,4 +39,3 @@ spec:
     volumes:
     - name: data-files
       source: "@LABEL_STUDIO_SPCS.APP.DATA_STAGE"
-
