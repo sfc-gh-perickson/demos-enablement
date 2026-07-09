@@ -321,6 +321,9 @@ tools:
 tool_resources:
   sales_analytics:
     semantic_view: "MULTI_TENANCY_LAB.PUBLIC.TENANT_SALES_ANALYTICS"
+    execution_environment:
+        type: warehouse
+        warehouse: MULTI_TENANCY_WH
 $$;
 
 -- ─────────────────────────────────────────────────────────────────────────────
