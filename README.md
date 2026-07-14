@@ -20,6 +20,7 @@ An internal enablement repository for Snowflake sales engineers and account exec
   - [Label Studio on SPCS](#label-studio-on-spcs)
   - [Dynamic Time-Period Metrics](#dynamic-time-period-metrics)
   - [Model Registry](#model-registry)
+  - [Scoping Agentic Implementations](#scoping-agentic-implementations)
 - [Repository Structure](#repository-structure)
 - [Getting Started](#getting-started)
 - [Presentation Format](#presentation-format)
@@ -28,7 +29,7 @@ An internal enablement repository for Snowflake sales engineers and account exec
 
 ## Overview
 
-This repository contains twelve enablement modules covering key Cortex AI and Snowflake ML topics:
+This repository contains thirteen enablement modules covering key Cortex AI and Snowflake ML topics:
 
 | Module | Audience | Format | Slides |
 |--------|----------|--------|--------|
@@ -44,6 +45,7 @@ This repository contains twelve enablement modules covering key Cortex AI and Sn
 | Label Studio on SPCS | SEs, ML Engineers, Platform Engineers | Presentation + Hands-on Lab | [View](https://sfc-gh-perickson.github.io/demos-enablement/label-studio-spcs/presentations/label-studio-spcs.html) |
 | Dynamic Time-Period Metrics | SEs, Analytics Engineers, Data Engineers | Presentation + Hands-on Lab | [View](https://sfc-gh-perickson.github.io/demos-enablement/dynamic-time-period-metrics/presentations/dynamic-time-period-metrics.html) |
 | Model Registry | SEs, Data Scientists, ML Engineers | Presentation + Hands-on Lab | [View](https://sfc-gh-perickson.github.io/demos-enablement/model-registry/presentations/model-registry-overview.html) |
+| Scoping Agentic Implementations | Customers, SEs, Solution Architects | Presentation + Workshop | [View](https://sfc-gh-perickson.github.io/demos-enablement/scoping-agentic-implementations/presentations/scoping-agentic-implementations.html) |
 
 Each module includes an HTML slide deck and companion speaker notes. The evaluations, many-model-training, feature-store, cortex-ai-observability, cortex-agent-multi-tenancy, and label-studio-spcs modules also provide complete hands-on labs with SQL setup and notebooks.
 
@@ -388,6 +390,31 @@ The notebook creates the `ML_REGISTRY_DEMO.REGISTRY` schema, loads the pickle, r
 
 ---
 
+### Scoping Agentic Implementations
+
+**Location:** `scoping-agentic-implementations/`
+
+A customer-facing workshop that teaches how to scope agentic AI implementations using a structured discovery process — moving from broad business aspirations through persona mapping, question taxonomy, tool selection, and seed evaluation generation to a completed agent specification with phased delivery plan.
+
+**Contents:**
+
+| File | Description |
+|------|-------------|
+| [`presentations/scoping-agentic-implementations.html`](https://sfc-gh-perickson.github.io/demos-enablement/scoping-agentic-implementations/presentations/scoping-agentic-implementations.html) | Slide deck (12 slides) |
+| `presentations/scoping-agentic-implementations-speaker-notes.md` | Speaker notes with facilitation guidance |
+| `lab/setup.sql` | SQL setup script (database, mock observability data, sample tables) |
+| `lab/scoping-agentic-implementations-lab.ipynb` | Workshop notebook (60 min) |
+
+#### Lab Prerequisites
+
+1. A Snowflake account with Cortex AI features enabled
+2. Run `scoping-agentic-implementations/lab/setup.sql` to create the `SCOPING_LAB` database
+3. Open `scoping-agentic-implementations/lab/scoping-agentic-implementations-lab.ipynb` in Snowflake Notebooks
+
+The workshop guides participants through persona mapping, question taxonomy creation, tool selection, and seed eval generation for their own use case.
+
+---
+
 ## Repository Structure
 
 ```
@@ -475,6 +502,13 @@ enablement/
     └── presentations/
         ├── semantic-view-description-quality.html
         └── semantic-view-description-quality-speaker-notes.md
+├── scoping-agentic-implementations/
+│   ├── lab/
+│   │   ├── setup.sql
+│   │   └── scoping-agentic-implementations-lab.ipynb
+│   └── presentations/
+│       ├── scoping-agentic-implementations.html
+│       └── scoping-agentic-implementations-speaker-notes.md
 ```
 
 ---
@@ -494,6 +528,7 @@ enablement/
    - **Label Studio on SPCS:** Run `label-studio-spcs/lab/setup.sql` before starting the notebook
    - **Dynamic Time-Period Metrics:** Run `dynamic-time-period-metrics/lab/setup.sql` before starting the notebook
    - **Model Registry:** Run `python model-registry/train_model.py` then open `model-registry/register_model.ipynb`
+   - **Scoping Agentic Implementations:** Run `scoping-agentic-implementations/lab/setup.sql` before starting the notebook
 
 ---
 

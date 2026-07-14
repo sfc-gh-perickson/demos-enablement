@@ -1,5 +1,7 @@
 # Scoping Agentic Implementations
 
+[View Presentation](https://sfc-gh-perickson.github.io/demos-enablement/scoping-agentic-implementations/presentations/scoping-agentic-implementations.html)
+
 A workshop module that teaches customers how to move from broad AI aspirations ("talk to your data") to scoped, measurable agent specifications with seed evaluation datasets and phased delivery plans.
 
 ## Overview
