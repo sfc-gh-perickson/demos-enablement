@@ -1,0 +1,1227 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Scoping Agentic Implementations: From Vision to Measurable Agent Specs</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+
+    :root {
+      --bg: #0F1B2D;
+      --sidebar-bg: #1B2A4A;
+      --primary: #29B5E8;
+      --accent: #7C3AED;
+      --text: #E2E8F0;
+      --text-muted: #94A3B8;
+      --card-bg: #162236;
+      --border: #2D4A6F;
+      --green: #10B981;
+      --orange: #F59E0B;
+      --red: #EF4444;
+    }
+
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      font-family: 'Inter', sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.6;
+      overflow-x: hidden;
+    }
+
+    .progress-bar {
+      position: fixed;
+      top: 0;
+      left: 0;
+      height: 3px;
+      background: linear-gradient(90deg, var(--primary), var(--accent));
+      z-index: 1000;
+      transition: width 0.1s;
+    }
+
+    .sidebar {
+      position: fixed;
+      left: 0;
+      top: 0;
+      width: 260px;
+      height: 100vh;
+      background: var(--sidebar-bg);
+      padding: 2rem 1.5rem;
+      overflow-y: auto;
+      border-right: 1px solid var(--border);
+      z-index: 100;
+    }
+
+    .sidebar h2 {
+      font-size: 1rem;
+      font-weight: 600;
+      color: var(--primary);
+      margin-bottom: 1.5rem;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+
+    .sidebar .section-label {
+      font-size: 0.7rem;
+      font-weight: 600;
+      color: var(--accent);
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      margin-top: 1.25rem;
+      margin-bottom: 0.5rem;
+      padding-left: 0.75rem;
+    }
+
+    .sidebar a {
+      display: block;
+      color: var(--text-muted);
+      text-decoration: none;
+      padding: 0.5rem 0.75rem;
+      border-radius: 6px;
+      font-size: 0.85rem;
+      margin-bottom: 0.25rem;
+      transition: all 0.2s;
+    }
+
+    .sidebar a:hover,
+    .sidebar a.active {
+      color: var(--text);
+      background: rgba(41, 181, 232, 0.1);
+    }
+
+    .sidebar a.active {
+      border-left: 3px solid var(--primary);
+      padding-left: calc(0.75rem - 3px);
+    }
+
+    .main {
+      margin-left: 260px;
+      padding: 0;
+    }
+
+    .slide {
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      padding: 4rem 3rem;
+      max-width: 1200px;
+      margin: 0 auto;
+    }
+
+    .slide h1 {
+      font-size: 2.5rem;
+      font-weight: 700;
+      margin-bottom: 1rem;
+      background: linear-gradient(135deg, var(--primary), var(--accent));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+
+    .slide h2 {
+      font-size: 1.75rem;
+      font-weight: 600;
+      color: var(--text);
+      margin-bottom: 1.5rem;
+    }
+
+    .slide h3 {
+      font-size: 1.25rem;
+      font-weight: 500;
+      color: var(--text-muted);
+      margin-bottom: 1rem;
+    }
+
+    .slide p {
+      font-size: 1.1rem;
+      color: var(--text-muted);
+      max-width: 700px;
+      text-align: center;
+    }
+
+    .stat-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 1.5rem;
+      width: 100%;
+      margin: 2rem 0;
+    }
+
+    .stat-card {
+      background: var(--card-bg);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 1.5rem;
+      text-align: center;
+    }
+
+    .stat-card .value {
+      font-size: 2rem;
+      font-weight: 700;
+      color: var(--primary);
+    }
+
+    .stat-card .label {
+      font-size: 0.85rem;
+      color: var(--text-muted);
+      margin-top: 0.5rem;
+    }
+
+    .card-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+      gap: 1.5rem;
+      width: 100%;
+      margin: 2rem 0;
+    }
+
+    .card {
+      background: var(--card-bg);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 1.5rem;
+    }
+
+    .card h4 {
+      font-size: 1rem;
+      font-weight: 600;
+      color: var(--text);
+      margin-bottom: 0.75rem;
+    }
+
+    .card p {
+      font-size: 0.9rem;
+      color: var(--text-muted);
+      text-align: left;
+    }
+
+    .card ul {
+      list-style: none;
+      padding: 0;
+    }
+
+    .card ul li {
+      padding: 0.4rem 0;
+      padding-left: 1.25rem;
+      position: relative;
+      color: var(--text-muted);
+      font-size: 0.9rem;
+    }
+
+    .card ul li::before {
+      content: '';
+      position: absolute;
+      left: 0;
+      top: 50%;
+      transform: translateY(-50%);
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: var(--primary);
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 2rem 0;
+      font-size: 0.9rem;
+    }
+
+    th {
+      background: var(--card-bg);
+      color: var(--primary);
+      font-weight: 600;
+      padding: 0.75rem 1rem;
+      text-align: left;
+      border-bottom: 2px solid var(--border);
+    }
+
+    td {
+      padding: 0.75rem 1rem;
+      border-bottom: 1px solid var(--border);
+      color: var(--text);
+    }
+
+    tr:hover td {
+      background: rgba(41, 181, 232, 0.05);
+    }
+
+    .highlight-box {
+      background: rgba(41, 181, 232, 0.1);
+      border: 1px solid var(--primary);
+      border-radius: 12px;
+      padding: 1.5rem;
+      margin: 1.5rem 0;
+      width: 100%;
+    }
+
+    .highlight-box p, .context-box p, .warning-box p {
+      text-align: left;
+      max-width: none;
+    }
+
+    .context-box {
+      background: rgba(124, 58, 237, 0.1);
+      border: 1px solid var(--accent);
+      border-radius: 12px;
+      padding: 1.5rem;
+      margin: 1.5rem 0;
+      width: 100%;
+    }
+
+    .warning-box {
+      background: rgba(245, 158, 11, 0.1);
+      border: 1px solid var(--orange);
+      border-radius: 12px;
+      padding: 1.5rem;
+      margin: 1.5rem 0;
+      width: 100%;
+    }
+
+    .badge-green { background: rgba(16, 185, 129, 0.15); color: var(--green); padding: 0.25rem 0.75rem; border-radius: 99px; font-size: 0.8rem; font-weight: 500; display: inline-block; }
+    .badge-orange { background: rgba(245, 158, 11, 0.15); color: var(--orange); padding: 0.25rem 0.75rem; border-radius: 99px; font-size: 0.8rem; font-weight: 500; display: inline-block; }
+    .badge-red { background: rgba(239, 68, 68, 0.15); color: var(--red); padding: 0.25rem 0.75rem; border-radius: 99px; font-size: 0.8rem; font-weight: 500; display: inline-block; }
+    .badge-blue { background: rgba(41, 181, 232, 0.15); color: var(--primary); padding: 0.25rem 0.75rem; border-radius: 99px; font-size: 0.8rem; font-weight: 500; display: inline-block; }
+    .badge-purple { background: rgba(124, 58, 237, 0.15); color: var(--accent); padding: 0.25rem 0.75rem; border-radius: 99px; font-size: 0.8rem; font-weight: 500; display: inline-block; }
+
+    .slide ul {
+      list-style: none;
+      width: 100%;
+      max-width: 700px;
+    }
+
+    .slide ul li {
+      padding: 0.75rem 0;
+      padding-left: 1.5rem;
+      position: relative;
+      color: var(--text);
+      font-size: 1.05rem;
+    }
+
+    .slide ul li::before {
+      content: '';
+      position: absolute;
+      left: 0;
+      top: 50%;
+      transform: translateY(-50%);
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: var(--primary);
+    }
+
+    code {
+      background: var(--card-bg);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 0.2rem 0.5rem;
+      font-size: 0.85rem;
+      font-family: 'SF Mono', 'Fira Code', monospace;
+      color: var(--primary);
+    }
+
+    pre {
+      background: var(--card-bg);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 1.5rem;
+      overflow-x: auto;
+      width: 100%;
+      margin: 1.5rem 0;
+      font-size: 0.85rem;
+      line-height: 1.7;
+      font-family: 'SF Mono', 'Fira Code', monospace;
+      color: var(--text);
+    }
+
+    pre .keyword { color: var(--accent); font-weight: 500; }
+    pre .string { color: var(--green); }
+    pre .comment { color: var(--text-muted); font-style: italic; }
+    pre .function { color: var(--primary); }
+
+    .flow-diagram {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.5rem;
+      margin: 2rem 0;
+      flex-wrap: wrap;
+      width: 100%;
+    }
+
+    .flow-step {
+      background: var(--card-bg);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 1rem 1.5rem;
+      text-align: center;
+      min-width: 120px;
+    }
+
+    .flow-step.active {
+      border-color: var(--primary);
+      box-shadow: 0 0 20px rgba(41, 181, 232, 0.2);
+    }
+
+    .flow-step .step-label {
+      font-size: 0.75rem;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+
+    .flow-step .step-title {
+      font-size: 0.95rem;
+      font-weight: 600;
+      color: var(--text);
+      margin-top: 0.25rem;
+    }
+
+    .flow-arrow {
+      color: var(--primary);
+      font-size: 1.5rem;
+      font-weight: 300;
+    }
+
+    .two-col {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 2rem;
+      width: 100%;
+      margin: 2rem 0;
+    }
+
+    .three-col {
+      display: grid;
+      grid-template-columns: 1fr 1fr 1fr;
+      gap: 1.5rem;
+      width: 100%;
+      margin: 2rem 0;
+    }
+
+    .part-divider {
+      min-height: 40vh;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      padding: 4rem 3rem;
+      max-width: 1200px;
+      margin: 0 auto;
+    }
+
+    .part-divider h2 {
+      font-size: 1rem;
+      font-weight: 600;
+      color: var(--accent);
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      margin-bottom: 0.5rem;
+    }
+
+    .part-divider h1 {
+      font-size: 2rem;
+      font-weight: 700;
+      color: var(--text);
+      background: none;
+      -webkit-text-fill-color: var(--text);
+    }
+
+    .anim-fade {
+      opacity: 0;
+      transform: translateY(20px);
+      transition: opacity 0.6s ease, transform 0.6s ease;
+    }
+
+    .anim-fade.visible {
+      opacity: 1;
+      transform: translateY(0);
+    }
+
+    .funnel {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 0.5rem;
+      width: 100%;
+      margin: 2rem 0;
+    }
+
+    .funnel-row {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 1rem;
+      padding: 0.75rem 1.5rem;
+      border-radius: 8px;
+      font-weight: 500;
+      font-size: 0.95rem;
+      transition: all 0.2s;
+    }
+
+    .funnel-row .funnel-num {
+      font-size: 0.75rem;
+      font-weight: 600;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      min-width: 2rem;
+    }
+
+    .phase-card {
+      background: var(--card-bg);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 1.5rem;
+      border-left: 4px solid var(--primary);
+    }
+
+    .phase-card.phase-2 { border-left-color: var(--green); }
+    .phase-card.phase-3 { border-left-color: var(--accent); }
+    .phase-card.phase-4 { border-left-color: var(--orange); }
+
+    .phase-card h4 {
+      font-size: 1rem;
+      font-weight: 600;
+      color: var(--text);
+      margin-bottom: 0.5rem;
+    }
+
+    .phase-card p {
+      font-size: 0.9rem;
+      color: var(--text-muted);
+      text-align: left;
+    }
+
+    .phase-card .phase-criteria {
+      margin-top: 0.75rem;
+      padding-top: 0.75rem;
+      border-top: 1px solid var(--border);
+      font-size: 0.8rem;
+      color: var(--text-muted);
+    }
+
+    .spec-template {
+      background: var(--card-bg);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 2rem;
+      width: 100%;
+      margin: 2rem 0;
+    }
+
+    .spec-template .spec-row {
+      display: grid;
+      grid-template-columns: 180px 1fr;
+      gap: 1rem;
+      padding: 0.6rem 0;
+      border-bottom: 1px solid var(--border);
+      align-items: start;
+    }
+
+    .spec-template .spec-row:last-child {
+      border-bottom: none;
+    }
+
+    .spec-template .spec-label {
+      font-size: 0.85rem;
+      font-weight: 600;
+      color: var(--primary);
+    }
+
+    .spec-template .spec-value {
+      font-size: 0.85rem;
+      color: var(--text-muted);
+      font-style: italic;
+    }
+
+    @media (max-width: 900px) {
+      .sidebar { display: none; }
+      .main { margin-left: 0; }
+      .stat-grid { grid-template-columns: repeat(2, 1fr); }
+      .slide { padding: 2rem 1.5rem; }
+      .two-col { grid-template-columns: 1fr; }
+      .three-col { grid-template-columns: 1fr; }
+    }
+
+    .github-link {
+      position: fixed;
+      top: 1rem;
+      right: 1.5rem;
+      z-index: 1000;
+      color: var(--text-muted);
+      text-decoration: none;
+      font-size: 0.8rem;
+      font-weight: 500;
+      display: flex;
+      align-items: center;
+      gap: 0.4rem;
+      padding: 0.4rem 0.75rem;
+      border-radius: 6px;
+      border: 1px solid var(--border);
+      background: var(--card-bg);
+      transition: all 0.2s;
+    }
+    .github-link:hover {
+      color: var(--text);
+      border-color: var(--primary);
+    }
+    .github-link svg {
+      width: 16px;
+      height: 16px;
+      fill: currentColor;
+    }
+  </style>
+</head>
+<body>
+  <a href="https://github.com/sfc-gh-perickson/demos-enablement/tree/main/scoping-agentic-implementations" class="github-link" target="_blank">
+    <svg viewBox="0 0 16 16"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"/></svg>
+    GitHub
+  </a>
+  <div class="progress-bar"></div>
+
+  <nav class="sidebar">
+    <h2>Scoping Agents</h2>
+    <a href="#hero">Overview</a>
+    <div class="section-label">Discovery</div>
+    <a href="#scoping-funnel">The Scoping Funnel</a>
+    <a href="#personas">Persona Mapping</a>
+    <a href="#question-taxonomy">Question Taxonomy</a>
+    <div class="section-label">Specification</div>
+    <a href="#questions-to-tools">Questions to Tools</a>
+    <a href="#agent-spec">The Agent Spec</a>
+    <a href="#seed-evals">Seed Eval Generation</a>
+    <div class="section-label">Iteration</div>
+    <a href="#measuring">Measuring What Matters</a>
+    <a href="#observability-iteration">Observability-Driven Iteration</a>
+    <a href="#phased-delivery">Phased Delivery</a>
+    <a href="#workshop">Workshop Exercise</a>
+    <a href="#takeaways">Key Takeaways</a>
+  </nav>
+
+  <main class="main">
+
+    <!-- Slide 1: Hero -->
+    <section class="slide" id="hero">
+      <h1>Scoping Agentic Implementations</h1>
+      <p>From "talk to your data" to measurable agent specs &mdash; a framework for turning broad AI aspirations into scoped, evaluable, deliverable agent projects.</p>
+      <div class="stat-grid anim-fade" style="margin-top: 2rem;">
+        <div class="stat-card">
+          <div class="value">Vision</div>
+          <div class="label">Start with business goals, not technology</div>
+        </div>
+        <div class="stat-card">
+          <div class="value">Personas</div>
+          <div class="label">Who will use it, what they actually ask</div>
+        </div>
+        <div class="stat-card">
+          <div class="value">Spec</div>
+          <div class="label">Scoped tools, boundaries, success criteria</div>
+        </div>
+        <div class="stat-card">
+          <div class="value">Iterate</div>
+          <div class="label">Observe, evaluate, expand with confidence</div>
+        </div>
+      </div>
+      <div class="context-box anim-fade" style="margin-top: 1rem;">
+        <p><strong>Session outcome:</strong> Participants leave with a completed scoping document for their own use case, plus a methodology for iterating from broad goals to measurable agent specifications using Snowflake-native observability.</p>
+      </div>
+    </section>
+
+    <!-- Part 1 Divider -->
+    <section class="part-divider" id="part1">
+      <h2>Part 1</h2>
+      <h1>Discovery: Understanding What to Build</h1>
+    </section>
+
+    <!-- Slide 2: The Scoping Funnel -->
+    <section class="slide" id="scoping-funnel">
+      <h2>The Scoping Funnel</h2>
+      <p style="margin-bottom: 2rem;">Every successful agent project starts broad and narrows. Each layer increases specificity, measurability, and confidence.</p>
+
+      <div class="funnel anim-fade">
+        <div class="funnel-row" style="width: 100%; background: rgba(41, 181, 232, 0.08); border: 1px solid rgba(41, 181, 232, 0.3);">
+          <span class="funnel-num">1</span>
+          <span style="color: var(--primary); font-weight: 600;">Business Vision</span>
+          <span style="color: var(--text-muted); font-size: 0.85rem; margin-left: auto;">"We want our team to talk to their data"</span>
+        </div>
+        <div class="funnel-row" style="width: 90%; background: rgba(16, 185, 129, 0.08); border: 1px solid rgba(16, 185, 129, 0.3);">
+          <span class="funnel-num">2</span>
+          <span style="color: var(--green); font-weight: 600;">Personas</span>
+          <span style="color: var(--text-muted); font-size: 0.85rem; margin-left: auto;">Who specifically? What's their data literacy?</span>
+        </div>
+        <div class="funnel-row" style="width: 80%; background: rgba(124, 58, 237, 0.08); border: 1px solid rgba(124, 58, 237, 0.3);">
+          <span class="funnel-num">3</span>
+          <span style="color: var(--accent); font-weight: 600;">Questions</span>
+          <span style="color: var(--text-muted); font-size: 0.85rem; margin-left: auto;">What will they actually ask? How complex?</span>
+        </div>
+        <div class="funnel-row" style="width: 70%; background: rgba(245, 158, 11, 0.08); border: 1px solid rgba(245, 158, 11, 0.3);">
+          <span class="funnel-num">4</span>
+          <span style="color: var(--orange); font-weight: 600;">Tools</span>
+          <span style="color: var(--text-muted); font-size: 0.85rem; margin-left: auto;">Which capabilities does each question type need?</span>
+        </div>
+        <div class="funnel-row" style="width: 60%; background: rgba(239, 68, 68, 0.08); border: 1px solid rgba(239, 68, 68, 0.3);">
+          <span class="funnel-num">5</span>
+          <span style="color: var(--red); font-weight: 600;">Agent Spec</span>
+          <span style="color: var(--text-muted); font-size: 0.85rem; margin-left: auto;">Boundaries, success criteria, eval dataset</span>
+        </div>
+      </div>
+
+      <div class="warning-box anim-fade">
+        <p><strong>Anti-pattern:</strong> Jumping from "talk to your data" directly to tool selection. Without understanding personas and their questions, you build an agent that's impressive in a demo but doesn't solve the problems users actually have.</p>
+      </div>
+    </section>
+
+    <!-- Slide 3: Persona Mapping -->
+    <section class="slide" id="personas">
+      <h2>Persona Mapping</h2>
+      <p style="margin-bottom: 2rem;">Different users ask fundamentally different questions. Map each persona before deciding what to build.</p>
+
+      <div class="card-grid anim-fade" style="grid-template-columns: 1fr 1fr;">
+        <div class="card" style="border-top: 3px solid var(--green);">
+          <h4>For Each Persona, Capture:</h4>
+          <ul>
+            <li><strong>Role &amp; responsibility</strong> &mdash; what decisions do they make?</li>
+            <li><strong>Data literacy</strong> &mdash; can they interpret raw numbers or need narrative?</li>
+            <li><strong>Current workflow</strong> &mdash; how do they get answers today?</li>
+            <li><strong>Frequency</strong> &mdash; daily power user or occasional explorer?</li>
+            <li><strong>Stakes</strong> &mdash; what happens if the answer is wrong?</li>
+          </ul>
+        </div>
+        <div class="card" style="border-top: 3px solid var(--primary);">
+          <h4>Example Persona Card</h4>
+          <ul>
+            <li><strong>Name:</strong> Regional Sales Manager</li>
+            <li><strong>Literacy:</strong> Reads dashboards, doesn't write SQL</li>
+            <li><strong>Current workflow:</strong> Asks analyst team, 2-day turnaround</li>
+            <li><strong>Frequency:</strong> 5-10 questions/week</li>
+            <li><strong>Stakes:</strong> Territory allocation, quota decisions</li>
+            <li><strong>Success signal:</strong> "I got the answer without filing a ticket"</li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="highlight-box anim-fade">
+        <p><strong>Key insight:</strong> The persona's success signal is your north star metric. A regional sales manager doesn't care about SQL correctness &mdash; they care that the territory numbers match what they'd get from their analyst. Frame evaluation around their definition of "right."</p>
+      </div>
+    </section>
+
+    <!-- Slide 4: Question Taxonomy -->
+    <section class="slide" id="question-taxonomy">
+      <h2>Question Taxonomy</h2>
+      <p style="margin-bottom: 2rem;">Categorize the questions each persona will ask. This taxonomy directly determines tool selection, eval coverage, and phased delivery scope.</p>
+
+      <table class="anim-fade">
+        <thead>
+          <tr>
+            <th>Category</th>
+            <th>Example</th>
+            <th>Complexity</th>
+            <th>Data Source</th>
+            <th>Wrong-Answer Cost</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><span class="badge-green">Lookup</span></td>
+            <td>"What was Q2 revenue for the West region?"</td>
+            <td>Low</td>
+            <td>Structured</td>
+            <td>Medium</td>
+          </tr>
+          <tr>
+            <td><span class="badge-blue">Aggregation</span></td>
+            <td>"Compare YoY growth by product line"</td>
+            <td>Medium</td>
+            <td>Structured</td>
+            <td>High</td>
+          </tr>
+          <tr>
+            <td><span class="badge-purple">Reasoning</span></td>
+            <td>"Why did NPS drop last month?"</td>
+            <td>High</td>
+            <td>Structured + Unstructured</td>
+            <td>High</td>
+          </tr>
+          <tr>
+            <td><span class="badge-orange">Policy/Process</span></td>
+            <td>"What's our return policy for enterprise?"</td>
+            <td>Low</td>
+            <td>Unstructured</td>
+            <td>Very High</td>
+          </tr>
+          <tr>
+            <td><span class="badge-red">Out of Scope</span></td>
+            <td>"Write me a marketing email"</td>
+            <td>N/A</td>
+            <td>N/A</td>
+            <td>Reputational</td>
+          </tr>
+        </tbody>
+      </table>
+
+      <div class="two-col anim-fade">
+        <div class="card">
+          <h4>Why This Matters for Scoping</h4>
+          <ul>
+            <li>Each category maps to a different Snowflake tool</li>
+            <li>Wrong-answer cost determines eval priority</li>
+            <li>Complexity tiers inform phased delivery</li>
+            <li>Out-of-scope definition prevents scope creep</li>
+          </ul>
+        </div>
+        <div class="card">
+          <h4>How to Build Your Taxonomy</h4>
+          <ul>
+            <li>Interview 3-5 users per persona (15 min each)</li>
+            <li>Ask: "What did you ask your analyst last week?"</li>
+            <li>Review Slack/Teams channels for data questions</li>
+            <li>Check existing dashboard usage for implicit questions</li>
+            <li>Have PMs brainstorm high-value questions</li>
+          </ul>
+        </div>
+      </div>
+    </section>
+
+    <!-- Part 2 Divider -->
+    <section class="part-divider" id="part2">
+      <h2>Part 2</h2>
+      <h1>Specification: Defining What to Build</h1>
+    </section>
+
+    <!-- Slide 5: Questions to Tools -->
+    <section class="slide" id="questions-to-tools">
+      <h2>From Questions to Tools</h2>
+      <p style="margin-bottom: 2rem;">Your question taxonomy directly maps to Snowflake primitives. Let the questions drive tool selection, not the reverse.</p>
+
+      <table class="anim-fade">
+        <thead>
+          <tr>
+            <th>Question Category</th>
+            <th>Primary Tool</th>
+            <th>What It Does</th>
+            <th>Prerequisite</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><span class="badge-green">Lookup</span> / <span class="badge-blue">Aggregation</span></td>
+            <td><strong>Semantic View + Cortex Analyst</strong></td>
+            <td>Text-to-SQL over structured data with semantic context</td>
+            <td>Well-described semantic view with verified queries</td>
+          </tr>
+          <tr>
+            <td><span class="badge-orange">Policy/Process</span></td>
+            <td><strong>Cortex Search</strong></td>
+            <td>Hybrid search over unstructured documents</td>
+            <td>Documents chunked and indexed in a search service</td>
+          </tr>
+          <tr>
+            <td><span class="badge-purple">Reasoning</span></td>
+            <td><strong>Multi-tool Agent</strong></td>
+            <td>Orchestrates Analyst + Search + reasoning</td>
+            <td>Both structured and unstructured sources ready</td>
+          </tr>
+          <tr>
+            <td><span class="badge-red">Out of Scope</span></td>
+            <td><strong>Agent Instructions</strong></td>
+            <td>Explicit refusal boundaries in system prompt</td>
+            <td>Clear definition of what the agent should NOT do</td>
+          </tr>
+        </tbody>
+      </table>
+
+      <div class="warning-box anim-fade">
+        <p><strong>Anti-pattern:</strong> Wiring up every tool "just in case." Each tool adds evaluation surface area, latency from unnecessary tool calls, and maintenance burden. If your taxonomy shows 80% of questions are structured lookups, start with Semantic Views + Cortex Analyst alone. Add tools when the taxonomy demands it.</p>
+      </div>
+
+      <div class="highlight-box anim-fade">
+        <p><strong>Prerequisite audit:</strong> Before committing to a tool, check that its prerequisites are achievable. A Semantic View requires well-modeled tables with clear column descriptions. Cortex Search requires documents to exist in a parseable format. Missing prerequisites are the #1 cause of POC delays.</p>
+      </div>
+    </section>
+
+    <!-- Slide 6: The Agent Spec -->
+    <section class="slide" id="agent-spec">
+      <h2>The Agent Spec Document</h2>
+      <p style="margin-bottom: 2rem;">The spec is your contract between business stakeholders and the technical team. It answers: what are we building, for whom, how will we know it works?</p>
+
+      <div class="spec-template anim-fade">
+        <div class="spec-row">
+          <span class="spec-label">Agent Name</span>
+          <span class="spec-value">[e.g., sales_insights_agent]</span>
+        </div>
+        <div class="spec-row">
+          <span class="spec-label">Owner</span>
+          <span class="spec-value">[Team and individual responsible for quality]</span>
+        </div>
+        <div class="spec-row">
+          <span class="spec-label">Personas Served</span>
+          <span class="spec-value">[List of persona cards this agent targets]</span>
+        </div>
+        <div class="spec-row">
+          <span class="spec-label">Question Categories</span>
+          <span class="spec-value">[Which taxonomy rows this agent handles]</span>
+        </div>
+        <div class="spec-row">
+          <span class="spec-label">Tools</span>
+          <span class="spec-value">[Semantic Views, Search Services, Skills configured]</span>
+        </div>
+        <div class="spec-row">
+          <span class="spec-label">Out of Scope</span>
+          <span class="spec-value">[Explicit boundaries: what the agent will refuse]</span>
+        </div>
+        <div class="spec-row">
+          <span class="spec-label">Business Success Metric</span>
+          <span class="spec-value">[e.g., "80% of users get answers without filing a ticket"]</span>
+        </div>
+        <div class="spec-row">
+          <span class="spec-label">Technical Success Metrics</span>
+          <span class="spec-value">[answer_correctness >= 0.80, tool_selection_accuracy >= 0.90]</span>
+        </div>
+        <div class="spec-row">
+          <span class="spec-label">Eval Dataset</span>
+          <span class="spec-value">[Pointer to seed eval questions, target coverage per category]</span>
+        </div>
+        <div class="spec-row">
+          <span class="spec-label">Phase 1 Scope</span>
+          <span class="spec-value">[Minimum viable slice: which personas + categories ship first]</span>
+        </div>
+      </div>
+
+      <div class="context-box anim-fade">
+        <p><strong>Why this matters:</strong> Without a spec, scope creeps via "can it also..." requests. The spec gives you a clear "yes, that's Phase 2" response. It also gives evaluations a target &mdash; you can measure progress against the spec's defined success criteria rather than vague "is it good enough?" conversations.</p>
+      </div>
+    </section>
+
+    <!-- Slide 7: Seed Eval Generation -->
+    <section class="slide" id="seed-evals">
+      <h2>Seed Eval Generation</h2>
+      <p style="margin-bottom: 2rem;">You don't need production traffic to start evaluating. Build seed evals from team intuition, then iterate with real signals.</p>
+
+      <div class="flow-diagram anim-fade">
+        <div class="flow-step">
+          <div class="step-label">Step 1</div>
+          <div class="step-title">Brainstorm</div>
+        </div>
+        <span class="flow-arrow">&rarr;</span>
+        <div class="flow-step">
+          <div class="step-label">Step 2</div>
+          <div class="step-title">Categorize</div>
+        </div>
+        <span class="flow-arrow">&rarr;</span>
+        <div class="flow-step">
+          <div class="step-label">Step 3</div>
+          <div class="step-title">Draft Ground Truth</div>
+        </div>
+        <span class="flow-arrow">&rarr;</span>
+        <div class="flow-step">
+          <div class="step-label">Step 4</div>
+          <div class="step-title">SME Validate</div>
+        </div>
+        <span class="flow-arrow">&rarr;</span>
+        <div class="flow-step active">
+          <div class="step-label">Step 5</div>
+          <div class="step-title">Ship &amp; Iterate</div>
+        </div>
+      </div>
+
+      <div class="two-col anim-fade">
+        <div class="card">
+          <h4>Where Seed Questions Come From</h4>
+          <ul>
+            <li><strong>PM intuition:</strong> "What would a VP ask on Monday morning?"</li>
+            <li><strong>Analyst backlog:</strong> Most-asked questions from data team tickets</li>
+            <li><strong>Dashboard implicit Qs:</strong> Every chart answers a question &mdash; write them down</li>
+            <li><strong>Edge cases:</strong> Questions you know will be tricky (date ranges, nulls, ambiguity)</li>
+            <li><strong>Refusals:</strong> Questions you know should be out of scope</li>
+          </ul>
+        </div>
+        <div class="card">
+          <h4>Target Coverage (30-50 questions)</h4>
+          <ul>
+            <li><strong>60%</strong> happy-path questions across all categories</li>
+            <li><strong>20%</strong> edge cases and high-stakes scenarios</li>
+            <li><strong>10%</strong> multi-tool coordination questions</li>
+            <li><strong>10%</strong> out-of-scope refusal questions</li>
+          </ul>
+          <p style="margin-top: 0.75rem;">Use <code>CORTEX.COMPLETE</code> to draft ground-truth answers from your data, then have SMEs validate and correct. Don't let perfect be the enemy of shipped.</p>
+        </div>
+      </div>
+
+      <div class="highlight-box anim-fade">
+        <p><strong>Speed over perfection:</strong> A 30-question eval dataset you ship this week is infinitely more useful than a 200-question dataset that takes a month to curate. Start with PM/tech intuition, ship, observe what breaks in practice, and add those failures back to the dataset. The flywheel is the product.</p>
+      </div>
+    </section>
+
+    <!-- Part 3 Divider -->
+    <section class="part-divider" id="part3">
+      <h2>Part 3</h2>
+      <h1>Iteration: Measuring and Expanding</h1>
+    </section>
+
+    <!-- Slide 8: Measuring What Matters -->
+    <section class="slide" id="measuring">
+      <h2>Measuring What Matters</h2>
+      <p style="margin-bottom: 2rem;">Map business goals to technical metrics. Every success criterion in your spec should have a corresponding measurable signal.</p>
+
+      <table class="anim-fade">
+        <thead>
+          <tr>
+            <th>Business Goal</th>
+            <th>Technical Metric</th>
+            <th>How to Measure</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>Users self-serve instead of filing tickets</td>
+            <td>Conversation completion rate + answer_correctness</td>
+            <td>Observability events + eval runs</td>
+          </tr>
+          <tr>
+            <td>Reduce time to insight</td>
+            <td>Latency P50/P95 + tool_selection_accuracy</td>
+            <td>Agent usage history + eval metrics</td>
+          </tr>
+          <tr>
+            <td>Trust the numbers</td>
+            <td>Answer correctness on high-stakes category</td>
+            <td>Per-category eval scoring</td>
+          </tr>
+          <tr>
+            <td>Don't generate compliance risk</td>
+            <td>Refusal accuracy on out-of-scope</td>
+            <td>Eval dataset with refusal questions</td>
+          </tr>
+          <tr>
+            <td>Predictable cost at scale</td>
+            <td>Tokens/interaction + warehouse credits/query</td>
+            <td>CORTEX_AGENT_USAGE_HISTORY + QUERY_ATTRIBUTION_HISTORY</td>
+          </tr>
+        </tbody>
+      </table>
+
+      <div class="context-box anim-fade">
+        <p><strong>The connection:</strong> Your scoping funnel (personas &rarr; questions &rarr; tools) determines what to build. Your agent spec defines success criteria. Your eval dataset + observability views measure whether you're meeting those criteria. The entire chain is traceable from "the VP wants to talk to their data" to "answer_correctness on aggregation questions is 0.87 this week."</p>
+      </div>
+    </section>
+
+    <!-- Slide 9: Observability-Driven Iteration -->
+    <section class="slide" id="observability-iteration">
+      <h2>Observability-Driven Iteration</h2>
+      <p style="margin-bottom: 2rem;">Once deployed (even to a pilot group), observability data reveals the gap between your taxonomy assumptions and reality.</p>
+
+      <div class="card-grid anim-fade" style="grid-template-columns: 1fr 1fr;">
+        <div class="card" style="border-top: 3px solid var(--primary);">
+          <h4>What You Assumed (Taxonomy)</h4>
+          <ul>
+            <li>70% lookup, 20% aggregation, 10% reasoning</li>
+            <li>Primary persona: Sales Managers</li>
+            <li>Peak usage: Monday mornings</li>
+            <li>Out-of-scope: rare (&lt;5%)</li>
+          </ul>
+        </div>
+        <div class="card" style="border-top: 3px solid var(--orange);">
+          <h4>What You Observe (Reality)</h4>
+          <ul>
+            <li>40% lookup, 30% aggregation, 20% reasoning, 10% ???</li>
+            <li>Surprise persona: Finance team discovered it</li>
+            <li>Peak usage: End of month (reporting)</li>
+            <li>15% questions hit refusal or fail silently</li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="highlight-box anim-fade">
+        <p><strong>The iteration flywheel:</strong></p>
+        <p style="margin-top: 0.5rem;">1. Query <code>CORTEX_AGENT_USAGE_HISTORY</code> to see actual question distribution</p>
+        <p>2. Identify questions the agent handles poorly (low scores, high token usage, user abandonment)</p>
+        <p>3. Add representative failures to your eval dataset</p>
+        <p>4. Improve the agent (better instructions, new tools, refined semantic view)</p>
+        <p>5. Validate improvement via eval run before promoting</p>
+        <p>6. Deploy improved version, continue observing</p>
+      </div>
+
+      <pre class="anim-fade"><span class="comment">-- Find questions where the agent used excessive tokens (potential confusion)</span>
+<span class="keyword">SELECT</span>
+    METADATA:<span class="string">'input'</span>::STRING <span class="keyword">AS</span> user_question,
+    TOKENS_USED,
+    METADATA:<span class="string">'interaction_interface'</span>::STRING <span class="keyword">AS</span> surface
+<span class="keyword">FROM</span> SNOWFLAKE.ACCOUNT_USAGE.CORTEX_AGENT_USAGE_HISTORY
+<span class="keyword">WHERE</span> AGENT_NAME = <span class="string">'SALES_INSIGHTS_AGENT'</span>
+    <span class="keyword">AND</span> TOKENS_USED > 5000  <span class="comment">-- unusually high token usage</span>
+<span class="keyword">ORDER BY</span> TOKENS_USED <span class="keyword">DESC</span>
+<span class="keyword">LIMIT</span> 20;</pre>
+    </section>
+
+    <!-- Slide 10: Phased Delivery -->
+    <section class="slide" id="phased-delivery">
+      <h2>Phased Delivery</h2>
+      <p style="margin-bottom: 2rem;">Ship narrow, prove value, expand. Each phase has explicit entry criteria tied to eval scores from the previous phase.</p>
+
+      <div class="card-grid anim-fade" style="grid-template-columns: 1fr 1fr;">
+        <div class="phase-card">
+          <h4>Phase 1: Prove Value</h4>
+          <p>Single persona, single tool (typically Semantic View + Analyst for structured data). Prove the agent answers the most common question category correctly.</p>
+          <div class="phase-criteria"><strong>Exit criteria:</strong> answer_correctness &ge; 0.75 on lookup questions, 5+ pilot users active weekly, seed eval passing in CI</div>
+        </div>
+        <div class="phase-card phase-2">
+          <h4>Phase 2: Expand Coverage</h4>
+          <p>Add tools (Cortex Search for documents, Skills for formatting). Cover the next tier of question complexity (aggregation, policy lookups).</p>
+          <div class="phase-criteria"><strong>Entry criteria:</strong> Phase 1 exit met. <strong>Exit:</strong> tool_selection_accuracy &ge; 0.85, answer_correctness &ge; 0.80 across all categories</div>
+        </div>
+        <div class="phase-card phase-3">
+          <h4>Phase 3: Multi-Persona</h4>
+          <p>Add routing/RBAC for new personas. May require agent routing (supervisor pattern) or row-level security on semantic views for data isolation.</p>
+          <div class="phase-criteria"><strong>Entry criteria:</strong> Phase 2 exit met + new persona taxonomy complete. <strong>Exit:</strong> per-persona eval scores meet thresholds</div>
+        </div>
+        <div class="phase-card phase-4">
+          <h4>Phase 4: Production Hardening</h4>
+          <p>Resource budgets, CI/CD quality gates, scheduled regression testing, SLAs, cost attribution tags, runaway query protection.</p>
+          <div class="phase-criteria"><strong>Entry criteria:</strong> Phase 3 exit met + observability baseline established. <strong>Exit:</strong> SLA met for 30 consecutive days</div>
+        </div>
+      </div>
+
+      <div class="context-box anim-fade">
+        <p><strong>Why phases work:</strong> Each phase delivers user value independently. If Phase 1 proves the agent isn't the right approach for a use case, you've invested weeks, not months. If it succeeds, you have eval data and observability baselines that de-risk every subsequent phase.</p>
+      </div>
+    </section>
+
+    <!-- Slide 11: Workshop Exercise -->
+    <section class="slide" id="workshop">
+      <h2>Workshop Exercise</h2>
+      <p style="margin-bottom: 2rem;">Apply the scoping funnel to your own use case. 60 minutes, four activities.</p>
+
+      <div class="card-grid anim-fade" style="grid-template-columns: 1fr 1fr;">
+        <div class="card" style="border-top: 3px solid var(--primary);">
+          <h4>Activity 1: Persona Mapping (15 min)</h4>
+          <p>Identify 2-3 personas for your agent. For each: role, data literacy, current workflow, frequency, stakes, success signal. Pick ONE persona for Phase 1.</p>
+        </div>
+        <div class="card" style="border-top: 3px solid var(--green);">
+          <h4>Activity 2: Question Brainstorm (15 min)</h4>
+          <p>For your Phase 1 persona, brainstorm 15-20 questions they would actually ask. Categorize each (lookup, aggregation, reasoning, policy, out-of-scope). Note data sources needed.</p>
+        </div>
+        <div class="card" style="border-top: 3px solid var(--accent);">
+          <h4>Activity 3: Tool Selection (15 min)</h4>
+          <p>Map question categories to Snowflake tools. Check prerequisites for each tool. Identify blockers (missing semantic view, un-indexed documents). Scope Phase 1 tools.</p>
+        </div>
+        <div class="card" style="border-top: 3px solid var(--orange);">
+          <h4>Activity 4: Seed Eval Draft (15 min)</h4>
+          <p>Select 10 questions from Activity 2 as your seed eval dataset: 6 happy-path, 2 edge-case, 2 out-of-scope. Draft ground-truth descriptions for each. Define your success threshold.</p>
+        </div>
+      </div>
+
+      <div class="highlight-box anim-fade">
+        <p><strong>Output:</strong> At the end of this exercise, you have a first-draft agent spec document with: target persona, question taxonomy, tool selection, Phase 1 scope, and a 10-question seed eval dataset. This is enough to start building and iterating immediately.</p>
+      </div>
+    </section>
+
+    <!-- Slide 12: Takeaways -->
+    <section class="slide" id="takeaways">
+      <h2>Key Takeaways</h2>
+
+      <div class="flow-diagram anim-fade">
+        <div class="flow-step">
+          <div class="step-label">Discover</div>
+          <div class="step-title">Personas</div>
+        </div>
+        <span class="flow-arrow">&rarr;</span>
+        <div class="flow-step">
+          <div class="step-label">Categorize</div>
+          <div class="step-title">Questions</div>
+        </div>
+        <span class="flow-arrow">&rarr;</span>
+        <div class="flow-step">
+          <div class="step-label">Match</div>
+          <div class="step-title">Tools</div>
+        </div>
+        <span class="flow-arrow">&rarr;</span>
+        <div class="flow-step">
+          <div class="step-label">Define</div>
+          <div class="step-title">Spec</div>
+        </div>
+        <span class="flow-arrow">&rarr;</span>
+        <div class="flow-step">
+          <div class="step-label">Seed</div>
+          <div class="step-title">Evals</div>
+        </div>
+        <span class="flow-arrow">&rarr;</span>
+        <div class="flow-step active">
+          <div class="step-label">Observe</div>
+          <div class="step-title">Iterate</div>
+        </div>
+      </div>
+
+      <div class="card-grid anim-fade" style="grid-template-columns: 1fr 1fr; margin-top: 2rem;">
+        <div class="card">
+          <h4>Core Principles</h4>
+          <ul>
+            <li>Questions determine tools, not the reverse</li>
+            <li>Ship narrow, observe, expand with data</li>
+            <li>Seed evals from intuition, grow from production</li>
+            <li>Every business goal maps to a technical metric</li>
+            <li>Phase boundaries are eval-score gated</li>
+          </ul>
+        </div>
+        <div class="card">
+          <h4>Companion Modules</h4>
+          <ul>
+            <li><strong>Evaluating Cortex Agents</strong> &mdash; GPA framework, LLM-as-Judge, CI/CD gates</li>
+            <li><strong>Cortex AI Observability</strong> &mdash; Surface identification, cost attribution</li>
+            <li><strong>Agent Versioning</strong> &mdash; Safe iteration with aliases</li>
+            <li><strong>Agent Routing</strong> &mdash; Multi-agent orchestration patterns</li>
+            <li><strong>Semantic View Quality</strong> &mdash; Description grading framework</li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="context-box anim-fade" style="margin-top: 2rem;">
+        <p><strong>Next steps:</strong> Complete the workshop notebook to formalize your scoping document. Use the setup.sql to deploy a stub agent for your Phase 1 scope. Run your seed eval dataset against it. Start the flywheel.</p>
+      </div>
+    </section>
+
+  </main>
+
+  <script>
+    // Progress bar
+    window.addEventListener('scroll', () => {
+      const bar = document.querySelector('.progress-bar');
+      const scrollTop = document.documentElement.scrollTop || document.body.scrollTop;
+      const scrollHeight = document.documentElement.scrollHeight - document.documentElement.clientHeight;
+      bar.style.width = (scrollTop / scrollHeight * 100) + '%';
+    });
+
+    // Sidebar active state
+    const sections = document.querySelectorAll('.slide, .part-divider');
+    const navLinks = document.querySelectorAll('.sidebar a');
+
+    const observer = new IntersectionObserver((entries) => {
+      entries.forEach(entry => {
+        if (entry.isIntersecting) {
+          navLinks.forEach(link => link.classList.remove('active'));
+          const activeLink = document.querySelector(`.sidebar a[href="#${entry.target.id}"]`);
+          if (activeLink) activeLink.classList.add('active');
+        }
+      });
+    }, { threshold: 0.3 });
+
+    sections.forEach(section => observer.observe(section));
+
+    // Fade-in animations
+    const animElements = document.querySelectorAll('.anim-fade');
+    const animObserver = new IntersectionObserver((entries) => {
+      entries.forEach(entry => {
+        if (entry.isIntersecting) {
+          entry.target.classList.add('visible');
+        }
+      });
+    }, { threshold: 0.1 });
+
+    animElements.forEach(el => animObserver.observe(el));
+  </script>
+</body>
+</html>
