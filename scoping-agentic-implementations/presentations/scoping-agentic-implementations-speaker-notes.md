@@ -164,7 +164,7 @@ The spec is the contract between "what business wants" and "what engineering bui
 - Walk through the flow diagram: Brainstorm -> Categorize -> Draft Ground Truth -> SME Validate -> Ship & Iterate
 - Left card (Where Seed Questions Come From): These are all pre-production sources. You don't need users in production to build a seed dataset. PM intuition, analyst ticket backlog, and dashboard implicit questions give you 30-50 seed questions in an afternoon.
 - Right card (Target Coverage): The 60/20/10/10 split is a starting point, not a rule. Adjust based on your taxonomy: if you have high-risk policy questions, weight them more heavily.
-- The CORTEX.COMPLETE technique for drafting ground truth: run each seed question against your data using a powerful model, then have an SME validate the output. This is faster than writing ground truth from scratch and catches cases where the "obvious" answer is wrong.
+- The AI_COMPLETE technique for drafting ground truth: run each seed question against your data using a powerful model, then have an SME validate the output. This is faster than writing ground truth from scratch and catches cases where the "obvious" answer is wrong.
 - "Speed over perfection" highlight: The biggest enemy of evaluation adoption is perfectionism. A 30-question dataset with rough ground truth that ships this week catches more regressions than a 200-question dataset that takes a month.
 
 **Key Insight:**
@@ -248,22 +248,51 @@ Each phase delivers user value independently. The biggest risk in agent projects
 
 ---
 
-## Slide 11: Workshop Exercise
+## Slide: Scoping for Multi-Tenancy
+
+**Talking Points:**
+- This slide is a decision gate. Ask the audience: "Will your agent serve multiple user groups with different data access?" If yes, everything on this slide becomes a Phase 1 prerequisite.
+- Walk through the four cards:
+  - Session Attributes: The bridge between your app's authentication and Snowflake's authorization. Immutable = cannot be overridden by prompt injection or SQL tricks.
+  - Row Access Policies: The only mechanism that guarantees correct data filtering regardless of what SQL the agent generates. Prompt-based security is not security.
+  - Column Masking: For sensitive fields that some users/tenants should never see. The agent doesn't even know the raw values exist.
+  - Entitlements Table: The operational pattern that makes multi-tenancy manageable. User lifecycle = INSERT/DELETE. No DDL per user.
+- The warning box about Cortex Search is critical for scoping. If the agent needs document retrieval AND multi-tenancy, the customer needs to plan for per-tenant search services or pre-filtered source tables. This is often a surprise blocker.
+
+**Key Insight:**
+Multi-tenancy changes the definition of "correct." An answer that's correct for Tenant A might be a data breach if shown to Tenant B. This means your evaluation dataset needs per-tenant variants: "What was Q2 revenue?" should return different numbers depending on who's asking. Factor this into your eval dataset design from the start.
+
+**Common Questions:**
+- *Q: Can we add multi-tenancy later (Phase 3) or does it need to be Phase 1?*
+  A: Depends on your launch plan. If Phase 1 users are all from the same team with the same data access, multi-tenancy can be Phase 3. If Phase 1 includes users from different regions/teams who shouldn't see each other's data, it's Phase 1.
+- *Q: How many tenants before we need this pattern?*
+  A: The session-attributes + RAP pattern is worth it above ~10 distinct access groups. Below that, traditional Snowflake roles might suffice. Above ~50 groups, the traditional approach becomes unmanageable.
+- *Q: What about the Cortex Search limitation -- is there a roadmap fix?*
+  A: No committed timeline for RAP support in Cortex Search. For now, the recommended patterns are: (1) per-tenant search services if you have <10 tenants, (2) pre-filtered source tables if you have many tenants but can partition documents by tenant.
+
+**References:**
+- https://docs.snowflake.com/en/user-guide/snowflake-cortex/cortex-agents-multi-tenancy
+
+---
+
+## Slide: Workshop Exercise
 
 **Talking Points:**
 - Frame as: "Everything we've discussed becomes concrete in the next 60 minutes. You'll walk out with a draft spec for your own use case."
-- Activity 1 (Persona Mapping): Have participants fill in 2-3 persona cards. The key push: "Pick ONE persona for Phase 1." Forced prioritization is the point.
-- Activity 2 (Question Brainstorm): 15-20 questions for the Phase 1 persona. Encourage specificity. If someone writes "revenue questions," push them to write actual questions: "What was total revenue last quarter?" "How does revenue compare to budget?"
-- Activity 3 (Tool Selection): Map question categories to Snowflake tools. Critical checkpoint: "Do the prerequisites exist today?" If not, that's a Phase 0 (data preparation) that must happen before the agent work starts.
-- Activity 4 (Seed Eval Draft): Select 10 questions and write ground-truth descriptions. This is the hardest activity because it forces precision about what "correct" means.
+- Activity 1 (Persona Mapping, 10 min): Have participants fill in 2-3 persona cards. The key push: "Pick ONE persona for Phase 1." Forced prioritization is the point.
+- Activity 2 (Question Brainstorm, 15 min): 15-20 questions for the Phase 1 persona. Encourage specificity. If someone writes "revenue questions," push them to write actual questions.
+- Activity 3 (Synthetic Expansion, 10 min): Use the notebook to run AI_COMPLETE and expand the seed dataset. Participants see their 15 questions become 40+ automatically.
+- Activity 4 (Eval Dataset + Config, 15 min): Format questions into the native eval format, draft ground-truth VARIANT objects, register the dataset, and write the eval config YAML.
+- Activity 5 (Multi-Tenancy Assessment, 10 min): Quick decision matrix -- if multi-tenancy is needed, fill in the access control section of the spec.
 
 **Facilitation Guidance:**
-- If running with a group, have participants pair up for Activities 2 and 4. Explaining your questions to someone else surfaces ambiguity.
+- Activities 3 and 4 require running the notebook. Have participants follow along or pair up on one machine.
+- If running with a group, have participants pair up for Activity 2. Explaining your questions to someone else surfaces ambiguity.
 - Time-box strictly. The goal is a rough draft, not a perfect document. Perfection comes through iteration.
-- At the end, have 2-3 participants share their Phase 1 scope with the group. This calibrates expectations and often sparks "oh, we should do that too" insights.
+- At the end, have 2-3 participants share their Phase 1 scope with the group.
 
 **Key Insight:**
-The workshop output is deliberately minimal -- 1 persona, 10 eval questions, Phase 1 tool set. This is intentional. A minimal spec that ships in days is worth more than a comprehensive spec that takes weeks. The flywheel (observe, add to eval set, improve, deploy) is where the real work happens.
+The workshop output is more concrete than before: a registered eval dataset (not just a list), an eval config YAML ready to run, and a multi-tenancy assessment that prevents Phase 3 surprises. Participants leave with artifacts that plug directly into the Cortex Agent Evaluations system.
 
 ---
 
@@ -306,6 +335,6 @@ Scoping is not a one-time exercise -- it's the first rotation of a continuous fl
 
 **If the session runs long (half-day):**
 - Extend workshop to 90 minutes
-- Add live notebook walkthrough (seed eval generation with CORTEX.COMPLETE)
+- Add live notebook walkthrough (synthetic expansion + native eval dataset registration)
 - Add group discussion: "What's your biggest concern about Phase 1?"
 - Add Q&A on companion modules (evals, observability, versioning)

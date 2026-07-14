@@ -29,7 +29,7 @@ Most agent projects fail not because the technology isn't ready, but because the
 - Snowflake account with SYSADMIN (or equivalent) for lab setup
 - Warehouse: XS is sufficient (auto-created by setup.sql)
 - For the notebook: Python environment with `snowflake-snowpark-python` or Snowsight Notebooks
-- Cortex AI enabled on the account (for CORTEX.COMPLETE in eval generation cells)
+- Cortex AI enabled on the account (for AI_COMPLETE in eval generation cells)
 
 ## Quick Start
 
@@ -54,7 +54,7 @@ scoping-agentic-implementations/
 │   ├── scoping-agentic-implementations.html           # Slide deck
 │   └── scoping-agentic-implementations-speaker-notes.md  # Facilitation guide
 └── lab/
-    ├── setup.sql                      # Creates database, mock data, stubs
+    ├── setup.sql                      # Creates database, eval stage, entitlements
     └── scoping-agentic-implementations-lab.ipynb      # Workshop notebook
 ```
 
@@ -72,9 +72,9 @@ scoping-agentic-implementations/
 | 0-5 min | Framing: The Scoping Funnel (slides 1-2) | Shared mental model |
 | 5-15 min | Activity 1: Persona Mapping | 2-3 persona cards, Phase 1 persona selected |
 | 15-30 min | Activity 2: Question Brainstorm | 15-20 categorized questions |
-| 30-40 min | Activity 3: Tool Selection + Prerequisite Audit | Tool map with blocker identification |
-| 40-55 min | Activity 4: Seed Eval Draft | 10 questions with ground-truth descriptions |
-| 55-60 min | Wrap: Phased Delivery + Next Steps | Draft spec document |
+| 30-40 min | Activity 3: Synthetic Expansion (notebook) | 40+ questions via AI_COMPLETE |
+| 40-55 min | Activity 4: Eval Dataset + Config | Native eval dataset registered, YAML config ready |
+| 55-60 min | Activity 5: Multi-Tenancy + Wrap | Access control spec, phased delivery plan |
 
 ### Common facilitation challenges
 
@@ -141,6 +141,15 @@ Phase 2: [scope] → Exit: [criteria]
 Phase 3: [scope] → Exit: [criteria]
 Phase 4: [scope] → Exit: [criteria]
 
+ACCESS CONTROL (Multi-Tenancy)
+------------------------------
+Tenant Model:       [single / multi-internal / multi-external]
+Identity Mechanism: [session attributes / Snowflake roles / app-layer]
+Session Attributes: [tenant_id, user_role, region — passed at API call time]
+Row Access Policies: [which tables, filter column, policy logic]
+Column Masking:     [which columns, who sees full vs masked]
+Cortex Search:      [per-tenant service / pre-filtered source / N/A]
+
 KNOWN BLOCKERS
 --------------
 - [Prerequisites not yet met]
@@ -158,4 +167,5 @@ This module is the "how to scope" — these companions cover "how to implement":
 | [cortex-ai-observability/](../cortex-ai-observability/) | Surface identification, cost attribution, unified views | After deploying: monitoring and iterating |
 | [agent_versioning/](../agent_versioning/) | Named versions, aliases, safe promotion | During iteration: version management |
 | [agent-routing/](../agent-routing/) | Supervisor pattern, multi-agent orchestration | Phase 3+: multi-persona routing |
+| [cortex-agent-multi-tenancy/](../cortex-agent-multi-tenancy/) | RAP, masking, entitlements, session attributes | Phase 3 (or Phase 1 if multi-tenant from launch) |
 | [semantic-view-description/](../semantic-view-description/) | Description quality grading | Phase 1 prerequisite: semantic view quality |

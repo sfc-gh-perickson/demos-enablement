@@ -599,6 +599,7 @@
     <a href="#measuring">Measuring What Matters</a>
     <a href="#observability-iteration">Observability-Driven Iteration</a>
     <a href="#phased-delivery">Phased Delivery</a>
+    <a href="#multi-tenancy">Multi-Tenancy Scoping</a>
     <a href="#workshop">Workshop Exercise</a>
     <a href="#takeaways">Key Takeaways</a>
   </nav>
@@ -890,6 +891,14 @@
           <span class="spec-label">Phase 1 Scope</span>
           <span class="spec-value">[Minimum viable slice: which personas + categories ship first]</span>
         </div>
+        <div class="spec-row">
+          <span class="spec-label">Tenant Model</span>
+          <span class="spec-value">[single-tenant / multi-tenant-internal / multi-tenant-external]</span>
+        </div>
+        <div class="spec-row">
+          <span class="spec-label">Access Control</span>
+          <span class="spec-value">[Session attributes, Row Access Policies, Column Masking needed?]</span>
+        </div>
       </div>
 
       <div class="context-box anim-fade">
@@ -948,7 +957,7 @@
             <li><strong>10%</strong> multi-tool coordination questions</li>
             <li><strong>10%</strong> out-of-scope refusal questions</li>
           </ul>
-          <p style="margin-top: 0.75rem;">Use <code>CORTEX.COMPLETE</code> to draft ground-truth answers from your data, then have SMEs validate and correct. Don't let perfect be the enemy of shipped.</p>
+          <p style="margin-top: 0.75rem;">Use <code>AI_COMPLETE</code> to draft ground-truth answers from your data, then have SMEs validate and correct. Don't let perfect be the enemy of shipped.</p>
         </div>
       </div>
 
@@ -1091,32 +1100,73 @@
       </div>
     </section>
 
-    <!-- Slide 11: Workshop Exercise -->
-    <section class="slide" id="workshop">
-      <h2>Workshop Exercise</h2>
-      <p style="margin-bottom: 2rem;">Apply the scoping funnel to your own use case. 60 minutes, four activities.</p>
+    <!-- Slide: Multi-Tenancy Scoping -->
+    <section class="slide" id="multi-tenancy">
+      <h2>Scoping for Multi-Tenancy</h2>
+      <p style="margin-bottom: 2rem;">If your agent serves multiple user groups with different data access, access control must be scoped into the spec from the start.</p>
+
+      <div class="highlight-box anim-fade">
+        <p><strong>Decision gate:</strong> Will this agent serve multiple tenants (teams, customers, business units) who should NOT see each other's data? If yes, the items below become Phase 1 prerequisites.</p>
+      </div>
 
       <div class="card-grid anim-fade" style="grid-template-columns: 1fr 1fr;">
         <div class="card" style="border-top: 3px solid var(--primary);">
-          <h4>Activity 1: Persona Mapping (15 min)</h4>
-          <p>Identify 2-3 personas for your agent. For each: role, data literacy, current workflow, frequency, stakes, success signal. Pick ONE persona for Phase 1.</p>
+          <h4>Session Attributes</h4>
+          <p>Immutable identity passed at API call time. Your app authenticates users, then passes tenant_id / user_role as session attributes when calling the agent. Cannot be overridden by prompt injection.</p>
+        </div>
+        <div class="card" style="border-top: 3px solid var(--green);">
+          <h4>Row Access Policies</h4>
+          <p>Per-tenant data filtering enforced at the query engine level. The agent generates SQL freely &mdash; the RAP silently filters results to only the tenant's rows. No reliance on prompt instructions for security.</p>
+        </div>
+        <div class="card" style="border-top: 3px solid var(--accent);">
+          <h4>Column Masking</h4>
+          <p>Sensitive columns (salary, SSN, commission rates) are masked or redacted based on tenant role. The agent never sees the raw values &mdash; masking is transparent and unforgeable.</p>
+        </div>
+        <div class="card" style="border-top: 3px solid var(--orange);">
+          <h4>Entitlements Table</h4>
+          <p>Maps users/tenants to their allowed data access. User lifecycle is INSERT/DELETE on this table &mdash; no DDL, no per-user roles, no per-user grants. Scales to 10K+ tenants.</p>
+        </div>
+      </div>
+
+      <div class="warning-box anim-fade">
+        <p><strong>Cortex Search limitation:</strong> Row Access Policies do NOT apply to Cortex Search (vector index bypass). If your agent uses document retrieval with tenant-specific access, you need per-tenant search services or pre-filtered source tables. Plan for this in your tool selection.</p>
+      </div>
+
+      <div class="context-box anim-fade">
+        <p><strong>Add to your spec:</strong> Tenant model (single/multi), identity mechanism (session attributes), which tables need RAPs, which columns need masking, and whether Cortex Search needs tenant isolation. These become Phase 1 prerequisites if multi-tenancy is required from launch.</p>
+      </div>
+    </section>
+
+    <!-- Slide: Workshop Exercise -->
+    <section class="slide" id="workshop">
+      <h2>Workshop Exercise</h2>
+      <p style="margin-bottom: 2rem;">Apply the scoping funnel to your own use case. 60 minutes, five activities.</p>
+
+      <div class="card-grid anim-fade" style="grid-template-columns: 1fr 1fr;">
+        <div class="card" style="border-top: 3px solid var(--primary);">
+          <h4>Activity 1: Persona Mapping (10 min)</h4>
+          <p>Identify 2-3 personas. For each: role, data literacy, current workflow, frequency, stakes, success signal. Pick ONE persona for Phase 1.</p>
         </div>
         <div class="card" style="border-top: 3px solid var(--green);">
           <h4>Activity 2: Question Brainstorm (15 min)</h4>
-          <p>For your Phase 1 persona, brainstorm 15-20 questions they would actually ask. Categorize each (lookup, aggregation, reasoning, policy, out-of-scope). Note data sources needed.</p>
+          <p>Brainstorm 15-20 questions your Phase 1 persona would ask. Categorize each (lookup, aggregation, reasoning, policy, out-of-scope).</p>
         </div>
         <div class="card" style="border-top: 3px solid var(--accent);">
-          <h4>Activity 3: Tool Selection (15 min)</h4>
-          <p>Map question categories to Snowflake tools. Check prerequisites for each tool. Identify blockers (missing semantic view, un-indexed documents). Scope Phase 1 tools.</p>
+          <h4>Activity 3: Synthetic Expansion (10 min)</h4>
+          <p>Use AI_COMPLETE to generate new questions per category and variations of existing questions. Grow from 15 to 40+ eval questions.</p>
         </div>
         <div class="card" style="border-top: 3px solid var(--orange);">
-          <h4>Activity 4: Seed Eval Draft (15 min)</h4>
-          <p>Select 10 questions from Activity 2 as your seed eval dataset: 6 happy-path, 2 edge-case, 2 out-of-scope. Draft ground-truth descriptions for each. Define your success threshold.</p>
+          <h4>Activity 4: Eval Dataset + Config (15 min)</h4>
+          <p>Draft ground-truth descriptions, register dataset with SYSTEM$CREATE_EVALUATION_DATASET, configure eval metrics YAML.</p>
+        </div>
+        <div class="card" style="border-top: 3px solid var(--red);">
+          <h4>Activity 5: Multi-Tenancy Assessment (10 min)</h4>
+          <p>Answer: who shares this agent? How many tenants? Which tables/columns need access control? What session attributes identify the user?</p>
         </div>
       </div>
 
       <div class="highlight-box anim-fade">
-        <p><strong>Output:</strong> At the end of this exercise, you have a first-draft agent spec document with: target persona, question taxonomy, tool selection, Phase 1 scope, and a 10-question seed eval dataset. This is enough to start building and iterating immediately.</p>
+        <p><strong>Output:</strong> A first-draft agent spec with: target persona, question taxonomy, 40+ question eval dataset registered natively, multi-tenancy requirements, and Phase 1 scope. This is enough to start building and iterating immediately.</p>
       </div>
     </section>
 
