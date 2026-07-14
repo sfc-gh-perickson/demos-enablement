@@ -1,0 +1,7 @@
+name: scoping_agent_app
+channels:
+  - snowflake
+dependencies:
+  - snowflake-snowpark-python
+  - streamlit
+  - pandas
