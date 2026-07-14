@@ -38,11 +38,28 @@ Each category represents a recurring business question theme these personas woul
 Personas:
 {persona_descriptions}
 
-Return a JSON array of objects with "name" (snake_case, short) and "description" (one sentence).
-Example: [{{"name": "pipeline_health", "description": "Questions about deal pipeline status, velocity, and conversion"}}]"""
-                
-                result = ai_complete_json(session, prompt)
-                if result:
+Return an "intents" array of objects with "name" (snake_case, short) and "description" (one sentence)."""
+                schema = {
+                    "type": "object",
+                    "properties": {
+                        "intents": {
+                            "type": "array",
+                            "items": {
+                                "type": "object",
+                                "properties": {
+                                    "name": {"type": "string"},
+                                    "description": {"type": "string"}
+                                },
+                                "required": ["name", "description"]
+                            }
+                        }
+                    },
+                    "required": ["intents"]
+                }
+                result = ai_complete_json(session, prompt, schema=schema)
+                if isinstance(result, dict) and "intents" in result:
+                    result = result["intents"]
+                if isinstance(result, list) and all(isinstance(item, dict) for item in result):
                     st.session_state.business_intents = result
                     st.rerun()
                 else:
@@ -124,9 +141,93 @@ with col_intent:
 # --- Section C: Question Brainstorming ---
 st.markdown("---")
 st.subheader("C. Seed Questions")
-st.markdown("Brainstorm questions your Phase 1 persona would ask. Tag each with technical type and business intent.")
+st.markdown("Generate an initial set of questions, then review and adjust before expansion.")
 
 intent_options = [i["name"] for i in st.session_state.business_intents] or ["(add intents above)"]
+
+# Auto-generate seed questions
+if intent_options[0] != "(add intents above)":
+    col_gen, col_count = st.columns([2, 1])
+    with col_gen:
+        per_cell = st.number_input("Questions per (type x intent) cell", min_value=1, max_value=5, value=2)
+    with col_count:
+        st.metric("Cells", f"{len(TECHNICAL_TYPES)} x {len(intent_options)} = {len(TECHNICAL_TYPES) * len(intent_options)}")
+
+    if st.button("Generate Seed Questions", type="primary"):
+        session = get_session()
+        personas = st.session_state.get("personas", [])
+        persona_context = "\n".join(
+            f"- {p.get('role', 'User')}: {p.get('responsibility', '')}"
+            for p in personas if p.get("role")
+        ) or "- Business analyst needing data insights"
+
+        generated_seeds = []
+        progress = st.progress(0)
+        total_cells = len(TECHNICAL_TYPES) * len(intent_options)
+        cell_idx = 0
+
+        seed_schema = {
+            "type": "object",
+            "properties": {
+                "questions": {
+                    "type": "array",
+                    "items": {
+                        "type": "object",
+                        "properties": {
+                            "question": {"type": "string"},
+                            "risk": {"type": "string", "enum": ["low", "medium", "high", "very_high", "reputational"]}
+                        },
+                        "required": ["question", "risk"]
+                    }
+                }
+            },
+            "required": ["questions"]
+        }
+
+        type_descriptions = {
+            "lookup": "simple fact retrieval (a specific number, name, or status)",
+            "aggregation": "comparisons, trends, or summaries across multiple records",
+            "reasoning": "multi-step analysis requiring joins or conditional logic",
+            "policy": "policy, process, or definition retrieval",
+            "search": "finding or filtering records by criteria (semantic or keyword search)",
+            "out_of_scope": "questions the agent should refuse (inappropriate, off-topic, or dangerous)"
+        }
+
+        for t in TECHNICAL_TYPES:
+            for intent in intent_options:
+                cell_idx += 1
+                progress.progress(cell_idx / total_cells, text=f"Generating {t} x {intent}...")
+                intent_desc = next((i.get("description", "") for i in st.session_state.business_intents if i["name"] == intent), "")
+                prompt = f"""Generate {per_cell} realistic questions a user would ask an AI data assistant.
+
+Personas:
+{persona_context}
+
+Technical type: {t} — {type_descriptions.get(t, t)}
+Business intent: {intent} — {intent_desc}
+
+Each question should be specific and natural (like a real user would type it).
+Assign a risk level based on how costly a wrong answer would be.
+Return a "questions" array of objects with "question" and "risk" keys."""
+
+                result = ai_complete_json(session, prompt, schema=seed_schema)
+                if result and "questions" in result:
+                    for q in result["questions"][:per_cell]:
+                        generated_seeds.append({
+                            "question": q["question"],
+                            "technical_type": t,
+                            "business_intent": intent,
+                            "risk": q.get("risk", "medium"),
+                        })
+
+        progress.empty()
+        if generated_seeds:
+            st.session_state.seed_questions = generated_seeds
+            st.rerun()
+
+    if st.session_state.get("seed_questions"):
+        st.caption("Review the generated questions below — edit, delete, or add rows as needed.")
+
 
 # Initialize with example data if empty
 if not st.session_state.seed_questions:

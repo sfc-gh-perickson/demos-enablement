@@ -95,11 +95,21 @@ Existing questions in this category:
 {existing_str}
 
 Generate questions that are DISTINCT from existing ones. Cover different metrics, time periods, or dimensions.
-Return ONLY a JSON array of strings."""
+Return a "questions" array of strings."""
 
-        result = ai_complete_json(session, prompt)
-        if result and isinstance(result, list):
-            for q in result[:deficit]:
+        questions_schema = {
+            "type": "object",
+            "properties": {
+                "questions": {
+                    "type": "array",
+                    "items": {"type": "string"}
+                }
+            },
+            "required": ["questions"]
+        }
+        result = ai_complete_json(session, prompt, schema=questions_schema)
+        if result and isinstance(result, dict) and "questions" in result:
+            for q in result["questions"][:deficit]:
                 generated.append({
                     "question": q,
                     "technical_type": t,
@@ -114,11 +124,21 @@ Return ONLY a JSON array of strings."""
     for q in variation_source:
         prompt = f"""Rephrase this question 2 different ways with different wording but same meaning.
 Original: {q['question']}
-Return ONLY a JSON array of 2 strings."""
+Return a "questions" array of 2 strings."""
         
-        result = ai_complete_json(session, prompt)
-        if result and isinstance(result, list):
-            for v in result[:2]:
+        variations_schema = {
+            "type": "object",
+            "properties": {
+                "questions": {
+                    "type": "array",
+                    "items": {"type": "string"}
+                }
+            },
+            "required": ["questions"]
+        }
+        result = ai_complete_json(session, prompt, schema=variations_schema)
+        if result and isinstance(result, dict) and "questions" in result:
+            for v in result["questions"][:2]:
                 generated.append({
                     "question": v,
                     "technical_type": q["technical_type"],

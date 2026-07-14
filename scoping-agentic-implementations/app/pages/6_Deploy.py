@@ -51,7 +51,7 @@ def build_agent_ddl():
     
     ddl = f"""CREATE OR REPLACE CORTEX AGENT {agent_name}
   COMMENT = 'Phase 1: {phase1.get("role", "business user")} assistant'
-  MODEL = 'claude-sonnet'
+  MODEL = 'claude-sonnet-4-5'
   TOOLS = (
 {tools_block}
   )

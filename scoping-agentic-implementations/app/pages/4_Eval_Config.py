@@ -50,7 +50,7 @@ Write 2-3 sentences describing:
 
 Return ONLY the description text."""
 
-        gt_text = ai_complete(session, prompt, model="claude-haiku")
+        gt_text = ai_complete(session, prompt, model="claude-haiku-4-5")
         
         eval_dataset.append({
             "input_query": q["question"],
@@ -145,23 +145,25 @@ Return ONLY the prompt text, no wrapping."""
             
             with st.spinner("Generating scoring prompt..."):
                 cm_prompt = ai_complete(session, gen_prompt)
-            st.session_state._generated_prompt = cm_prompt
+            st.session_state.cm_prompt_area = cm_prompt
+            st.rerun()
         
-        # Show generated or manual prompt
-        prompt_value = st.session_state.get("_generated_prompt", "")
         cm_prompt_final = st.text_area(
-            "Scoring prompt (edit as needed)", value=prompt_value, height=200, key="cm_prompt_area",
+            "Scoring prompt (edit as needed)", height=200, key="cm_prompt_area",
             placeholder="Evaluate whether the response...\n\nUser query: {{input}}\nAgent response: {{output}}\n..."
         )
         
-        if st.button("Add Metric") and cm_name and cm_prompt_final:
+        def _add_metric():
             st.session_state.custom_metrics.append({
-                "name": cm_name,
-                "description": cm_description,
-                "prompt": cm_prompt_final,
+                "name": st.session_state.cm_name,
+                "description": st.session_state.cm_desc,
+                "prompt": st.session_state.cm_prompt_area,
             })
-            st.session_state._generated_prompt = ""
-            st.rerun()
+            st.session_state.cm_prompt_area = ""
+            st.session_state.cm_name = ""
+            st.session_state.cm_desc = ""
+
+        st.button("Add Metric", on_click=_add_metric, disabled=not (cm_name and cm_prompt_final))
     
     # Display existing custom metrics
     if st.session_state.custom_metrics:
@@ -176,39 +178,49 @@ Return ONLY the prompt text, no wrapping."""
     # --- Build YAML ---
     st.markdown("---")
     st.subheader("Eval Config Preview")
-    
-    metrics_block = ""
+
+    def _indent_prompt(text, spaces=6):
+        """Indent each line of a prompt for YAML block scalar."""
+        lines = text.rstrip().split("\n")
+        return "\n".join((" " * spaces) + line if line.strip() else "" for line in lines)
+
+    metrics_lines = []
     if use_correctness:
-        metrics_block += '  - "answer_correctness"\n'
+        metrics_lines.append('  - "answer_correctness"')
     if use_consistency:
-        metrics_block += '  - "logical_consistency"\n'
+        metrics_lines.append('  - "logical_consistency"')
     if use_tool_selection:
-        metrics_block += """  - name: "tool_selection"
+        metrics_lines.append("""  - name: "tool_selection"
     score_ranges:
       min_score: [1, 3]
       median_score: [4, 6]
       max_score: [7, 10]
     prompt: |
       Evaluate whether the agent selected the correct tool(s) for the user's query.
+
       User query: {{input}}
       Tools used: {{tool_info}}
       Expected behavior: {{ground_truth}}
       Agent response: {{output}}
-      Rate 1-10: 1-3=wrong tool, 4-6=partially correct, 7-10=optimal.
-      For out-of-scope questions, 7-10 only if agent refused without calling tools.
-"""
-    
+
+      Rate from 1-10:
+      1-3 = Wrong tool selected or unnecessary tool calls
+      4-6 = Partially correct (right primary tool but missed secondary, or redundant calls)
+      7-10 = Optimal tool selection for the query intent
+
+      For out-of-scope questions, score 7-10 only if the agent refused without calling tools.""")
+
     for cm in st.session_state.custom_metrics:
-        # Indent the prompt for YAML block scalar
-        indented_prompt = "\n".join(f"      {line}" for line in cm["prompt"].split("\n"))
-        metrics_block += f"""  - name: "{cm['name']}"
+        prompt_block = _indent_prompt(cm["prompt"])
+        metrics_lines.append(f"""  - name: "{cm['name']}"
     score_ranges:
       min_score: [1, 3]
       median_score: [4, 6]
       max_score: [7, 10]
     prompt: |
-{indented_prompt}
-"""
+{prompt_block}""")
+
+    metrics_block = "\n".join(metrics_lines)
 
     yaml_content = f"""evaluation:
   agent_params:
@@ -221,7 +233,8 @@ Return ONLY the prompt text, no wrapping."""
     dataset_name: "SCOPING_EVAL_DATASET"
 
 metrics:
-{metrics_block}"""
+{metrics_block}
+"""
 
     st.session_state.eval_config_yaml = yaml_content
     st.code(yaml_content, language="yaml")
