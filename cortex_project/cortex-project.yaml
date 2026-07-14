@@ -1,5 +1,0 @@
-version: 1
-artifacts:
-  - path: evaluations/lab/cmo_assistant.agent.yaml
-    type: cortex_agent
-    targets: {}
