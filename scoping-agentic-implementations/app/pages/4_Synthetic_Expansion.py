@@ -85,11 +85,20 @@ if st.button("Expand to Target", type="primary"):
         
         intent_desc = next((i.get("description", "") for i in st.session_state.business_intents if i["name"] == intent), "")
         
+        # Optional schema context from data sources
+        data_sources = st.session_state.get("data_sources", {})
+        schema_hint = ""
+        sv_list = data_sources.get("semantic_views", [])
+        if sv_list:
+            metrics = [m["name"] for sv in sv_list for m in sv.get("metrics", [])]
+            dims = [d["name"] for sv in sv_list for d in sv.get("dimensions", [])]
+            schema_hint = f"\nAvailable metrics: {', '.join(metrics[:20])}\nAvailable dimensions: {', '.join(dims[:20])}\nUse these real field names in your generated questions."
+        
         prompt = f"""Generate {min(deficit, 5)} questions for an AI agent evaluation dataset.
 
 Persona: {persona_desc}
 Technical type: {t} ({"simple fact retrieval" if t == "lookup" else "comparisons/trends" if t == "aggregation" else "multi-step reasoning" if t == "reasoning" else "policy/process retrieval" if t == "policy" else "agent should refuse"})
-Business intent: {intent} ({intent_desc})
+Business intent: {intent} ({intent_desc}){schema_hint}
 
 Existing questions in this category:
 {existing_str}

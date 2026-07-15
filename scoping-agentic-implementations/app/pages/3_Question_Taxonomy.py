@@ -32,11 +32,25 @@ with col1:
                     f"Asks about: {p.get('current_workflow', '')}. Stakes: {p.get('stakes', '')}"
                     for p in personas if p.get("role")
                 )
+                # Build optional data source context
+                data_sources = st.session_state.get("data_sources", {})
+                schema_context = ""
+                sv_list = data_sources.get("semantic_views", [])
+                if sv_list:
+                    metrics_str = ", ".join(m["name"] for sv in sv_list for m in sv.get("metrics", []))[:500]
+                    dims_str = ", ".join(d["name"] for sv in sv_list for d in sv.get("dimensions", []))[:500]
+                    schema_context = f"\n\nAvailable data (from semantic views):\n- Metrics: {metrics_str}\n- Dimensions: {dims_str}"
+                
+                search_services = data_sources.get("search_services", [])
+                if search_services:
+                    ss_names = ", ".join(s["name"] for s in search_services)
+                    schema_context += f"\n- Document search services: {ss_names}"
+
                 prompt = f"""Based on these personas for an AI data assistant, suggest 6-8 business intent categories.
 Each category represents a recurring business question theme these personas would ask.
 
 Personas:
-{persona_descriptions}
+{persona_descriptions}{schema_context}
 
 Return an "intents" array of objects with "name" (snake_case, short) and "description" (one sentence)."""
                 schema = {
@@ -145,15 +159,16 @@ st.markdown("Generate an initial set of questions, then review and adjust before
 
 intent_options = [i["name"] for i in st.session_state.business_intents] or ["(add intents above)"]
 
-# Auto-generate seed questions
+# Auto-generate seed questions respecting distribution
 if intent_options[0] != "(add intents above)":
     col_gen, col_count = st.columns([2, 1])
     with col_gen:
-        per_cell = st.number_input("Questions per (type x intent) cell", min_value=1, max_value=5, value=2)
+        total_seed_target = st.number_input("Total seed questions to generate", min_value=10, max_value=100, value=20, step=5)
     with col_count:
         st.metric("Cells", f"{len(TECHNICAL_TYPES)} x {len(intent_options)} = {len(TECHNICAL_TYPES) * len(intent_options)}")
 
     if st.button("Generate Seed Questions", type="primary"):
+        import math
         session = get_session()
         personas = st.session_state.get("personas", [])
         persona_context = "\n".join(
@@ -161,10 +176,22 @@ if intent_options[0] != "(add intents above)":
             for p in personas if p.get("role")
         ) or "- Business analyst needing data insights"
 
+        # Calculate per-cell targets from distribution percentages
+        type_dist_local = st.session_state.get("type_distribution", {})
+        intent_dist_local = st.session_state.get("intent_distribution", {})
+        
+        cell_targets = {}
+        for t in TECHNICAL_TYPES:
+            t_pct = type_dist_local.get(t, 0) / 100.0
+            for intent in intent_options:
+                i_pct = intent_dist_local.get(intent, 0) / 100.0
+                target = max(1, math.ceil(total_seed_target * t_pct * i_pct))
+                cell_targets[(t, intent)] = target
+
         generated_seeds = []
         progress = st.progress(0)
-        total_cells = len(TECHNICAL_TYPES) * len(intent_options)
-        cell_idx = 0
+        cells_to_generate = [(k, v) for k, v in cell_targets.items() if v > 0]
+        total_cells = len(cells_to_generate)
 
         seed_schema = {
             "type": "object",
@@ -193,12 +220,10 @@ if intent_options[0] != "(add intents above)":
             "out_of_scope": "questions the agent should refuse (inappropriate, off-topic, or dangerous)"
         }
 
-        for t in TECHNICAL_TYPES:
-            for intent in intent_options:
-                cell_idx += 1
-                progress.progress(cell_idx / total_cells, text=f"Generating {t} x {intent}...")
-                intent_desc = next((i.get("description", "") for i in st.session_state.business_intents if i["name"] == intent), "")
-                prompt = f"""Generate {per_cell} realistic questions a user would ask an AI data assistant.
+        for cell_idx, ((t, intent), num_questions) in enumerate(cells_to_generate):
+            progress.progress((cell_idx + 1) / total_cells, text=f"Generating {t} x {intent} ({num_questions} questions)...")
+            intent_desc = next((i.get("description", "") for i in st.session_state.business_intents if i["name"] == intent), "")
+            prompt = f"""Generate {num_questions} realistic questions a user would ask an AI data assistant.
 
 Personas:
 {persona_context}
@@ -210,15 +235,15 @@ Each question should be specific and natural (like a real user would type it).
 Assign a risk level based on how costly a wrong answer would be.
 Return a "questions" array of objects with "question" and "risk" keys."""
 
-                result = ai_complete_json(session, prompt, schema=seed_schema)
-                if result and "questions" in result:
-                    for q in result["questions"][:per_cell]:
-                        generated_seeds.append({
-                            "question": q["question"],
-                            "technical_type": t,
-                            "business_intent": intent,
-                            "risk": q.get("risk", "medium"),
-                        })
+            result = ai_complete_json(session, prompt, schema=seed_schema)
+            if result and "questions" in result:
+                for q in result["questions"][:num_questions]:
+                    generated_seeds.append({
+                        "question": q["question"],
+                        "technical_type": t,
+                        "business_intent": intent,
+                        "risk": q.get("risk", "medium"),
+                    })
 
         progress.empty()
         if generated_seeds:

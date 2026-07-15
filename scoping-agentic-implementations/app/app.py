@@ -11,6 +11,7 @@ st.set_page_config(
 defaults = {
     "personas": [],
     "phase1_persona_idx": 0,
+    "data_sources": {},
     "business_intents": [],
     "type_distribution": {
         "lookup": 40,
@@ -40,8 +41,12 @@ personas = st.session_state.personas
 intents = st.session_state.business_intents
 seed_qs = st.session_state.seed_questions
 expanded_qs = st.session_state.expanded_questions
+data_sources = st.session_state.data_sources
 
 st.sidebar.metric("Personas", len(personas))
+
+ds_status = "configured" if data_sources.get("semantic_views") or data_sources.get("tables") else "skipped"
+st.sidebar.metric("Data Sources", ds_status)
 st.sidebar.metric("Business Intents", len(intents))
 st.sidebar.metric("Seed Questions", len(seed_qs))
 st.sidebar.metric("Expanded Dataset", len(expanded_qs) if expanded_qs else "—")
@@ -58,11 +63,12 @@ st.markdown("""
 This app guides you through the scoping process for a Cortex Agent:
 
 1. **Personas** — define who will use the agent
-2. **Taxonomy** — categorize questions by type and business intent, set distribution targets
-3. **Expansion** — synthetically grow the dataset guided by your distribution
-4. **Eval Config** — generate ground truth and configure evaluation
-5. **Multi-Tenancy** — scope access control requirements
-6. **Deploy** — create the agent, register eval dataset, export to git
+2. **Data Sources** _(optional)_ — discover semantic views, tables, and search services
+3. **Taxonomy** — categorize questions by type and business intent, set distribution targets
+4. **Expansion** — synthetically grow the dataset guided by your distribution
+5. **Eval Config** — generate ground truth and configure evaluation metrics
+6. **Multi-Tenancy** — scope access control requirements
+7. **Deploy** — create the agent, register eval dataset, export to git
 
 Use the sidebar to navigate between steps.
 """)

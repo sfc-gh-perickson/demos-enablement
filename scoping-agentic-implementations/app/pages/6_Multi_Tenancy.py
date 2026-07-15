@@ -46,9 +46,16 @@ session_attrs = st.text_area(
 st.markdown("---")
 st.subheader("Data Access Policies")
 
+# Pre-populate from discovered data sources if available
+data_sources = st.session_state.get("data_sources", {})
+discovered_tables = data_sources.get("tables", [])
+default_rap = st.session_state.tenancy_spec.get("rap_tables", "")
+if not default_rap and discovered_tables:
+    default_rap = "\n".join(t["name"] for t in discovered_tables)
+
 rap_tables = st.text_area(
     "Tables needing Row Access Policies (one per line, with filter column)",
-    value=st.session_state.tenancy_spec.get("rap_tables", ""),
+    value=default_rap,
     placeholder="SALES_DATA (filter by REGION)\nCUSTOMERS (filter by OWNER_TENANT_ID)",
 )
 

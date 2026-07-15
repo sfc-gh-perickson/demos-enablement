@@ -14,49 +14,102 @@ def build_agent_ddl():
     phase1 = personas[phase1_idx] if personas else {}
     intents = st.session_state.get("business_intents", [])
     type_dist = st.session_state.get("type_distribution", {})
-    tenancy = st.session_state.get("tenancy_spec", {})
-    
-    # Build instructions from persona + intents + scope
-    persona_desc = f"You are an AI assistant for {phase1.get('role', 'business users')}."
+    data_sources = st.session_state.get("data_sources", {})
+
+    # Build instructions
+    response_instr = f"You are an AI assistant for {phase1.get('role', 'business users')}."
     if phase1.get("responsibility"):
-        persona_desc += f" They are responsible for {phase1['responsibility']}."
+        response_instr += f" They are responsible for {phase1['responsibility']}."
     if phase1.get("data_literacy"):
-        persona_desc += f" Their data literacy: {phase1['data_literacy']}."
-    
-    intent_scope = ""
+        response_instr += f" Their data literacy: {phase1['data_literacy']}."
+    response_instr += " Lead with the direct answer. Include relevant context. Note any caveats."
+    response_instr += " Do NOT generate content (emails, proposals). Do NOT provide competitor information."
+    response_instr += " If asked something outside your scope, politely explain your boundaries."
+
+    orchestration_instr = ""
     if intents:
         intent_names = [i["name"] for i in intents]
-        intent_scope = f"\n\nYou help with these business areas: {', '.join(intent_names)}."
-    
-    out_of_scope = "\n\nBOUNDARIES:\n- Do NOT generate content (emails, proposals, presentations)\n- Do NOT provide competitor information\n- Do NOT modify data or take actions in external systems\n- If asked something outside your scope, politely explain your boundaries"
-    
-    response_format = "\n\nRESPONSE FORMAT:\n- Lead with the direct answer\n- Include relevant context (time period, filters applied)\n- Note any caveats or data limitations"
-    
-    instructions = persona_desc + intent_scope + out_of_scope + response_format
-    
-    # Determine tools from type distribution
-    tools_comment = "-- Tools: configure based on your data sources\n"
+        orchestration_instr = f"You help with these business areas: {', '.join(intent_names)}."
+
+    # Determine tools from distribution + discovered data sources
     has_structured = type_dist.get("lookup", 0) + type_dist.get("aggregation", 0) > 0
     has_unstructured = type_dist.get("policy", 0) > 0
+    sv_list = data_sources.get("semantic_views", [])
+    search_list = data_sources.get("search_services", [])
+
+    # Build YAML specification
+    spec_lines = []
+    spec_lines.append("models:")
+    spec_lines.append("  orchestration: claude-sonnet-4-5")
+    spec_lines.append("")
+    spec_lines.append("orchestration:")
+    spec_lines.append("  budget:")
+    spec_lines.append("    seconds: 30")
+    spec_lines.append("    tokens: 16000")
+    spec_lines.append("")
+    spec_lines.append("instructions:")
+
+    # Escape quotes for YAML string values
+    escaped_response = response_instr.replace('"', '\\"')
+    spec_lines.append(f'  response: "{escaped_response}"')
+    if orchestration_instr:
+        escaped_orch = orchestration_instr.replace('"', '\\"')
+        spec_lines.append(f'  orchestration: "{escaped_orch}"')
+
+    # Tools — include tools when a resource is specified (manual or discovered)
+    sv_resource = st.session_state.get("_sv_resource", "")
+    ss_resource = st.session_state.get("_ss_resource", "")
     
-    tools_lines = []
-    if has_structured:
-        tools_lines.append("    -- SEMANTIC_VIEW = 'YOUR_DB.YOUR_SCHEMA.YOUR_SEMANTIC_VIEW'")
-    if has_unstructured:
-        tools_lines.append("    -- CORTEX_SEARCH = 'YOUR_DB.YOUR_SCHEMA.YOUR_SEARCH_SERVICE'")
+    tools_added = []
+    if sv_resource:
+        tools_added.append("Analyst1")
+    if ss_resource:
+        tools_added.append("Search1")
     
-    tools_block = "\n".join(tools_lines) if tools_lines else "    -- (add tools here)"
+    if tools_added:
+        spec_lines.append("")
+        spec_lines.append("tools:")
+        if "Analyst1" in tools_added:
+            spec_lines.append("  - tool_spec:")
+            spec_lines.append('      type: "cortex_analyst_text_to_sql"')
+            spec_lines.append('      name: "Analyst1"')
+            spec_lines.append('      description: "Queries structured data using natural language"')
+        if "Search1" in tools_added:
+            spec_lines.append("  - tool_spec:")
+            spec_lines.append('      type: "cortex_search"')
+            spec_lines.append('      name: "Search1"')
+            spec_lines.append('      description: "Searches documents and policy content"')
+
+        spec_lines.append("")
+        spec_lines.append("tool_resources:")
+        if "Analyst1" in tools_added:
+            spec_lines.append("  Analyst1:")
+            spec_lines.append(f'    semantic_view: "{sv_resource}"')
+        if "Search1" in tools_added:
+            spec_lines.append("  Search1:")
+            spec_lines.append(f'    name: "{ss_resource}"')
+            spec_lines.append('    max_results: "5"')
+
+    spec_yaml = "\n".join(spec_lines)
+    agent_name = st.session_state.get("eval_agent_name", "MY_AGENT")
+    agent_db = st.session_state.get("agent_db", "")
+    agent_schema = st.session_state.get("agent_schema", "")
     
-    agent_name = st.session_state.get("eval_agent_name", "YOUR_AGENT_NAME")
+    # Use fully qualified name if db/schema are set
+    if agent_db and agent_schema:
+        fq_name = f"{agent_db}.{agent_schema}.{agent_name}"
+    else:
+        fq_name = agent_name
     
-    ddl = f"""CREATE OR REPLACE CORTEX AGENT {agent_name}
-  COMMENT = 'Phase 1: {phase1.get("role", "business user")} assistant'
-  MODEL = 'claude-sonnet-4-5'
-  TOOLS = (
-{tools_block}
-  )
-  INSTRUCTIONS = $${instructions}$$;"""
-    
+    comment = f"Phase 1: {phase1.get('role', 'business user')} assistant"
+
+    ddl = f"""CREATE OR REPLACE AGENT {fq_name}
+  COMMENT = '{comment}'
+  FROM SPECIFICATION
+  $$
+{spec_yaml}
+  $$;"""
+
     return ddl
 
 
@@ -145,17 +198,47 @@ with tab_ddl:
     st.subheader("Agent DDL")
     st.markdown("Generated from your personas, intents, and scope boundaries.")
     
+    col_db, col_schema, col_name = st.columns(3)
+    with col_db:
+        agent_db = st.text_input("Database", value=st.session_state.get("data_sources", {}).get("database", ""), key="agent_db", placeholder="MY_DATABASE")
+    with col_schema:
+        agent_schema = st.text_input("Schema", value=st.session_state.get("data_sources", {}).get("schema", "PUBLIC"), key="agent_schema", placeholder="PUBLIC")
+    with col_name:
+        agent_name_input = st.text_input("Agent name", value=st.session_state.get("eval_agent_name", "MY_AGENT"), key="agent_name_input")
+    
+    # Tool resources — manual override or auto-populated from discovery
+    st.markdown("**Tool Resources** (leave blank to omit from spec)")
+    data_sources = st.session_state.get("data_sources", {})
+    sv_default = data_sources.get("semantic_views", [{}])[0].get("fq_name", "") if data_sources.get("semantic_views") else ""
+    ss_default = data_sources.get("search_services", [{}])[0].get("fq_name", "") if data_sources.get("search_services") else ""
+    
+    col_sv, col_ss = st.columns(2)
+    with col_sv:
+        sv_resource = st.text_input("Semantic View (for Cortex Analyst)", value=sv_default, key="sv_resource", placeholder="DB.SCHEMA.MY_SEMANTIC_VIEW")
+    with col_ss:
+        ss_resource = st.text_input("Cortex Search Service", value=ss_default, key="ss_resource", placeholder="DB.SCHEMA.MY_SEARCH_SERVICE")
+    
+    # Store for build_agent_ddl
+    st.session_state.eval_agent_name = agent_name_input
+    st.session_state._sv_resource = sv_resource
+    st.session_state._ss_resource = ss_resource
+    
     ddl = build_agent_ddl()
     edited_ddl = st.text_area("Agent DDL (editable)", value=ddl, height=400, key="ddl_editor")
     st.session_state.agent_ddl = edited_ddl
     
     if st.button("Execute DDL in Snowflake", type="primary"):
-        try:
-            session = get_session()
-            session.sql(edited_ddl).collect()
-            st.success("Agent created successfully!")
-        except Exception as e:
-            st.error(f"Error: {e}")
+        if not agent_db or not agent_schema:
+            st.error("Database and Schema are required to deploy the agent.")
+        else:
+            try:
+                session = get_session()
+                session.sql(f"USE DATABASE {agent_db}").collect()
+                session.sql(f"USE SCHEMA {agent_schema}").collect()
+                session.sql(edited_ddl).collect()
+                st.success(f"Agent `{agent_db}.{agent_schema}.{agent_name_input}` created successfully!")
+            except Exception as e:
+                st.error(f"Error: {e}")
 
 
 # --- Tab 2: Deploy Eval Dataset ---
