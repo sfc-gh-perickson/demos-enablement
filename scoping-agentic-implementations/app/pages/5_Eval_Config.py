@@ -230,7 +230,7 @@ Return ONLY the prompt text, no wrapping."""
     label: "Scoping workshop baseline"
   source_metadata:
     type: "dataset"
-    dataset_name: "SCOPING_EVAL_DATASET"
+    dataset_name: "{agent_name}_EVAL_DATASET"
 
 metrics:
 {metrics_block}

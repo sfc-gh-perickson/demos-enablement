@@ -84,22 +84,28 @@ with col2:
 
 # Display and edit intents
 if st.session_state.business_intents:
-    st.markdown("**Generated intents** (toggle off to remove, edit names below):")
+    st.markdown("**Business intents** — edit names or delete rows:")
     
-    kept_intents = []
-    for i, intent in enumerate(st.session_state.business_intents):
-        col_a, col_b = st.columns([1, 4])
-        with col_a:
-            keep = st.checkbox("Keep", value=True, key=f"keep_intent_{i}")
-        with col_b:
-            name = st.text_input(
-                "Name", value=intent.get("name", ""), key=f"intent_name_{i}", label_visibility="collapsed"
-            )
-            st.caption(intent.get("description", ""))
-        if keep:
-            kept_intents.append({"name": name, "description": intent.get("description", "")})
+    intents_df = pd.DataFrame(st.session_state.business_intents)
+    if "name" not in intents_df.columns:
+        intents_df["name"] = ""
+    if "description" not in intents_df.columns:
+        intents_df["description"] = ""
     
-    st.session_state.business_intents = kept_intents
+    edited_intents = st.data_editor(
+        intents_df[["name", "description"]],
+        column_config={
+            "name": st.column_config.TextColumn("Intent Name", width="medium"),
+            "description": st.column_config.TextColumn("Description", width="large"),
+        },
+        num_rows="dynamic",
+        use_container_width=True,
+        key="intents_editor",
+    )
+    
+    # Store non-empty rows back
+    valid_intents = edited_intents[edited_intents["name"].str.strip() != ""].to_dict("records")
+    st.session_state.business_intents = valid_intents
 
 # Add custom intent
 with st.expander("Add custom intent"):
@@ -185,7 +191,9 @@ if intent_options[0] != "(add intents above)":
             t_pct = type_dist_local.get(t, 0) / 100.0
             for intent in intent_options:
                 i_pct = intent_dist_local.get(intent, 0) / 100.0
-                target = max(1, math.ceil(total_seed_target * t_pct * i_pct))
+                if t_pct == 0 or i_pct == 0:
+                    continue
+                target = max(1, round(total_seed_target * t_pct * i_pct))
                 cell_targets[(t, intent)] = target
 
         generated_seeds = []
@@ -255,7 +263,7 @@ Return a "questions" array of objects with "question" and "risk" keys."""
 
 
 # Initialize with example data if empty
-if not st.session_state.seed_questions:
+if not st.session_state.get("seed_questions"):
     st.session_state.seed_questions = []
 
 # Data editor

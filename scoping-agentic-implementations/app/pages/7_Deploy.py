@@ -40,11 +40,11 @@ def build_agent_ddl():
     # Build YAML specification
     spec_lines = []
     spec_lines.append("models:")
-    spec_lines.append("  orchestration: claude-sonnet-4-5")
+    spec_lines.append("  orchestration: claude-opus-4")
     spec_lines.append("")
     spec_lines.append("orchestration:")
     spec_lines.append("  budget:")
-    spec_lines.append("    seconds: 30")
+    spec_lines.append("    seconds: 600")
     spec_lines.append("    tokens: 16000")
     spec_lines.append("")
     spec_lines.append("instructions:")
@@ -85,6 +85,9 @@ def build_agent_ddl():
         if "Analyst1" in tools_added:
             spec_lines.append("  Analyst1:")
             spec_lines.append(f'    semantic_view: "{sv_resource}"')
+            spec_lines.append('    execution_environment:')
+            spec_lines.append('      type: "warehouse"')
+            spec_lines.append('      warehouse: "' + st.session_state.get('agent_warehouse', 'COMPUTE_WH') + '"')
         if "Search1" in tools_added:
             spec_lines.append("  Search1:")
             spec_lines.append(f'    name: "{ss_resource}"')
@@ -118,8 +121,12 @@ def build_eval_sql():
     if not eval_dataset:
         return "-- No eval dataset generated yet. Complete Step 4 first."
     
+    agent_name = st.session_state.get("eval_agent_name", "MY_AGENT")
+    table_name = f"{agent_name}_EVAL_QUESTIONS"
+    dataset_name = f"{agent_name}_EVAL_DATASET"
+    
     lines = [
-        "CREATE OR REPLACE TABLE EVAL_QUESTIONS (\n    INPUT_QUERY VARCHAR,\n    GROUND_TRUTH VARIANT\n);\n",
+        f"CREATE OR REPLACE TABLE {table_name} (\n    INPUT_QUERY VARCHAR,\n    GROUND_TRUTH VARIANT\n);\n",
     ]
     
     for q in eval_dataset:
@@ -130,14 +137,14 @@ def build_eval_sql():
         }
         gt_json = json.dumps(gt_obj).replace("$$", "$ $")
         query = q["input_query"].replace("$$", "$ $")
-        lines.append(f"INSERT INTO EVAL_QUESTIONS SELECT $${query}$$, PARSE_JSON($${gt_json}$$);")
+        lines.append(f"INSERT INTO {table_name} SELECT $${query}$$, PARSE_JSON($${gt_json}$$);")
     
     lines.append("")
     lines.append("-- Register as evaluation dataset")
-    lines.append("""CALL SYSTEM$CREATE_EVALUATION_DATASET(
+    lines.append(f"""CALL SYSTEM$CREATE_EVALUATION_DATASET(
   'Cortex Agent',
-  'EVAL_QUESTIONS',
-  'SCOPING_EVAL_DATASET',
+  '{table_name}',
+  '{dataset_name}',
   OBJECT_CONSTRUCT('query_text', 'INPUT_QUERY', 'expected_tools', 'GROUND_TRUTH')
 );""")
     
@@ -212,11 +219,13 @@ with tab_ddl:
     sv_default = data_sources.get("semantic_views", [{}])[0].get("fq_name", "") if data_sources.get("semantic_views") else ""
     ss_default = data_sources.get("search_services", [{}])[0].get("fq_name", "") if data_sources.get("search_services") else ""
     
-    col_sv, col_ss = st.columns(2)
+    col_sv, col_ss, col_wh = st.columns(3)
     with col_sv:
         sv_resource = st.text_input("Semantic View (for Cortex Analyst)", value=sv_default, key="sv_resource", placeholder="DB.SCHEMA.MY_SEMANTIC_VIEW")
     with col_ss:
         ss_resource = st.text_input("Cortex Search Service", value=ss_default, key="ss_resource", placeholder="DB.SCHEMA.MY_SEARCH_SERVICE")
+    with col_wh:
+        wh_resource = st.text_input("Warehouse (for Analyst queries)", value="COMPUTE_WH", key="agent_warehouse", placeholder="MY_WAREHOUSE")
     
     # Store for build_agent_ddl
     st.session_state.eval_agent_name = agent_name_input
@@ -224,7 +233,7 @@ with tab_ddl:
     st.session_state._ss_resource = ss_resource
     
     ddl = build_agent_ddl()
-    edited_ddl = st.text_area("Agent DDL (editable)", value=ddl, height=400, key="ddl_editor")
+    edited_ddl = st.text_area("Agent DDL (editable)", value=ddl, height=400)
     st.session_state.agent_ddl = edited_ddl
     
     if st.button("Execute DDL in Snowflake", type="primary"):
@@ -255,29 +264,44 @@ with tab_eval:
             try:
                 session = get_session()
                 
+                agent_name_for_eval = st.session_state.get("eval_agent_name", "MY_AGENT")
+                table_name = f"{agent_name_for_eval}_EVAL_QUESTIONS"
+                dataset_name = f"{agent_name_for_eval}_EVAL_DATASET"
+                
+                # Deduplicate by input_query (keep first occurrence)
+                seen = set()
+                unique_dataset = []
+                for q in eval_dataset:
+                    if q["input_query"] not in seen:
+                        seen.add(q["input_query"])
+                        unique_dataset.append(q)
+                
+                if len(unique_dataset) < len(eval_dataset):
+                    st.info(f"Removed {len(eval_dataset) - len(unique_dataset)} duplicate question(s).")
+                
                 # Create table
-                session.sql("CREATE OR REPLACE TABLE EVAL_QUESTIONS (INPUT_QUERY VARCHAR, GROUND_TRUTH VARIANT)").collect()
+                session.sql(f"CREATE OR REPLACE TABLE {table_name} (INPUT_QUERY VARCHAR, GROUND_TRUTH VARIANT)").collect()
                 
                 # Insert rows
-                for q in eval_dataset:
+                for q in unique_dataset:
                     gt_obj = json.dumps({
                         "ground_truth_output": q["ground_truth_output"],
                         "intent": q["intent"],
                         "process": q["process"],
                     })
                     query = q["input_query"]
-                    session.sql(f"INSERT INTO EVAL_QUESTIONS SELECT $${query}$$, PARSE_JSON($${gt_obj}$$)").collect()
+                    session.sql(f"INSERT INTO {table_name} SELECT $${query}$$, PARSE_JSON($${gt_obj}$$)").collect()
                 
                 # Register dataset
-                session.sql("DROP DATASET IF EXISTS SCOPING_EVAL_DATASET").collect()
-                session.sql("""
+                session.sql(f"DROP DATASET IF EXISTS {dataset_name}").collect()
+                session.sql(f"""
                     CALL SYSTEM$CREATE_EVALUATION_DATASET(
-                      'Cortex Agent', 'EVAL_QUESTIONS', 'SCOPING_EVAL_DATASET',
+                      'Cortex Agent', '{table_name}', '{dataset_name}',
                       OBJECT_CONSTRUCT('query_text', 'INPUT_QUERY', 'expected_tools', 'GROUND_TRUTH')
                     )
                 """).collect()
                 
-                st.success("Eval dataset registered as SCOPING_EVAL_DATASET")
+                st.success(f"Eval dataset registered: {dataset_name} ({len(unique_dataset)} questions)")
             except Exception as e:
                 st.error(f"Error: {e}")
         
