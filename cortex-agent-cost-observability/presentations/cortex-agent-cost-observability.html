@@ -461,40 +461,27 @@
         <li>Does NOT include: data transfer, storage, cloud services, or serverless costs</li>
       </ul>
 
-      <h3>The Attribution Challenge</h3>
-      <p>Agent execution is a <strong>black box</strong> -- there is no direct join key between <code>CORTEX_AGENT_USAGE_HISTORY.REQUEST_ID</code> (agent UUID) and <code>QUERY_ATTRIBUTION_HISTORY.QUERY_ID</code> (Snowflake query UUID). You cannot inject <code>QUERY_TAG</code> into the agent's internally-generated queries.</p>
+      <h3>The Join Key: QUERY_TAG</h3>
+      <p>The agent <strong>automatically</strong> tags its generated SQL queries with <code>QUERY_TAG = 'cortex-agent-{REQUEST_ID}'</code>. This enables a precise join between agent requests and warehouse compute -- no manual tagging required.</p>
 
-      <h4>Approach: User + Time Window Correlation</h4>
-      <p>Correlate by matching the same <code>USER_NAME</code> and queries that ran during the agent's execution window (<code>START_TIME</code> to <code>END_TIME</code>).</p>
-
-      <pre><span class="keyword">WITH</span> agent_requests <span class="keyword">AS</span> (
-    <span class="keyword">SELECT</span> REQUEST_ID, USER_NAME, AGENT_NAME, START_TIME, END_TIME,
-           TOKEN_CREDITS,
-           <span class="function">COALESCE</span>(METADATA:<span class="string">ai_functions_credits</span>::NUMBER, <span class="number">0</span>) <span class="keyword">AS</span> ai_fn_credits
-    <span class="keyword">FROM</span> SNOWFLAKE.ACCOUNT_USAGE.CORTEX_AGENT_USAGE_HISTORY
-    <span class="keyword">WHERE</span> START_TIME >= <span class="function">DATEADD</span>(<span class="string">'day'</span>, <span class="number">-30</span>, <span class="function">CURRENT_TIMESTAMP</span>())
-)
-<span class="keyword">SELECT</span>
-    a.REQUEST_ID, a.USER_NAME, a.AGENT_NAME,
-    a.TOKEN_CREDITS <span class="keyword">AS</span> ai_token_credits,
-    a.ai_fn_credits,
+      <h4>Query: Per-Request Warehouse Compute</h4>
+      <pre><span class="keyword">SELECT</span>
+    a.REQUEST_ID,
+    a.AGENT_NAME,
     <span class="function">COALESCE</span>(<span class="function">SUM</span>(q.CREDITS_ATTRIBUTED_COMPUTE), <span class="number">0</span>) <span class="keyword">AS</span> warehouse_credits
-<span class="keyword">FROM</span> agent_requests a
+<span class="keyword">FROM</span> SNOWFLAKE.ACCOUNT_USAGE.CORTEX_AGENT_USAGE_HISTORY a
 <span class="keyword">LEFT JOIN</span> SNOWFLAKE.ACCOUNT_USAGE.QUERY_ATTRIBUTION_HISTORY q
-    <span class="keyword">ON</span> q.USER_NAME = a.USER_NAME
-    <span class="keyword">AND</span> q.START_TIME <span class="keyword">BETWEEN</span> a.START_TIME <span class="keyword">AND</span> <span class="function">DATEADD</span>(<span class="string">'second'</span>, <span class="number">10</span>, a.END_TIME)
-<span class="keyword">GROUP BY</span> <span class="number">1</span>, <span class="number">2</span>, <span class="number">3</span>, <span class="number">4</span>, <span class="number">5</span>
+    <span class="keyword">ON</span> q.QUERY_TAG = <span class="string">'cortex-agent-'</span> || a.REQUEST_ID
+<span class="keyword">WHERE</span> a.START_TIME >= <span class="function">DATEADD</span>(<span class="string">'day'</span>, <span class="number">-30</span>, <span class="function">CURRENT_TIMESTAMP</span>())
+<span class="keyword">GROUP BY</span> <span class="number">1</span>, <span class="number">2</span>
 <span class="keyword">ORDER BY</span> warehouse_credits <span class="keyword">DESC</span>;</pre>
 
-      <h4>Limitations of This Approach</h4>
+      <h4>Caveats</h4>
       <ul>
-        <li><span class="badge-orange">Approximation</span> Concurrent queries from the same user during the window will be incorrectly attributed</li>
-        <li>Queries &lt; ~100ms don't appear in <code>QUERY_ATTRIBUTION_HISTORY</code> (many agent queries are fast)</li>
-        <li>Up to 8-hour latency before data appears</li>
+        <li>Queries &lt; ~100ms don't appear in <code>QUERY_ATTRIBUTION_HISTORY</code> (show as 0 credits)</li>
+        <li>Up to <strong>8-hour latency</strong> before attribution data appears</li>
+        <li>The <code>QUERY_TAG</code> pattern <code>cortex-agent-{uuid}</code> is set automatically by the agent runtime</li>
       </ul>
-
-      <h4>Mitigation: Dedicated Warehouse</h4>
-      <p>Assign each agent a <strong>dedicated warehouse</strong>. All compute on that warehouse is then attributable to that agent, eliminating false attribution from concurrent workloads.</p>
 
       <p><a href="https://docs.snowflake.com/en/sql-reference/account-usage/query_attribution_history" class="badge-blue">QUERY_ATTRIBUTION_HISTORY Docs</a></p>
     </section>
@@ -515,41 +502,34 @@
       </div>
 
       <table>
-        <thead><tr><th>Component</th><th>Precision</th><th>Why</th></tr></thead>
+        <thead><tr><th>Component</th><th>Precision</th><th>How</th></tr></thead>
         <tbody>
           <tr><td>Token credits</td><td><span class="badge-green">Precise</span></td><td>Directly in <code>CORTEX_AGENT_USAGE_HISTORY.TOKEN_CREDITS</code></td></tr>
           <tr><td>AI function credits</td><td><span class="badge-green">Precise</span></td><td>Directly in <code>METADATA:ai_functions_credits</code></td></tr>
-          <tr><td>Warehouse compute</td><td><span class="badge-orange">Estimated</span></td><td>No join key exists; agent is a black box; requires time-window correlation</td></tr>
+          <tr><td>Warehouse compute</td><td><span class="badge-green">Precise</span></td><td>Join via <code>QUERY_TAG = 'cortex-agent-' || REQUEST_ID</code></td></tr>
         </tbody>
       </table>
 
-      <h3>Combined Query (User + Time Window Approach)</h3>
-      <pre><span class="keyword">WITH</span> agent_requests <span class="keyword">AS</span> (
-    <span class="keyword">SELECT</span> REQUEST_ID, USER_NAME, AGENT_NAME,
-           START_TIME, END_TIME, TOKEN_CREDITS,
-           <span class="function">COALESCE</span>(METADATA:<span class="string">ai_functions_credits</span>::NUMBER, <span class="number">0</span>) <span class="keyword">AS</span> ai_fn_credits
-    <span class="keyword">FROM</span> SNOWFLAKE.ACCOUNT_USAGE.CORTEX_AGENT_USAGE_HISTORY
-    <span class="keyword">WHERE</span> START_TIME >= <span class="function">DATEADD</span>(<span class="string">'day'</span>, <span class="number">-30</span>, <span class="function">CURRENT_TIMESTAMP</span>())
-)
-<span class="keyword">SELECT</span>
+      <h3>Combined Query (via QUERY_TAG join)</h3>
+      <pre><span class="keyword">SELECT</span>
     a.REQUEST_ID,
     a.USER_NAME,
     a.AGENT_NAME,
     a.TOKEN_CREDITS <span class="keyword">AS</span> ai_token_credits,
-    a.ai_fn_credits,
+    <span class="function">COALESCE</span>(a.METADATA:<span class="string">ai_functions_credits</span>::NUMBER, <span class="number">0</span>) <span class="keyword">AS</span> ai_fn_credits,
     <span class="function">COALESCE</span>(<span class="function">SUM</span>(q.CREDITS_ATTRIBUTED_COMPUTE), <span class="number">0</span>) <span class="keyword">AS</span> warehouse_credits,
-    a.TOKEN_CREDITS + a.ai_fn_credits
-        + <span class="function">COALESCE</span>(<span class="function">SUM</span>(q.CREDITS_ATTRIBUTED_COMPUTE), <span class="number">0</span>) <span class="keyword">AS</span> total_estimated_credits
-<span class="keyword">FROM</span> agent_requests a
+    a.TOKEN_CREDITS
+        + <span class="function">COALESCE</span>(a.METADATA:<span class="string">ai_functions_credits</span>::NUMBER, <span class="number">0</span>)
+        + <span class="function">COALESCE</span>(<span class="function">SUM</span>(q.CREDITS_ATTRIBUTED_COMPUTE), <span class="number">0</span>) <span class="keyword">AS</span> total_credits
+<span class="keyword">FROM</span> SNOWFLAKE.ACCOUNT_USAGE.CORTEX_AGENT_USAGE_HISTORY a
 <span class="keyword">LEFT JOIN</span> SNOWFLAKE.ACCOUNT_USAGE.QUERY_ATTRIBUTION_HISTORY q
-    <span class="keyword">ON</span> q.USER_NAME = a.USER_NAME
-    <span class="keyword">AND</span> q.START_TIME <span class="keyword">BETWEEN</span> a.START_TIME
-        <span class="keyword">AND</span> <span class="function">DATEADD</span>(<span class="string">'second'</span>, <span class="number">10</span>, a.END_TIME)
+    <span class="keyword">ON</span> q.QUERY_TAG = <span class="string">'cortex-agent-'</span> || a.REQUEST_ID
+<span class="keyword">WHERE</span> a.START_TIME >= <span class="function">DATEADD</span>(<span class="string">'day'</span>, <span class="number">-30</span>, <span class="function">CURRENT_TIMESTAMP</span>())
 <span class="keyword">GROUP BY</span> <span class="number">1</span>, <span class="number">2</span>, <span class="number">3</span>, <span class="number">4</span>, <span class="number">5</span>
-<span class="keyword">ORDER BY</span> total_estimated_credits <span class="keyword">DESC</span>
+<span class="keyword">ORDER BY</span> total_credits <span class="keyword">DESC</span>
 <span class="keyword">LIMIT</span> <span class="number">10</span>;</pre>
 
-      <p><strong>Note:</strong> <code>warehouse_credits</code> may be 0 for requests where the generated SQL runs in &lt; 100ms (too short for <code>QUERY_ATTRIBUTION_HISTORY</code> to capture).</p>
+      <p><strong>Note:</strong> <code>warehouse_credits</code> = 0 means the generated SQL ran in &lt; ~100ms (below the attribution tracking threshold). The join itself is precise.</p>
     </section>
 
     <!-- Per-User Attribution -->
