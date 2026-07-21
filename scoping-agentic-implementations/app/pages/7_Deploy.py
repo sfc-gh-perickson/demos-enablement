@@ -40,7 +40,7 @@ def build_agent_ddl():
     # Build YAML specification
     spec_lines = []
     spec_lines.append("models:")
-    spec_lines.append("  orchestration: claude-opus-4")
+    spec_lines.append("  orchestration: claude-opus-4-5")
     spec_lines.append("")
     spec_lines.append("orchestration:")
     spec_lines.append("  budget:")

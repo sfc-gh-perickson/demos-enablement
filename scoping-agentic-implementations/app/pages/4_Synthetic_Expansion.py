@@ -198,6 +198,12 @@ if st.button("Expand to Target", type="primary"):
     progress = st.progress(0)
     total_steps = len(cells_to_fill) + 2
 
+    questions_schema = {
+        "type": "object",
+        "properties": {"questions": {"type": "array", "items": {"type": "string"}}},
+        "required": ["questions"]
+    }
+
     # --- Generate ANSWERABLE questions ---
     phase1_persona = st.session_state.get("personas", [{}])[st.session_state.get("phase1_persona_idx", 0)]
     persona_desc = f"{phase1_persona.get('role', 'business user')} who {phase1_persona.get('responsibility', 'needs data insights')}"
@@ -238,11 +244,6 @@ Existing questions in this category:
 Generate questions that are DISTINCT from existing ones.
 Return a "questions" array of strings."""
 
-        questions_schema = {
-            "type": "object",
-            "properties": {"questions": {"type": "array", "items": {"type": "string"}}},
-            "required": ["questions"]
-        }
         result = ai_complete_json(session, prompt, schema=questions_schema)
         if result and isinstance(result, dict) and "questions" in result:
             for q in result["questions"][:deficit]:

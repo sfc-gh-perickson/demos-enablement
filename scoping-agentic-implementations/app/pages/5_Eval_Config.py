@@ -32,25 +32,49 @@ if st.button("Generate Ground Truth", type="primary"):
     eval_dataset = []
     progress = st.progress(0)
     
+    # Build data profile context if available
+    profile = st.session_state.get("_data_profile", {})
+    profile_context = ""
+    if profile:
+        lines = []
+        for tbl_name, cols in profile.items():
+            for col_name, info in cols.items():
+                if info["type"] == "categorical":
+                    lines.append(f"- {col_name}: {', '.join(info['values'][:8])}")
+                elif info["type"] == "date_range":
+                    lines.append(f"- {col_name} date range: {info['min']} to {info['max']}")
+                elif info["type"] == "numeric_range":
+                    lines.append(f"- {col_name} range: {info['min']} to {info['max']}")
+        profile_context = "\n".join(lines[:20])
+    
     for idx, q in enumerate(expanded):
         progress.progress((idx + 1) / len(expanded), text=f"Processing {idx + 1}/{len(expanded)}...")
         
         process = TYPE_TO_PROCESS.get(q["technical_type"], "single_tool")
+        source = q.get("source", "manual")
+        is_unanswerable = source == "synthetic_unanswerable" or q["technical_type"] == "out_of_scope"
+        
+        data_section = ""
+        if profile_context and not is_unanswerable:
+            data_section = f"\nActual data available:\n{profile_context}\nUse real values to make ground truth specific."
+        elif profile_context and is_unanswerable:
+            data_section = f"\nData boundaries:\n{profile_context}\nThis question asks OUTSIDE these boundaries. Ground truth should state the agent cannot answer."
         
         prompt = f"""Generate a ground-truth description for evaluating an AI agent's response.
 
 Question: {q['question']}
 Category: {q['business_intent']}
 Technical type: {q['technical_type']} (process: {process})
+Source: {source}{data_section}
 
 Write 2-3 sentences describing:
-- What a correct answer SHOULD contain
+- What a correct answer SHOULD contain (or why it should refuse)
 - What it should NOT contain or do
 - Be specific enough to validate but flexible for non-deterministic responses
 
 Return ONLY the description text."""
 
-        gt_text = ai_complete(session, prompt, model="claude-haiku-4-5")
+        gt_text = ai_complete(session, prompt)
         
         eval_dataset.append({
             "input_query": q["question"],

@@ -38,16 +38,20 @@ with col_run:
             session.sql("CREATE STAGE IF NOT EXISTS EVAL_STAGE").collect()
             yaml_content = st.session_state.get("eval_config_yaml", "")
             if yaml_content:
-                with tempfile.NamedTemporaryFile(mode="w", suffix=".yaml", delete=False) as f:
+                import os
+                tmp_dir = tempfile.gettempdir()
+                config_filename = f"{agent_name.lower()}_eval_config.yaml"
+                tmp_path = os.path.join(tmp_dir, config_filename)
+                with open(tmp_path, "w") as f:
                     f.write(yaml_content)
-                    tmp_path = f.name
                 session.sql(f"PUT 'file://{tmp_path}' @EVAL_STAGE AUTO_COMPRESS=FALSE OVERWRITE=TRUE").collect()
             
+            config_stage_path = f"@{agent_db}.{agent_schema}.EVAL_STAGE/{agent_name.lower()}_eval_config.yaml"
             session.sql(f"""
                 CALL EXECUTE_AI_EVALUATION(
                     'START',
                     OBJECT_CONSTRUCT('run_name', '{run_name}'),
-                    '@{agent_db}.{agent_schema}.EVAL_STAGE/eval_config.yaml'
+                    '{config_stage_path}'
                 )
             """).collect()
             st.success(f"Evaluation '{run_name}' started. Wait a few minutes, then click Load Results.")
