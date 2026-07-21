@@ -1,0 +1,505 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="snowflake-source" content="cortex-agent-authored" />
+  <title>Cortex Agent Document Context</title>
+  <script type="application/json" id="snowflake-report-metadata">
+  {
+    "generated": "2026-07-21",
+    "intent": "Architecture guidance for enabling file/document uploads in custom frontends calling the Cortex Agent API",
+    "sections": [
+      { "id": "hero", "title": "Overview" },
+      { "id": "problem", "title": "The Problem" },
+      { "id": "architecture", "title": "Architecture" },
+      { "id": "udf-tool", "title": "The UDF Tool" },
+      { "id": "middleware", "title": "Middleware Pattern" },
+      { "id": "file-types", "title": "File Type Handling" },
+      { "id": "multi-turn", "title": "Multi-Turn Threads" },
+      { "id": "production", "title": "Production Considerations" },
+      { "id": "closing", "title": "Next Steps" }
+    ]
+  }
+  </script>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+
+    :root {
+      --bg: #0F1B2D;
+      --sidebar-bg: #1B2A4A;
+      --primary: #29B5E8;
+      --accent: #7C3AED;
+      --text: #E2E8F0;
+      --text-muted: #94A3B8;
+      --card-bg: #162236;
+      --border: #2D4A6F;
+      --green: #10B981;
+      --orange: #F59E0B;
+      --red: #EF4444;
+    }
+
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      font-family: 'Inter', sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.6;
+      overflow-x: hidden;
+    }
+
+    .progress-bar {
+      position: fixed;
+      top: 0;
+      left: 0;
+      height: 3px;
+      background: linear-gradient(90deg, var(--primary), var(--accent));
+      z-index: 1000;
+      transition: width 0.1s;
+    }
+
+    .sidebar {
+      position: fixed;
+      left: 0;
+      top: 0;
+      width: 260px;
+      height: 100vh;
+      background: var(--sidebar-bg);
+      padding: 2rem 1.5rem;
+      overflow-y: auto;
+      border-right: 1px solid var(--border);
+      z-index: 100;
+    }
+
+    .sidebar h2 {
+      font-size: 1rem;
+      font-weight: 600;
+      color: var(--primary);
+      margin-bottom: 1.5rem;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+
+    .sidebar a {
+      display: block;
+      color: var(--text-muted);
+      text-decoration: none;
+      padding: 0.5rem 0.75rem;
+      border-radius: 6px;
+      font-size: 0.85rem;
+      margin-bottom: 0.25rem;
+      transition: all 0.2s;
+    }
+
+    .sidebar a:hover, .sidebar a.active {
+      color: var(--text);
+      background: rgba(41, 181, 232, 0.1);
+    }
+
+    .sidebar a.active {
+      border-left: 3px solid var(--primary);
+      padding-left: calc(0.75rem - 3px);
+    }
+
+    .main { margin-left: 260px; padding: 0; }
+
+    .slide {
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      padding: 4rem 3rem;
+      max-width: 1200px;
+      margin: 0 auto;
+    }
+
+    .slide h1 {
+      font-size: 2.5rem;
+      font-weight: 700;
+      margin-bottom: 1rem;
+      background: linear-gradient(135deg, var(--primary), var(--accent));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+
+    .slide h2 { font-size: 1.75rem; font-weight: 600; color: var(--text); margin-bottom: 1.5rem; }
+    .slide h3 { font-size: 1.25rem; font-weight: 500; color: var(--text-muted); margin-bottom: 1rem; }
+    .slide p { font-size: 1.1rem; color: var(--text-muted); max-width: 700px; text-align: center; }
+
+    .stat-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 1.5rem; width: 100%; margin: 2rem 0; }
+    .stat-card { background: var(--card-bg); border: 1px solid var(--border); border-radius: 12px; padding: 1.5rem; text-align: center; }
+    .stat-card .value { font-size: 2rem; font-weight: 700; color: var(--primary); }
+    .stat-card .label { font-size: 0.85rem; color: var(--text-muted); margin-top: 0.5rem; }
+
+    .card-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 1.5rem; width: 100%; margin: 2rem 0; }
+    .card { background: var(--card-bg); border: 1px solid var(--border); border-radius: 12px; padding: 1.5rem; }
+    .card h4 { font-size: 1rem; font-weight: 600; color: var(--text); margin-bottom: 0.75rem; }
+    .card p { font-size: 0.9rem; color: var(--text-muted); text-align: left; }
+
+    table { width: 100%; border-collapse: collapse; margin: 2rem 0; font-size: 0.9rem; }
+    th { background: var(--card-bg); color: var(--primary); font-weight: 600; padding: 0.75rem 1rem; text-align: left; border-bottom: 2px solid var(--border); }
+    td { padding: 0.75rem 1rem; border-bottom: 1px solid var(--border); color: var(--text); }
+    tr:hover td { background: rgba(41, 181, 232, 0.05); }
+
+    pre {
+      background: var(--card-bg);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 1.5rem;
+      overflow-x: auto;
+      font-family: 'JetBrains Mono', 'Fira Code', monospace;
+      font-size: 0.8rem;
+      line-height: 1.7;
+      margin: 1.5rem 0;
+      width: 100%;
+    }
+
+    code {
+      font-family: 'JetBrains Mono', 'Fira Code', monospace;
+      background: var(--card-bg);
+      padding: 0.15rem 0.4rem;
+      border-radius: 3px;
+      font-size: 0.85rem;
+    }
+
+    .keyword { color: #c792ea; }
+    .string { color: #c3e88d; }
+    .function { color: #82aaff; }
+    .comment { color: #546e7a; }
+
+    .highlight-box { background: rgba(41, 181, 232, 0.1); border: 1px solid var(--primary); border-radius: 12px; padding: 1.5rem; margin: 1.5rem 0; width: 100%; }
+    .warning-box { background: rgba(245, 158, 11, 0.1); border: 1px solid var(--orange); border-radius: 12px; padding: 1.5rem; margin: 1.5rem 0; width: 100%; }
+
+    .badge-green { background: rgba(16, 185, 129, 0.15); color: var(--green); padding: 0.25rem 0.75rem; border-radius: 99px; font-size: 0.8rem; font-weight: 500; }
+    .badge-red { background: rgba(239, 68, 68, 0.15); color: var(--red); padding: 0.25rem 0.75rem; border-radius: 99px; font-size: 0.8rem; font-weight: 500; }
+    .badge-blue { background: rgba(41, 181, 232, 0.15); color: var(--primary); padding: 0.25rem 0.75rem; border-radius: 99px; font-size: 0.8rem; font-weight: 500; }
+
+    .flow-row { display: flex; align-items: center; gap: 0.75rem; flex-wrap: wrap; margin: 1.5rem 0; width: 100%; justify-content: center; }
+    .flow-box { background: var(--card-bg); border: 1px solid var(--border); border-radius: 8px; padding: 0.6rem 1.2rem; font-size: 0.85rem; color: var(--text); text-align: center; }
+    .flow-box-accent { background: rgba(41, 181, 232, 0.1); border: 1px solid var(--primary); border-radius: 8px; padding: 0.6rem 1.2rem; font-size: 0.85rem; color: var(--primary); font-weight: 600; text-align: center; }
+    .flow-arrow { color: var(--text-muted); font-size: 1.25rem; }
+
+    .slide ul { list-style: none; width: 100%; max-width: 700px; }
+    .slide ul li { padding: 0.75rem 0; padding-left: 1.5rem; position: relative; color: var(--text); font-size: 1.05rem; }
+    .slide ul li::before { content: ''; position: absolute; left: 0; top: 50%; transform: translateY(-50%); width: 8px; height: 8px; border-radius: 50%; background: var(--primary); }
+
+    .anim-fade { opacity: 0; transform: translateY(20px); transition: opacity 0.6s ease, transform 0.6s ease; }
+    .anim-fade.visible { opacity: 1; transform: translateY(0); }
+
+    @media (max-width: 900px) {
+      .sidebar { display: none; }
+      .main { margin-left: 0; }
+      .stat-grid { grid-template-columns: repeat(2, 1fr); }
+      .slide { padding: 2rem 1.5rem; }
+    }
+  </style>
+</head>
+<body>
+  <div class="progress-bar"></div>
+
+  <nav class="sidebar">
+    <h2>Document Context</h2>
+    <a href="#hero">Overview</a>
+    <a href="#problem">The Problem</a>
+    <a href="#architecture">Architecture</a>
+    <a href="#udf-tool">UDF Tool</a>
+    <a href="#middleware">Middleware</a>
+    <a href="#file-types">File Types</a>
+    <a href="#multi-turn">Multi-Turn</a>
+    <a href="#production">Production</a>
+    <a href="#closing">Next Steps</a>
+  </nav>
+
+  <main class="main">
+
+    <!-- Hero -->
+    <section class="slide" id="hero">
+      <h1>Enabling Document Context in Cortex Agents</h1>
+      <p>Architecture pattern for file uploads in custom frontends calling the Cortex Agent REST API</p>
+      <div class="stat-grid" style="margin-top: 2rem;">
+        <div class="stat-card anim-fade"><div class="value">1 UDF</div><div class="label">Agent Tool</div></div>
+        <div class="stat-card anim-fade"><div class="value">Thin</div><div class="label">Middleware</div></div>
+        <div class="stat-card anim-fade"><div class="value">Threaded</div><div class="label">Multi-Turn</div></div>
+        <div class="stat-card anim-fade"><div class="value">Native</div><div class="label">Snowflake</div></div>
+      </div>
+    </section>
+
+    <!-- Problem -->
+    <section class="slide" id="problem">
+      <h2>The Problem</h2>
+      <p style="margin-bottom: 2rem;">The Cortex Agent <code>agent:run</code> API does not natively accept file attachments.</p>
+
+      <div class="anim-fade" style="width: 100%; overflow-x: auto;">
+        <table>
+          <thead><tr><th>Content Type</th><th>Supported</th><th>Notes</th></tr></thead>
+          <tbody>
+            <tr><td><code>type: "text"</code></td><td><span class="badge-green">Yes</span></td><td>Standard text input</td></tr>
+            <tr><td><code>type: "image"</code></td><td><span class="badge-blue">Limited</span></td><td>Base64 for claude-sonnet-4-5+ only</td></tr>
+            <tr><td><code>type: "file"</code></td><td><span class="badge-red">No</span></td><td>Returns an error; not a supported primitive</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="warning-box anim-fade">
+        <strong>Key constraint:</strong> Raw binary file upload is not a supported content type in the agent:run API. Snowflake Intelligence's "+" button uses a proprietary internal pipeline that is not publicly accessible.
+      </div>
+    </section>
+
+    <!-- Architecture -->
+    <section class="slide" id="architecture">
+      <h2>Solution Architecture</h2>
+      <p style="margin-bottom: 2rem;">Give the agent a UDF tool. The middleware just uploads and hints.</p>
+
+      <div class="flow-row anim-fade">
+        <div class="flow-box">User + File</div>
+        <span class="flow-arrow">&rarr;</span>
+        <div class="flow-box">React Frontend</div>
+        <span class="flow-arrow">&rarr;</span>
+        <div class="flow-box">Middleware</div>
+        <span class="flow-arrow">&rarr;</span>
+        <div class="flow-box-accent">agent:run API</div>
+      </div>
+
+      <div class="flow-row anim-fade">
+        <div class="flow-box">Middleware</div>
+        <span class="flow-arrow">&darr;</span>
+        <div class="flow-box">PUT to @stage</div>
+        <span style="width: 2rem;"></span>
+        <div class="flow-box-accent">Agent</div>
+        <span class="flow-arrow">&rarr;</span>
+        <div class="flow-box">read_document(file)</div>
+        <span class="flow-arrow">&rarr;</span>
+        <div class="flow-box">UDF + AI_PARSE_DOCUMENT</div>
+      </div>
+
+      <div class="highlight-box anim-fade" style="margin-top: 2rem;">
+        <strong>Key insight:</strong> The middleware does NOT parse the document. It uploads to stage and prepends a one-line hint. The agent autonomously decides if/when to read the file via its tool.
+      </div>
+    </section>
+
+    <!-- UDF Tool -->
+    <section class="slide" id="udf-tool">
+      <h2>The UDF Tool: READ_STAGED_DOCUMENT</h2>
+      <p style="margin-bottom: 1.5rem;">A SQL UDF registered as a generic tool on the agent.</p>
+
+      <pre class="anim-fade"><span class="keyword">CREATE FUNCTION</span> READ_STAGED_DOCUMENT(filename <span class="function">VARCHAR</span>)
+<span class="keyword">RETURNS</span> <span class="function">VARCHAR</span>
+<span class="keyword">LANGUAGE</span> SQL
+<span class="keyword">AS</span>
+$$
+  <span class="keyword">SELECT</span> <span class="function">COALESCE</span>(
+    <span class="function">AI_PARSE_DOCUMENT</span>(
+      <span class="function">TO_FILE</span>(<span class="string">'@DOC_UPLOADS'</span>, filename),
+      {<span class="string">'mode'</span>: <span class="string">'LAYOUT'</span>}
+    ):content::<span class="function">VARCHAR</span>,
+    <span class="string">'[Error: Could not parse document]'</span>
+  )
+$$;</pre>
+
+      <pre class="anim-fade"><span class="comment">-- Agent spec (excerpt)</span>
+tools:
+  - tool_spec:
+      type: <span class="string">"generic"</span>
+      name: <span class="string">"read_document"</span>
+      description: <span class="string">"Read and parse a document from the upload stage."</span>
+      input_schema:
+        type: object
+        properties:
+          filename: { type: string }
+        required: [filename]
+
+tool_resources:
+  read_document:
+    type: function
+    identifier: <span class="string">"DB.SCHEMA.READ_STAGED_DOCUMENT"</span>
+    execution_environment:
+      type: warehouse
+      warehouse: MY_WH</pre>
+    </section>
+
+    <!-- Middleware -->
+    <section class="slide" id="middleware">
+      <h2>The Middleware Pattern</h2>
+      <p style="margin-bottom: 2rem;">Three responsibilities. No parsing logic.</p>
+
+      <div class="card-grid anim-fade">
+        <div class="card">
+          <h4>1. Upload to Stage</h4>
+          <p>Receive file from frontend. Convert .csv/.json to .txt (rename only). PUT to <code>@DOC_UPLOADS</code>.</p>
+        </div>
+        <div class="card">
+          <h4>2. Prepend Hint</h4>
+          <p>Add a system-style text block: "The user uploaded 'reports/analysis.txt'. Use read_document to access it."</p>
+        </div>
+        <div class="card">
+          <h4>3. Forward to Agent</h4>
+          <p>Pass <code>thread_id</code> + <code>parent_message_id</code> + the content blocks to <code>agent:run</code>.</p>
+        </div>
+      </div>
+
+      <pre class="anim-fade"><span class="comment">// What the middleware sends to agent:run</span>
+{
+  <span class="string">"thread_id"</span>: 1234,
+  <span class="string">"parent_message_id"</span>: 0,
+  <span class="string">"messages"</span>: [{
+    <span class="string">"role"</span>: <span class="string">"user"</span>,
+    <span class="string">"content"</span>: [
+      {<span class="string">"type"</span>: <span class="string">"text"</span>, <span class="string">"text"</span>: <span class="string">"[User uploaded 'reports/q2_plan.txt'. Use read_document if relevant.]"</span>},
+      {<span class="string">"type"</span>: <span class="string">"text"</span>, <span class="string">"text"</span>: <span class="string">"Which region has the most aggressive growth target?"</span>}
+    ]
+  }]
+}</pre>
+    </section>
+
+    <!-- File Types -->
+    <section class="slide" id="file-types">
+      <h2>File Type Handling</h2>
+      <p style="margin-bottom: 2rem;"><code>AI_PARSE_DOCUMENT</code> handles most formats. CSV/JSON just need a rename.</p>
+
+      <div class="anim-fade" style="width: 100%; overflow-x: auto;">
+        <table>
+          <thead><tr><th>File Type</th><th>Middleware Action</th><th>UDF Behavior</th></tr></thead>
+          <tbody>
+            <tr><td>PDF, DOCX, PPTX</td><td>Upload as-is</td><td>AI_PARSE_DOCUMENT (LAYOUT)</td></tr>
+            <tr><td>TXT, HTML</td><td>Upload as-is</td><td>AI_PARSE_DOCUMENT (LAYOUT)</td></tr>
+            <tr><td>JPEG, PNG, TIF</td><td>Upload as-is</td><td>AI_PARSE_DOCUMENT (OCR/LAYOUT)</td></tr>
+            <tr><td>CSV, JSON, MD</td><td>Rename to .txt</td><td>AI_PARSE_DOCUMENT reads as text</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="highlight-box anim-fade">
+        <strong>Why rename?</strong> <code>AI_PARSE_DOCUMENT</code> does not support .csv/.json extensions. Renaming to .txt is a no-op on the content -- the function reads it as plain text, preserving the original structure (headers, delimiters, etc.).
+      </div>
+    </section>
+
+    <!-- Multi-Turn -->
+    <section class="slide" id="multi-turn">
+      <h2>Multi-Turn Conversations</h2>
+      <p style="margin-bottom: 2rem;">Use threads. The file hint only goes in the first message.</p>
+
+      <div class="card-grid anim-fade">
+        <div class="card">
+          <h4>Turn 1: Upload + Question</h4>
+          <p>Create thread. Prepend file hint. Agent calls <code>read_document</code> and answers.</p>
+          <p style="margin-top: 0.5rem;"><code>parent_message_id: 0</code></p>
+        </div>
+        <div class="card">
+          <h4>Turn 2+: Follow-up</h4>
+          <p>No file hint needed. Agent retains document context from the thread history.</p>
+          <p style="margin-top: 0.5rem;"><code>parent_message_id: &lt;prev assistant_id&gt;</code></p>
+        </div>
+      </div>
+
+      <pre class="anim-fade"><span class="comment">// Turn 2: just the question, no file re-upload</span>
+{
+  <span class="string">"thread_id"</span>: 1234,
+  <span class="string">"parent_message_id"</span>: 456,  <span class="comment">// from Turn 1 response metadata</span>
+  <span class="string">"messages"</span>: [{
+    <span class="string">"role"</span>: <span class="string">"user"</span>,
+    <span class="string">"content"</span>: [
+      {<span class="string">"type"</span>: <span class="string">"text"</span>, <span class="string">"text"</span>: <span class="string">"What actions should we take in the Southeast?"</span>}
+    ]
+  }]
+}</pre>
+    </section>
+
+    <!-- Production -->
+    <section class="slide" id="production">
+      <h2>Production Considerations</h2>
+
+      <div class="card-grid anim-fade">
+        <div class="card">
+          <h4>Context Window Limits</h4>
+          <p>Large docs (100+ pages) may exceed the model's context. Consider adding a <code>pages</code> param to the UDF, or pre-chunking in the middleware.</p>
+        </div>
+        <div class="card">
+          <h4>Cost</h4>
+          <p><code>AI_PARSE_DOCUMENT</code> bills per page. The UDF is only invoked when the agent decides it needs the file -- no wasted parsing.</p>
+        </div>
+        <div class="card">
+          <h4>Caching</h4>
+          <p>Store parsed content in a table keyed by file hash. Modify the UDF to check cache before calling AI_PARSE_DOCUMENT.</p>
+        </div>
+        <div class="card">
+          <h4>Security</h4>
+          <p>Stage access governed by RBAC. Consider per-user paths: <code>@DOC_UPLOADS/{user_id}/</code>. UDF hardcodes the stage to prevent traversal.</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- Closing -->
+    <section class="slide" id="closing">
+      <h2>Next Steps</h2>
+
+      <div class="card-grid anim-fade">
+        <div class="card">
+          <h4>1. Run the Lab</h4>
+          <p>Execute <code>setup.sql</code> to create the UDF, stage, semantic view, and agent. Walk through the notebook end-to-end.</p>
+        </div>
+        <div class="card">
+          <h4>2. Integrate with Frontend</h4>
+          <p>Add a file upload endpoint to your backend that PUTs to stage and calls agent:run with the hint pattern.</p>
+        </div>
+        <div class="card">
+          <h4>3. Add Caching</h4>
+          <p>For frequently-accessed docs, cache parsed content to reduce AI_PARSE_DOCUMENT calls and latency.</p>
+        </div>
+        <div class="card">
+          <h4>4. Consider Cortex Search</h4>
+          <p>For large document corpuses with repeated Q&A, index docs into a Cortex Search Service for retrieval-based access.</p>
+        </div>
+      </div>
+
+      <div class="highlight-box anim-fade" style="margin-top: 2rem;">
+        <strong>Documentation:</strong>
+        <a href="https://docs.snowflake.com/en/user-guide/snowflake-cortex/cortex-agents-run" style="color: var(--primary); margin-left: 0.5rem;">Cortex Agent Run API</a> |
+        <a href="https://docs.snowflake.com/en/sql-reference/functions/ai_parse_document" style="color: var(--primary); margin-left: 0.5rem;">AI_PARSE_DOCUMENT</a> |
+        <a href="https://docs.snowflake.com/en/user-guide/snowflake-cortex/cortex-agents-threads" style="color: var(--primary); margin-left: 0.5rem;">Agent Threads</a>
+      </div>
+    </section>
+
+  </main>
+
+  <script>
+    const progressBar = document.querySelector('.progress-bar');
+    window.addEventListener('scroll', () => {
+      const scrollTop = window.scrollY;
+      const docHeight = document.documentElement.scrollHeight - window.innerHeight;
+      progressBar.style.width = (scrollTop / docHeight * 100) + '%';
+    });
+
+    const observer = new IntersectionObserver((entries) => {
+      entries.forEach(entry => {
+        if (entry.isIntersecting) {
+          entry.target.classList.add('visible');
+        }
+      });
+    }, { threshold: 0.1 });
+
+    document.querySelectorAll('.anim-fade').forEach(el => observer.observe(el));
+
+    const sections = document.querySelectorAll('.slide');
+    const navLinks = document.querySelectorAll('.sidebar a');
+
+    window.addEventListener('scroll', () => {
+      let current = '';
+      sections.forEach(section => {
+        const sectionTop = section.offsetTop - 200;
+        if (window.scrollY >= sectionTop) {
+          current = section.getAttribute('id');
+        }
+      });
+      navLinks.forEach(link => {
+        link.classList.remove('active');
+        if (link.getAttribute('href') === '#' + current) {
+          link.classList.add('active');
+        }
+      });
+    });
+  </script>
+</body>
+</html>
