@@ -1,0 +1,714 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="snowflake-source" content="cortex-agent-authored" />
+  <title>Cortex Agent Cost Observability</title>
+  <script type="application/json" id="snowflake-report-metadata">
+  {
+    "generated": "2026-07-21",
+    "intent": "Educational presentation on Cortex Agent cost observability views and queries",
+    "sections": [
+      { "id": "hero", "title": "Overview", "producerNotes": "Static content, no data refresh needed." },
+      { "id": "data-model", "title": "Data Model", "producerNotes": "Architecture diagram of cost views." },
+      { "id": "token-deep-dive", "title": "Token-Level Deep Dive", "producerNotes": "Explains TOKENS_GRANULAR structure." },
+      { "id": "analyst-credits", "title": "Cortex Analyst Credits", "producerNotes": "Explains CORTEX_ANALYST_USAGE_HISTORY." },
+      { "id": "warehouse-compute", "title": "Warehouse Compute", "producerNotes": "Explains QUERY_ATTRIBUTION_HISTORY." },
+      { "id": "total-cost", "title": "Total Cost Formula", "producerNotes": "Combined cost query." },
+      { "id": "per-user", "title": "Per-User Attribution", "producerNotes": "USER_NAME and USER_TAGS grouping." },
+      { "id": "resource-budgets", "title": "Resource Budgets", "producerNotes": "Tag-based budget governance." },
+      { "id": "takeaways", "title": "Key Takeaways", "producerNotes": "Latency caveats and best practices." }
+    ]
+  }
+  </script>
+  <style>
+    :root {
+      --bg: #0f1117;
+      --surface: #1a1d27;
+      --surface-alt: #232733;
+      --border: #2e3345;
+      --text: #e4e7ef;
+      --text-muted: #8b92a8;
+      --accent: #29b5f6;
+      --accent-dim: rgba(41, 181, 246, 0.12);
+      --green: #4caf50;
+      --orange: #ff9800;
+      --red: #f44336;
+      --purple: #ab47bc;
+      --sidebar-width: 240px;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Segoe UI', Roboto, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.6;
+      overflow-x: hidden;
+    }
+
+    .progress-bar {
+      position: fixed;
+      top: 0;
+      left: 0;
+      height: 3px;
+      background: var(--accent);
+      z-index: 1000;
+      transition: width 0.1s;
+    }
+
+    .sidebar {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: var(--sidebar-width);
+      height: 100vh;
+      background: var(--surface);
+      border-right: 1px solid var(--border);
+      padding: 2rem 1.25rem;
+      overflow-y: auto;
+      z-index: 100;
+    }
+
+    .sidebar h3 {
+      font-size: 0.75rem;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      color: var(--accent);
+      margin-bottom: 1rem;
+      font-weight: 700;
+    }
+
+    .sidebar .nav-section { margin-bottom: 1.5rem; }
+
+    .sidebar .nav-section-title {
+      font-size: 0.65rem;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--text-muted);
+      margin-bottom: 0.5rem;
+      font-weight: 600;
+    }
+
+    .sidebar a {
+      display: block;
+      padding: 0.35rem 0.75rem;
+      color: var(--text-muted);
+      text-decoration: none;
+      font-size: 0.8rem;
+      border-radius: 4px;
+      margin-bottom: 2px;
+      transition: all 0.2s;
+    }
+
+    .sidebar a:hover { color: var(--text); background: var(--surface-alt); }
+    .sidebar a.active { color: var(--accent); background: var(--accent-dim); }
+
+    .main { margin-left: var(--sidebar-width); min-height: 100vh; }
+
+    .slide {
+      padding: 4rem 3rem;
+      max-width: 1200px;
+      margin: 0 auto;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .slide h2 {
+      font-size: 1.75rem;
+      font-weight: 700;
+      margin-bottom: 0.75rem;
+      background: linear-gradient(135deg, var(--text), var(--accent));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+
+    .slide h3 { font-size: 1.1rem; font-weight: 600; color: var(--text); margin-bottom: 0.5rem; }
+    .slide h4 { font-size: 0.95rem; font-weight: 600; color: var(--accent); margin-bottom: 0.5rem; }
+    .slide p { color: var(--text-muted); font-size: 0.95rem; margin-bottom: 0.75rem; }
+    .slide ul, .slide ol { color: var(--text-muted); font-size: 0.9rem; padding-left: 1.25rem; }
+    .slide li { margin-bottom: 0.35rem; }
+
+    .hero {
+      padding: 6rem 3rem 4rem;
+      text-align: center;
+      max-width: 1200px;
+      margin: 0 auto;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .hero h1 {
+      font-size: 2.5rem;
+      font-weight: 800;
+      background: linear-gradient(135deg, var(--text) 0%, var(--accent) 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+      margin-bottom: 1rem;
+      line-height: 1.2;
+    }
+
+    .hero .subtitle { font-size: 1.1rem; color: var(--text-muted); margin-bottom: 2.5rem; }
+
+    .stat-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 1rem;
+      margin: 2rem 0;
+    }
+
+    .stat-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 1.25rem;
+      text-align: center;
+    }
+
+    .stat-card .stat-value { font-size: 1.5rem; font-weight: 700; color: var(--accent); display: block; }
+    .stat-card .stat-label { font-size: 0.8rem; color: var(--text-muted); margin-top: 0.25rem; }
+
+    .card-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 1rem; margin: 1.5rem 0; }
+    .card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 1.25rem;
+    }
+    .card h4 { margin-bottom: 0.5rem; }
+    .card p { font-size: 0.85rem; }
+
+    pre {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 1.25rem;
+      overflow-x: auto;
+      font-family: 'SF Mono', 'Fira Code', 'JetBrains Mono', monospace;
+      font-size: 0.8rem;
+      line-height: 1.7;
+      margin: 1rem 0;
+    }
+
+    code {
+      font-family: 'SF Mono', 'Fira Code', 'JetBrains Mono', monospace;
+      background: var(--surface-alt);
+      padding: 0.15rem 0.4rem;
+      border-radius: 3px;
+      font-size: 0.85rem;
+    }
+
+    .keyword { color: #c792ea; }
+    .string { color: #c3e88d; }
+    .function { color: #82aaff; }
+    .comment { color: #546e7a; }
+    .number { color: #f78c6c; }
+
+    table { width: 100%; border-collapse: collapse; margin: 1rem 0; font-size: 0.85rem; }
+    th, td { padding: 0.6rem 0.75rem; border: 1px solid var(--border); text-align: left; }
+    th { background: var(--surface-alt); font-weight: 600; color: var(--text); }
+    td { color: var(--text-muted); }
+
+    .badge-blue {
+      display: inline-block;
+      background: var(--accent);
+      color: #fff;
+      padding: 0.2rem 0.6rem;
+      border-radius: 99px;
+      font-size: 0.7rem;
+      font-weight: 600;
+      text-decoration: none;
+    }
+    .badge-blue:hover { opacity: 0.85; }
+
+    .badge-green {
+      background: rgba(76, 175, 80, 0.15);
+      color: var(--green);
+      padding: 0.15rem 0.5rem;
+      border-radius: 4px;
+      font-size: 0.75rem;
+      font-weight: 600;
+    }
+
+    .badge-orange {
+      background: rgba(255, 152, 0, 0.15);
+      color: var(--orange);
+      padding: 0.15rem 0.5rem;
+      border-radius: 4px;
+      font-size: 0.75rem;
+      font-weight: 600;
+    }
+
+    .flow-row { display: flex; align-items: center; gap: 0.75rem; flex-wrap: wrap; margin: 1rem 0; }
+    .flow-box {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 0.5rem 1rem;
+      font-size: 0.85rem;
+      color: var(--text);
+    }
+    .flow-arrow { color: var(--text-muted); font-size: 1.25rem; }
+
+    .anim-fade {
+      opacity: 0;
+      transform: translateY(20px);
+      transition: opacity 0.6s ease, transform 0.6s ease;
+    }
+    .anim-fade.visible { opacity: 1; transform: translateY(0); }
+
+    @media (max-width: 900px) {
+      .sidebar { display: none; }
+      .main { margin-left: 0; }
+      .stat-grid { grid-template-columns: repeat(2, 1fr); }
+      .card-grid { grid-template-columns: 1fr; }
+      .hero h1 { font-size: 1.75rem; }
+    }
+  </style>
+</head>
+<body>
+  <div class="progress-bar"></div>
+
+  <nav class="sidebar">
+    <h3>Cost Observability</h3>
+    <div class="nav-section">
+      <div class="nav-section-title">Concepts</div>
+      <a href="#hero">Overview</a>
+      <a href="#data-model">Data Model</a>
+    </div>
+    <div class="nav-section">
+      <div class="nav-section-title">Deep Dives</div>
+      <a href="#token-deep-dive">Token Breakdown</a>
+      <a href="#analyst-credits">Analyst Credits</a>
+      <a href="#warehouse-compute">Warehouse Compute</a>
+      <a href="#total-cost">Total Cost Formula</a>
+    </div>
+    <div class="nav-section">
+      <div class="nav-section-title">Governance</div>
+      <a href="#per-user">Per-User Attribution</a>
+      <a href="#resource-budgets">Resource Budgets</a>
+      <a href="#takeaways">Key Takeaways</a>
+    </div>
+  </nav>
+
+  <div class="main">
+
+    <!-- Hero -->
+    <section class="hero" id="hero">
+      <h1>Cortex Agent Cost Observability</h1>
+      <p class="subtitle">Understand token consumption, per-user attribution, Analyst credits, and warehouse compute for every agent request.</p>
+      <div class="stat-grid">
+        <div class="stat-card"><span class="stat-value">4</span><span class="stat-label">Cost Views</span></div>
+        <div class="stat-card"><span class="stat-value">Per-Request</span><span class="stat-label">Granularity</span></div>
+        <div class="stat-card"><span class="stat-value">3 Layers</span><span class="stat-label">Token + AI Fn + Compute</span></div>
+        <div class="stat-card"><span class="stat-value">Tag-Based</span><span class="stat-label">Budget Governance</span></div>
+      </div>
+    </section>
+
+    <!-- Data Model -->
+    <section class="slide anim-fade" id="data-model">
+      <h2>The Cost Observability Data Model</h2>
+      <p>A single Cortex Agent request generates costs across multiple dimensions, tracked by four ACCOUNT_USAGE views:</p>
+
+      <div class="flow-row">
+        <div class="flow-box">User Request</div>
+        <span class="flow-arrow">&rarr;</span>
+        <div class="flow-box">Cortex Agent (orchestration)</div>
+        <span class="flow-arrow">&rarr;</span>
+        <div class="flow-box">Cortex Analyst (SQL generation)</div>
+        <span class="flow-arrow">&rarr;</span>
+        <div class="flow-box">Warehouse (SQL execution)</div>
+      </div>
+
+      <table>
+        <thead>
+          <tr><th>View</th><th>What It Tracks</th><th>Granularity</th><th>Latency</th></tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><code>CORTEX_AGENT_USAGE_HISTORY</code></td>
+            <td>Token credits, per-model breakdown, cache metrics</td>
+            <td>Per-request</td>
+            <td><span class="badge-orange">~3 hrs</span></td>
+          </tr>
+          <tr>
+            <td><code>CORTEX_ANALYST_USAGE_HISTORY</code></td>
+            <td>Analyst tool credits, request counts</td>
+            <td>Hourly rollup</td>
+            <td><span class="badge-orange">~3 hrs</span></td>
+          </tr>
+          <tr>
+            <td><code>QUERY_ATTRIBUTION_HISTORY</code></td>
+            <td>Warehouse compute per query</td>
+            <td>Per-query</td>
+            <td><span class="badge-orange">~8 hrs</span></td>
+          </tr>
+          <tr>
+            <td><code>METERING_DAILY_HISTORY</code></td>
+            <td>Daily totals by service type</td>
+            <td>Daily</td>
+            <td><span class="badge-orange">~3 hrs</span></td>
+          </tr>
+        </tbody>
+      </table>
+
+      <p><a href="https://docs.snowflake.com/en/sql-reference/account-usage/cortex_agent_usage_history" class="badge-blue">CORTEX_AGENT_USAGE_HISTORY Docs</a>
+         <a href="https://docs.snowflake.com/en/sql-reference/account-usage/metering_daily_history" class="badge-blue">METERING_DAILY_HISTORY Docs</a></p>
+    </section>
+
+    <!-- Token Deep Dive -->
+    <section class="slide anim-fade" id="token-deep-dive">
+      <h2>Token-Level Deep Dive</h2>
+      <p>The <code>TOKENS_GRANULAR</code> array in <code>CORTEX_AGENT_USAGE_HISTORY</code> provides a per-sub-request breakdown:</p>
+
+      <h3>Structure of TOKENS_GRANULAR</h3>
+      <pre><span class="comment">-- Each element maps: request_id -> service_type -> model -> token counts</span>
+[{
+  <span class="string">"request_id_abc"</span>: {
+    <span class="string">"cortex_agents"</span>: {
+      <span class="string">"claude-4-sonnet"</span>: {
+        <span class="string">"input"</span>: <span class="number">1800</span>,
+        <span class="string">"cache_read_input"</span>: <span class="number">200</span>,
+        <span class="string">"cache_write_input"</span>: <span class="number">0</span>,
+        <span class="string">"output"</span>: <span class="number">600</span>
+      }
+    },
+    <span class="string">"start_time"</span>: <span class="string">"2026-07-01 09:00:00"</span>
+  }
+}]</pre>
+
+      <h3>Token Categories</h3>
+      <div class="card-grid">
+        <div class="card">
+          <h4>input</h4>
+          <p>Tokens in the prompt sent to the model. Largest component of cost.</p>
+        </div>
+        <div class="card">
+          <h4>output</h4>
+          <p>Tokens generated by the model response. Typically 2-3x the cost rate of input.</p>
+        </div>
+        <div class="card">
+          <h4>cache_read_input</h4>
+          <p>Tokens served from prompt cache. Significantly cheaper than fresh input tokens.</p>
+        </div>
+        <div class="card">
+          <h4>cache_write_input</h4>
+          <p>Tokens written to prompt cache for future reuse.</p>
+        </div>
+      </div>
+
+      <h3>Query: Per-Model Breakdown</h3>
+      <pre><span class="keyword">SELECT</span>
+    f.value:<span class="string">service_type</span>::STRING <span class="keyword">AS</span> service_type,
+    f.value:<span class="string">model</span>::STRING <span class="keyword">AS</span> model_name,
+    <span class="function">SUM</span>(f.value:<span class="string">input</span>::NUMBER) <span class="keyword">AS</span> input_tokens,
+    <span class="function">SUM</span>(f.value:<span class="string">cache_read_input</span>::NUMBER) <span class="keyword">AS</span> cache_read,
+    <span class="function">SUM</span>(f.value:<span class="string">output</span>::NUMBER) <span class="keyword">AS</span> output_tokens,
+    <span class="function">ROUND</span>(<span class="function">SUM</span>(f.value:<span class="string">cache_read_input</span>::NUMBER)
+        / <span class="function">NULLIF</span>(<span class="function">SUM</span>(f.value:<span class="string">input</span>::NUMBER), <span class="number">0</span>) * <span class="number">100</span>, <span class="number">1</span>) <span class="keyword">AS</span> cache_hit_pct
+<span class="keyword">FROM</span> SNOWFLAKE.ACCOUNT_USAGE.CORTEX_AGENT_USAGE_HISTORY,
+    <span class="keyword">LATERAL FLATTEN</span>(input => TOKENS_GRANULAR) f
+<span class="keyword">WHERE</span> START_TIME >= <span class="function">DATEADD</span>(<span class="string">'day'</span>, <span class="number">-30</span>, <span class="function">CURRENT_TIMESTAMP</span>())
+<span class="keyword">GROUP BY</span> <span class="number">1</span>, <span class="number">2</span>
+<span class="keyword">ORDER BY</span> input_tokens <span class="keyword">DESC</span>;</pre>
+
+      <p><a href="https://docs.snowflake.com/en/sql-reference/account-usage/cortex_agent_usage_history" class="badge-blue">Full Column Reference</a></p>
+    </section>
+
+    <!-- Analyst Credits -->
+    <section class="slide anim-fade" id="analyst-credits">
+      <h2>Cortex Analyst Credits</h2>
+      <p>When a Cortex Agent invokes Cortex Analyst as a tool, those costs appear in two places:</p>
+
+      <div class="card-grid">
+        <div class="card">
+          <h4>Within CORTEX_AGENT_USAGE_HISTORY</h4>
+          <p><code>TOKENS_GRANULAR</code> entries with <code>service_type = 'cortex_analyst'</code> show the analyst's token consumption per model.</p>
+          <p><code>METADATA:ai_functions_credits</code> shows additional AI function credits.</p>
+        </div>
+        <div class="card">
+          <h4>CORTEX_ANALYST_USAGE_HISTORY</h4>
+          <p>Hourly rollup view with <code>CREDITS</code>, <code>REQUEST_COUNT</code>, and <code>USERNAME</code>.</p>
+          <p>These credits roll into <code>AI_SERVICES</code> in METERING_DAILY_HISTORY.</p>
+        </div>
+      </div>
+
+      <h3>Query: Analyst Credits by User</h3>
+      <pre><span class="keyword">SELECT</span>
+    USERNAME,
+    <span class="function">SUM</span>(REQUEST_COUNT) <span class="keyword">AS</span> total_requests,
+    <span class="function">SUM</span>(CREDITS) <span class="keyword">AS</span> total_analyst_credits
+<span class="keyword">FROM</span> SNOWFLAKE.ACCOUNT_USAGE.CORTEX_ANALYST_USAGE_HISTORY
+<span class="keyword">WHERE</span> START_TIME >= <span class="function">DATEADD</span>(<span class="string">'day'</span>, <span class="number">-30</span>, <span class="function">CURRENT_TIMESTAMP</span>())
+<span class="keyword">GROUP BY</span> <span class="number">1</span>
+<span class="keyword">ORDER BY</span> total_analyst_credits <span class="keyword">DESC</span>;</pre>
+
+      <p><a href="https://docs.snowflake.com/en/sql-reference/account-usage/cortex_analyst_usage_history" class="badge-blue">CORTEX_ANALYST_USAGE_HISTORY Docs</a></p>
+    </section>
+
+    <!-- Warehouse Compute -->
+    <section class="slide anim-fade" id="warehouse-compute">
+      <h2>Warehouse Compute Attribution</h2>
+      <p>Token credits are only part of the cost. When Cortex Analyst generates SQL, it runs on a warehouse. That compute is a separate billing dimension tracked in <code>QUERY_ATTRIBUTION_HISTORY</code>.</p>
+
+      <h3>Key Facts</h3>
+      <ul>
+        <li><code>CREDITS_ATTRIBUTED_COMPUTE</code> = warehouse credits for executing the query (excludes idle time)</li>
+        <li>Latency: up to <strong>8 hours</strong> for data to appear</li>
+        <li>Short queries (&lt; ~100ms) may not appear in this view</li>
+        <li>Does NOT include: data transfer, storage, cloud services, or serverless costs</li>
+      </ul>
+
+      <h3>The Attribution Challenge</h3>
+      <p>Agent execution is a <strong>black box</strong> -- there is no direct join key between <code>CORTEX_AGENT_USAGE_HISTORY.REQUEST_ID</code> (agent UUID) and <code>QUERY_ATTRIBUTION_HISTORY.QUERY_ID</code> (Snowflake query UUID). You cannot inject <code>QUERY_TAG</code> into the agent's internally-generated queries.</p>
+
+      <h4>Approach: User + Time Window Correlation</h4>
+      <p>Correlate by matching the same <code>USER_NAME</code> and queries that ran during the agent's execution window (<code>START_TIME</code> to <code>END_TIME</code>).</p>
+
+      <pre><span class="keyword">WITH</span> agent_requests <span class="keyword">AS</span> (
+    <span class="keyword">SELECT</span> REQUEST_ID, USER_NAME, AGENT_NAME, START_TIME, END_TIME,
+           TOKEN_CREDITS,
+           <span class="function">COALESCE</span>(METADATA:<span class="string">ai_functions_credits</span>::NUMBER, <span class="number">0</span>) <span class="keyword">AS</span> ai_fn_credits
+    <span class="keyword">FROM</span> SNOWFLAKE.ACCOUNT_USAGE.CORTEX_AGENT_USAGE_HISTORY
+    <span class="keyword">WHERE</span> START_TIME >= <span class="function">DATEADD</span>(<span class="string">'day'</span>, <span class="number">-30</span>, <span class="function">CURRENT_TIMESTAMP</span>())
+)
+<span class="keyword">SELECT</span>
+    a.REQUEST_ID, a.USER_NAME, a.AGENT_NAME,
+    a.TOKEN_CREDITS <span class="keyword">AS</span> ai_token_credits,
+    a.ai_fn_credits,
+    <span class="function">COALESCE</span>(<span class="function">SUM</span>(q.CREDITS_ATTRIBUTED_COMPUTE), <span class="number">0</span>) <span class="keyword">AS</span> warehouse_credits
+<span class="keyword">FROM</span> agent_requests a
+<span class="keyword">LEFT JOIN</span> SNOWFLAKE.ACCOUNT_USAGE.QUERY_ATTRIBUTION_HISTORY q
+    <span class="keyword">ON</span> q.USER_NAME = a.USER_NAME
+    <span class="keyword">AND</span> q.START_TIME <span class="keyword">BETWEEN</span> a.START_TIME <span class="keyword">AND</span> <span class="function">DATEADD</span>(<span class="string">'second'</span>, <span class="number">10</span>, a.END_TIME)
+<span class="keyword">GROUP BY</span> <span class="number">1</span>, <span class="number">2</span>, <span class="number">3</span>, <span class="number">4</span>, <span class="number">5</span>
+<span class="keyword">ORDER BY</span> warehouse_credits <span class="keyword">DESC</span>;</pre>
+
+      <h4>Limitations of This Approach</h4>
+      <ul>
+        <li><span class="badge-orange">Approximation</span> Concurrent queries from the same user during the window will be incorrectly attributed</li>
+        <li>Queries &lt; ~100ms don't appear in <code>QUERY_ATTRIBUTION_HISTORY</code> (many agent queries are fast)</li>
+        <li>Up to 8-hour latency before data appears</li>
+      </ul>
+
+      <h4>Mitigation: Dedicated Warehouse</h4>
+      <p>Assign each agent a <strong>dedicated warehouse</strong>. All compute on that warehouse is then attributable to that agent, eliminating false attribution from concurrent workloads.</p>
+
+      <p><a href="https://docs.snowflake.com/en/sql-reference/account-usage/query_attribution_history" class="badge-blue">QUERY_ATTRIBUTION_HISTORY Docs</a></p>
+    </section>
+
+    <!-- Total Cost Formula -->
+    <section class="slide anim-fade" id="total-cost">
+      <h2>Total Cost of a Request</h2>
+      <p>A single agent request incurs costs across three dimensions:</p>
+
+      <div class="flow-row">
+        <div class="flow-box">Token Credits <span class="badge-green">precise</span></div>
+        <span class="flow-arrow">+</span>
+        <div class="flow-box">AI Function Credits <span class="badge-green">precise</span></div>
+        <span class="flow-arrow">+</span>
+        <div class="flow-box">Warehouse Credits <span class="badge-orange">estimated</span></div>
+        <span class="flow-arrow">=</span>
+        <div class="flow-box"><strong>Total Cost</strong></div>
+      </div>
+
+      <table>
+        <thead><tr><th>Component</th><th>Precision</th><th>Why</th></tr></thead>
+        <tbody>
+          <tr><td>Token credits</td><td><span class="badge-green">Precise</span></td><td>Directly in <code>CORTEX_AGENT_USAGE_HISTORY.TOKEN_CREDITS</code></td></tr>
+          <tr><td>AI function credits</td><td><span class="badge-green">Precise</span></td><td>Directly in <code>METADATA:ai_functions_credits</code></td></tr>
+          <tr><td>Warehouse compute</td><td><span class="badge-orange">Estimated</span></td><td>No join key exists; agent is a black box; requires time-window correlation</td></tr>
+        </tbody>
+      </table>
+
+      <h3>Combined Query (User + Time Window Approach)</h3>
+      <pre><span class="keyword">WITH</span> agent_requests <span class="keyword">AS</span> (
+    <span class="keyword">SELECT</span> REQUEST_ID, USER_NAME, AGENT_NAME,
+           START_TIME, END_TIME, TOKEN_CREDITS,
+           <span class="function">COALESCE</span>(METADATA:<span class="string">ai_functions_credits</span>::NUMBER, <span class="number">0</span>) <span class="keyword">AS</span> ai_fn_credits
+    <span class="keyword">FROM</span> SNOWFLAKE.ACCOUNT_USAGE.CORTEX_AGENT_USAGE_HISTORY
+    <span class="keyword">WHERE</span> START_TIME >= <span class="function">DATEADD</span>(<span class="string">'day'</span>, <span class="number">-30</span>, <span class="function">CURRENT_TIMESTAMP</span>())
+)
+<span class="keyword">SELECT</span>
+    a.REQUEST_ID,
+    a.USER_NAME,
+    a.AGENT_NAME,
+    a.TOKEN_CREDITS <span class="keyword">AS</span> ai_token_credits,
+    a.ai_fn_credits,
+    <span class="function">COALESCE</span>(<span class="function">SUM</span>(q.CREDITS_ATTRIBUTED_COMPUTE), <span class="number">0</span>) <span class="keyword">AS</span> warehouse_credits,
+    a.TOKEN_CREDITS + a.ai_fn_credits
+        + <span class="function">COALESCE</span>(<span class="function">SUM</span>(q.CREDITS_ATTRIBUTED_COMPUTE), <span class="number">0</span>) <span class="keyword">AS</span> total_estimated_credits
+<span class="keyword">FROM</span> agent_requests a
+<span class="keyword">LEFT JOIN</span> SNOWFLAKE.ACCOUNT_USAGE.QUERY_ATTRIBUTION_HISTORY q
+    <span class="keyword">ON</span> q.USER_NAME = a.USER_NAME
+    <span class="keyword">AND</span> q.START_TIME <span class="keyword">BETWEEN</span> a.START_TIME
+        <span class="keyword">AND</span> <span class="function">DATEADD</span>(<span class="string">'second'</span>, <span class="number">10</span>, a.END_TIME)
+<span class="keyword">GROUP BY</span> <span class="number">1</span>, <span class="number">2</span>, <span class="number">3</span>, <span class="number">4</span>, <span class="number">5</span>
+<span class="keyword">ORDER BY</span> total_estimated_credits <span class="keyword">DESC</span>
+<span class="keyword">LIMIT</span> <span class="number">10</span>;</pre>
+
+      <p><strong>Note:</strong> <code>warehouse_credits</code> may be 0 for requests where the generated SQL runs in &lt; 100ms (too short for <code>QUERY_ATTRIBUTION_HISTORY</code> to capture).</p>
+    </section>
+
+    <!-- Per-User Attribution -->
+    <section class="slide anim-fade" id="per-user">
+      <h2>Per-User Attribution</h2>
+      <p>Every request in <code>CORTEX_AGENT_USAGE_HISTORY</code> is tagged with <code>USER_NAME</code>, <code>USER_ID</code>, and <code>USER_TAGS</code> for chargeback.</p>
+
+      <h3>Snowflake User Attribution</h3>
+      <pre><span class="keyword">SELECT</span>
+    USER_NAME,
+    AGENT_NAME,
+    <span class="function">COUNT</span>(*) <span class="keyword">AS</span> request_count,
+    <span class="function">SUM</span>(TOKENS) <span class="keyword">AS</span> total_tokens,
+    <span class="function">SUM</span>(TOKEN_CREDITS) <span class="keyword">AS</span> total_credits
+<span class="keyword">FROM</span> SNOWFLAKE.ACCOUNT_USAGE.CORTEX_AGENT_USAGE_HISTORY
+<span class="keyword">WHERE</span> START_TIME >= <span class="function">DATEADD</span>(<span class="string">'day'</span>, <span class="number">-30</span>, <span class="function">CURRENT_TIMESTAMP</span>())
+<span class="keyword">GROUP BY</span> <span class="number">1</span>, <span class="number">2</span>
+<span class="keyword">ORDER BY</span> total_credits <span class="keyword">DESC</span>;</pre>
+
+      <h3>Non-Snowflake User IDs (Multi-Tenant Apps)</h3>
+      <p>In multi-tenant apps, <code>USER_NAME</code> is often a shared service account. Three approaches to track application-level user identity:</p>
+
+      <div class="card-grid">
+        <div class="card">
+          <h4>Session Attributes (agent:run API)</h4>
+          <p>Pass <code>variables</code> with <code>is_immutable_session_attribute: true</code>. Readable via <code>SYS_CONTEXT('SNOWFLAKE$SESSION_ATTRIBUTES', 'key')</code>. Works with row access policies for tenant isolation.</p>
+          <p><a href="https://docs.snowflake.com/en/user-guide/snowflake-cortex/cortex-agents-multi-tenancy" class="badge-blue">Multi-Tenancy Docs</a></p>
+        </div>
+        <div class="card">
+          <h4>USER_TAGS</h4>
+          <p>Apply Snowflake tags to users: <code>ALTER USER svc SET TAG app_user = 'user-123'</code>. These appear in the <code>USER_TAGS</code> array column and can be queried via <code>LATERAL FLATTEN</code>.</p>
+        </div>
+      </div>
+
+      <h3>Tag-Based Cost Center Grouping</h3>
+      <pre><span class="keyword">SELECT</span>
+    t.value:<span class="string">tag_value</span>::STRING <span class="keyword">AS</span> cost_center,
+    <span class="function">COUNT</span>(*) <span class="keyword">AS</span> requests,
+    <span class="function">SUM</span>(TOKEN_CREDITS) <span class="keyword">AS</span> credits
+<span class="keyword">FROM</span> SNOWFLAKE.ACCOUNT_USAGE.CORTEX_AGENT_USAGE_HISTORY,
+    <span class="keyword">LATERAL FLATTEN</span>(input => USER_TAGS) t
+<span class="keyword">WHERE</span> t.value:<span class="string">tag_name</span>::STRING = <span class="string">'cost-center'</span>
+    <span class="keyword">AND</span> START_TIME >= <span class="function">DATEADD</span>(<span class="string">'day'</span>, <span class="number">-30</span>, <span class="function">CURRENT_TIMESTAMP</span>())
+<span class="keyword">GROUP BY</span> <span class="number">1</span>
+<span class="keyword">ORDER BY</span> credits <span class="keyword">DESC</span>;</pre>
+    </section>
+
+    <!-- Resource Budgets -->
+    <section class="slide anim-fade" id="resource-budgets">
+      <h2>Resource Budgets</h2>
+      <p>Snowflake supports tag-based resource budgets that monitor agent spend and take automated actions (alerts, access revocation) when thresholds are exceeded.</p>
+
+      <h3>How It Works</h3>
+      <ol>
+        <li>Create a tag and apply it to the Cortex Agent object</li>
+        <li>Create a budget with a monthly credit limit</li>
+        <li>Configure threshold actions (e.g., alert at 80%, revoke at 100%)</li>
+        <li>Snowflake evaluates spending periodically and triggers actions</li>
+      </ol>
+
+      <h3>Setup Pattern</h3>
+      <pre><span class="comment">-- Apply cost-center tag to agent</span>
+<span class="keyword">ALTER AGENT IF EXISTS</span> my_agent
+    <span class="keyword">SET TAG</span> cost_mgmt_db.tags.cost_center = <span class="string">'finance'</span>;
+
+<span class="comment">-- Create budget with 500 credit/month limit</span>
+<span class="keyword">CREATE</span> SNOWFLAKE.CORE.BUDGET my_agent_budget();
+<span class="keyword">CALL</span> my_agent_budget!SET_SPENDING_LIMIT(<span class="number">500</span>);
+
+<span class="comment">-- Alert at 80%, revoke at 100%</span>
+<span class="keyword">CALL</span> my_agent_budget!SET_NOTIFICATION_THRESHOLD(<span class="number">80</span>);
+<span class="keyword">CALL</span> my_agent_budget!ADD_CUSTOM_ACTION(
+    SYSTEM$REFERENCE(<span class="string">'PROCEDURE'</span>, <span class="string">'sp_revoke_agent_access(string, string)'</span>),
+    ARRAY_CONSTRUCT(<span class="string">'my_agent'</span>, <span class="string">'user_role'</span>),
+    <span class="string">'ACTUAL'</span>, <span class="number">100</span>
+);</pre>
+
+      <p><strong>Enforcement latency:</strong> Up to 8 hours (or 2 hours with low-latency budgets enabled).</p>
+      <p><a href="https://docs.snowflake.com/en/user-guide/snowflake-cortex/cortex-agents-resource-budgets" class="badge-blue">Resource Budgets Docs</a></p>
+    </section>
+
+    <!-- Key Takeaways -->
+    <section class="slide anim-fade" id="takeaways">
+      <h2>Key Takeaways</h2>
+
+      <h3>Cost Components</h3>
+      <table>
+        <thead><tr><th>Component</th><th>Source</th><th>Service Type (Metering)</th></tr></thead>
+        <tbody>
+          <tr><td>Agent orchestration tokens</td><td>CORTEX_AGENT_USAGE_HISTORY</td><td>CORTEX_AGENTS</td></tr>
+          <tr><td>Analyst tool tokens</td><td>CORTEX_AGENT_USAGE_HISTORY (service_type='cortex_analyst')</td><td>AI_SERVICES</td></tr>
+          <tr><td>Analyst hourly credits</td><td>CORTEX_ANALYST_USAGE_HISTORY</td><td>AI_SERVICES</td></tr>
+          <tr><td>AI function credits</td><td>METADATA:ai_functions_credits</td><td>AI_SERVICES</td></tr>
+          <tr><td>Warehouse compute</td><td>QUERY_ATTRIBUTION_HISTORY</td><td>WAREHOUSE_METERING</td></tr>
+        </tbody>
+      </table>
+
+      <h3>Important Caveats</h3>
+      <ul>
+        <li>ACCOUNT_USAGE views have up to <strong>3-hour latency</strong> (sometimes longer)</li>
+        <li>QUERY_ATTRIBUTION_HISTORY can take up to <strong>8 hours</strong></li>
+        <li>Short queries (&lt; ~100ms) may not appear in attribution views</li>
+        <li><code>AI_SERVICES</code> in metering is a roll-up of multiple feature views -- do not sum overlapping views</li>
+        <li>Token credits and warehouse credits are <strong>separate billing dimensions</strong></li>
+        <li>Set <code>QUERY_TAG</code> on agent sessions to enable compute attribution</li>
+      </ul>
+
+      <h3>Documentation Links</h3>
+      <ul>
+        <li><a href="https://docs.snowflake.com/en/sql-reference/account-usage/cortex_agent_usage_history">CORTEX_AGENT_USAGE_HISTORY</a></li>
+        <li><a href="https://docs.snowflake.com/en/sql-reference/account-usage/cortex_analyst_usage_history">CORTEX_ANALYST_USAGE_HISTORY</a></li>
+        <li><a href="https://docs.snowflake.com/en/sql-reference/account-usage/query_attribution_history">QUERY_ATTRIBUTION_HISTORY</a></li>
+        <li><a href="https://docs.snowflake.com/en/sql-reference/account-usage/metering_daily_history">METERING_DAILY_HISTORY</a></li>
+        <li><a href="https://docs.snowflake.com/en/user-guide/snowflake-cortex/cortex-agents-resource-budgets">Resource Budgets for Cortex Agents</a></li>
+        <li><a href="https://community.snowflake.com/s/article/how-to-track-and-understand-cortex-ai-related-charges">Cortex AI Billing FAQ (Community)</a></li>
+      </ul>
+    </section>
+
+  </div>
+
+  <script>
+    // Progress bar
+    var progressBar = document.querySelector('.progress-bar');
+    document.addEventListener('scroll', function() {
+      var scrollTop = window.scrollY;
+      var docHeight = document.documentElement.scrollHeight - window.innerHeight;
+      var progress = docHeight > 0 ? (scrollTop / docHeight) * 100 : 0;
+      progressBar.style.width = progress + '%';
+    });
+
+    // Scroll animations
+    var observer = new IntersectionObserver(function(entries) {
+      entries.forEach(function(entry) {
+        if (entry.isIntersecting) {
+          entry.target.classList.add('visible');
+        }
+      });
+    }, { threshold: 0.1 });
+
+    document.querySelectorAll('.anim-fade').forEach(function(el) {
+      observer.observe(el);
+    });
+
+    // Active nav link
+    var sections = document.querySelectorAll('section[id]');
+    var navLinks = document.querySelectorAll('.sidebar a');
+    document.addEventListener('scroll', function() {
+      var scrollPos = window.scrollY + 200;
+      sections.forEach(function(section) {
+        if (section.offsetTop <= scrollPos && section.offsetTop + section.offsetHeight > scrollPos) {
+          navLinks.forEach(function(link) {
+            link.classList.remove('active');
+            if (link.getAttribute('href') === '#' + section.id) {
+              link.classList.add('active');
+            }
+          });
+        }
+      });
+    });
+  </script>
+</body>
+</html>
