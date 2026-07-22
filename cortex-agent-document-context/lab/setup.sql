@@ -141,25 +141,46 @@ CREATE OR REPLACE FILE FORMAT RAW_TEXT_FMT
     RECORD_DELIMITER = '\n';
 
 -- -----------------------------------------------------------------------------
--- 6. UDF: READ_STAGED_DOCUMENT
+-- 6. UDFs: READ_STAGED_DOCUMENT + READ_DOCUMENT_BY_PATH
 -- -----------------------------------------------------------------------------
--- SQL UDF that reads a file from DOC_UPLOADS using AI_PARSE_DOCUMENT (LAYOUT mode).
--- Supports: PDF, DOCX, PPTX, TXT, HTML, JPEG, PNG, TIF
--- For CSV/JSON data: upload as .txt so AI_PARSE_DOCUMENT can read it.
--- The middleware should rename .csv/.json to .txt before staging.
+-- Python UDF reads any file as raw text (via SnowflakeFile + scoped URL).
+-- SQL wrapper routes: PDF/DOCX/PPTX use AI_PARSE_DOCUMENT, everything else reads raw.
 
-CREATE OR REPLACE FUNCTION READ_STAGED_DOCUMENT(filename VARCHAR)
+CREATE OR REPLACE FUNCTION READ_STAGED_DOCUMENT(scoped_url VARCHAR)
+RETURNS VARCHAR
+LANGUAGE PYTHON
+RUNTIME_VERSION = '3.11'
+PACKAGES = ('snowflake-snowpark-python')
+HANDLER = 'run'
+AS
+$$
+from snowflake.snowpark.files import SnowflakeFile
+
+def run(scoped_url):
+    with SnowflakeFile.open(scoped_url, 'r') as f:
+        return f.read()
+$$;
+
+CREATE OR REPLACE FUNCTION READ_DOCUMENT_BY_PATH(filename VARCHAR)
 RETURNS VARCHAR
 LANGUAGE SQL
 AS
 $$
-    SELECT COALESCE(
-        AI_PARSE_DOCUMENT(
-            TO_FILE('@DOCUMENT_CONTEXT_LAB.PUBLIC.DOC_UPLOADS', filename),
-            {'mode': 'LAYOUT'}
-        ):content::VARCHAR,
-        '[Error: Could not parse document]'
-    )
+    SELECT CASE
+        WHEN LOWER(filename) LIKE '%.pdf'
+          OR LOWER(filename) LIKE '%.docx'
+          OR LOWER(filename) LIKE '%.pptx'
+        THEN COALESCE(
+            AI_PARSE_DOCUMENT(
+                TO_FILE('@DOCUMENT_CONTEXT_LAB.PUBLIC.DOC_UPLOADS', filename),
+                {'mode': 'LAYOUT'}
+            ):content::VARCHAR,
+            '[Error: Could not parse document]'
+        )
+        ELSE READ_STAGED_DOCUMENT(
+            BUILD_SCOPED_FILE_URL('@DOCUMENT_CONTEXT_LAB.PUBLIC.DOC_UPLOADS', filename)
+        )
+    END
 $$;
 
 -- -----------------------------------------------------------------------------
@@ -211,7 +232,7 @@ tool_resources:
       warehouse: DOCUMENT_CONTEXT_LAB_WH
   read_document:
     type: function
-    identifier: "DOCUMENT_CONTEXT_LAB.PUBLIC.READ_STAGED_DOCUMENT"
+    identifier: "DOCUMENT_CONTEXT_LAB.PUBLIC.READ_DOCUMENT_BY_PATH"
     execution_environment:
       type: warehouse
       warehouse: DOCUMENT_CONTEXT_LAB_WH

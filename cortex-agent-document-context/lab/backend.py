@@ -1,16 +1,16 @@
 """
 BiteIQ Backend — Middleware for file upload to Snowflake stage + agent:run proxy.
-Run: python backend.py
-Requires: pip install flask flask-cors snowflake-snowpark-python
+Run: uvicorn backend:app --port 5001 --reload
+Requires: pip install fastapi uvicorn python-multipart snowflake-snowpark-python
 """
 import os, json, tempfile
 from pathlib import Path
-from flask import Flask, request, jsonify
-from flask_cors import CORS
-from snowflake.snowpark import Session
+from contextlib import asynccontextmanager
 
-app = Flask(__name__)
-CORS(app)  # Allow React frontend to call this
+from fastapi import FastAPI, UploadFile, File, HTTPException
+from fastapi.middleware.cors import CORSMiddleware
+from pydantic import BaseModel
+from snowflake.snowpark import Session
 
 # --- Snowflake connection (uses ~/.snowflake/config.toml) ---
 import tomllib
@@ -31,18 +31,19 @@ session.sql("USE WAREHOUSE DOCUMENT_CONTEXT_LAB_WH").collect()
 
 print(f"Connected as: {session.sql('SELECT CURRENT_USER()').collect()[0][0]}")
 
-# Extensions to rename to .txt before staging
-CONVERT_TO_TXT = {'.csv', '.json', '.md', '.tsv', '.log', '.xml', '.yaml', '.yml'}
+# --- App ---
+app = FastAPI(title="BiteIQ Backend", version="1.0")
+app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_methods=["*"], allow_headers=["*"])
+
+# Extensions to rename to .txt before staging (no longer needed — UDF reads raw)
+# Keeping .csv/.json as-is since READ_DOCUMENT_BY_PATH handles them directly.
+CONVERT_TO_TXT = set()  # empty — no conversion needed
 
 
-@app.route("/upload", methods=["POST"])
-def upload_file():
+@app.post("/upload")
+async def upload_file(file: UploadFile = File(...)):
     """Upload a file to @DOC_UPLOADS stage. Returns the staged path."""
-    if "file" not in request.files:
-        return jsonify({"error": "No file provided"}), 400
-
-    f = request.files["file"]
-    original_name = f.filename
+    original_name = file.filename
     ext = Path(original_name).suffix.lower()
 
     # Convert unsupported extensions to .txt
@@ -52,9 +53,10 @@ def upload_file():
         stage_name = original_name
 
     # Save to temp and PUT to stage
-    with tempfile.NamedTemporaryFile(delete=False, suffix=f"_{stage_name}") as tmp:
-        f.save(tmp.name)
-        tmp_path = tmp.name
+    content = await file.read()
+    tmp_dir = tempfile.mkdtemp()
+    tmp_path = os.path.join(tmp_dir, stage_name)
+    Path(tmp_path).write_bytes(content)
 
     try:
         session.file.put(
@@ -63,32 +65,30 @@ def upload_file():
             auto_compress=False,
             overwrite=True
         )
-        staged_path = f"uploads/{Path(tmp_path).name}"
-        return jsonify({"staged_path": staged_path, "original_name": original_name})
+        staged_path = f"uploads/{stage_name}"
+        return {"staged_path": staged_path, "original_name": original_name}
     finally:
         os.unlink(tmp_path)
+        os.rmdir(tmp_dir)
 
 
-@app.route("/ask", methods=["POST"])
-def ask_agent():
-    """
-    Call the agent with optional file context.
-    Body: { "question": "...", "staged_files": ["uploads/foo.txt"] }
-    """
-    data = request.json
-    question = data.get("question", "")
-    staged_files = data.get("staged_files", [])
+class AskRequest(BaseModel):
+    question: str
+    staged_files: list[str] = []
 
-    # Build content blocks
+
+@app.post("/ask")
+async def ask_agent(req: AskRequest):
+    """Call the agent with optional file context."""
     content_blocks = []
-    if staged_files:
-        file_list = ", ".join(f"'{f}'" for f in staged_files)
+    if req.staged_files:
+        file_list = ", ".join(f"'{f}'" for f in req.staged_files)
         content_blocks.append({
             "type": "text",
             "text": f"[The user has uploaded the following files to the document stage: {file_list}. "
                     f"Use the read_document tool to access them if relevant to the question.]"
         })
-    content_blocks.append({"type": "text", "text": question})
+    content_blocks.append({"type": "text", "text": req.question})
 
     # Call agent:run via the session's REST client
     rest = session.connection.rest
@@ -106,18 +106,20 @@ def ask_agent():
     with rest.use_requests_session(url) as s:
         resp = s.post(url, json=body, headers=headers)
         resp.raise_for_status()
-        return jsonify(resp.json())
+        return resp.json()
 
 
-@app.route("/health", methods=["GET"])
-def health():
-    return jsonify({"status": "ok", "user": session.sql("SELECT CURRENT_USER()").collect()[0][0]})
+@app.get("/health")
+async def health():
+    return {"status": "ok", "user": session.sql("SELECT CURRENT_USER()").collect()[0][0]}
 
 
 if __name__ == "__main__":
+    import uvicorn
     print("BiteIQ backend running on http://localhost:5001")
     print("Endpoints:")
     print("  POST /upload  — upload file to stage (multipart form)")
     print("  POST /ask     — call agent with question + staged files")
     print("  GET  /health  — check connection")
-    app.run(port=5001, debug=True)
+    print("  GET  /docs    — OpenAPI docs (Swagger UI)")
+    uvicorn.run(app, host="0.0.0.0", port=5001)
