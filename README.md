@@ -21,6 +21,8 @@ An internal enablement repository for Snowflake sales engineers and account exec
   - [Dynamic Time-Period Metrics](#dynamic-time-period-metrics)
   - [Model Registry](#model-registry)
   - [Scoping Agentic Implementations](#scoping-agentic-implementations)
+  - [Cortex Agent Document Context](#cortex-agent-document-context)
+  - [Cortex Agent Cost Observability](#cortex-agent-cost-observability)
 - [Repository Structure](#repository-structure)
 - [Getting Started](#getting-started)
 - [Presentation Format](#presentation-format)
@@ -29,7 +31,7 @@ An internal enablement repository for Snowflake sales engineers and account exec
 
 ## Overview
 
-This repository contains thirteen enablement modules covering key Cortex AI and Snowflake ML topics:
+This repository contains fifteen enablement modules covering key Cortex AI and Snowflake ML topics:
 
 | Module | Audience | Format | Slides |
 |--------|----------|--------|--------|
@@ -46,6 +48,8 @@ This repository contains thirteen enablement modules covering key Cortex AI and 
 | Dynamic Time-Period Metrics | SEs, Analytics Engineers, Data Engineers | Presentation + Hands-on Lab | [View](https://sfc-gh-perickson.github.io/demos-enablement/dynamic-time-period-metrics/presentations/dynamic-time-period-metrics.html) |
 | Model Registry | SEs, Data Scientists, ML Engineers | Presentation + Hands-on Lab | [View](https://sfc-gh-perickson.github.io/demos-enablement/model-registry/presentations/model-registry-overview.html) |
 | Scoping Agentic Implementations | Customers, SEs, Solution Architects | Presentation + Workshop | [View](https://sfc-gh-perickson.github.io/demos-enablement/scoping-agentic-implementations/presentations/scoping-agentic-implementations.html) |
+| Cortex Agent Document Context | SEs, Platform Engineers | Presentation + Hands-on Lab + React Demo | [View](https://sfc-gh-perickson.github.io/demos-enablement/cortex-agent-document-context/presentations/cortex-agent-document-context.html) |
+| Cortex Agent Cost Observability | SEs, FinOps Admins | Presentation + Hands-on Lab | [View](https://sfc-gh-perickson.github.io/demos-enablement/cortex-agent-cost-observability/presentations/cortex-agent-cost-observability.html) |
 
 Each module includes an HTML slide deck and companion speaker notes. The evaluations, many-model-training, feature-store, cortex-ai-observability, cortex-agent-multi-tenancy, and label-studio-spcs modules also provide complete hands-on labs with SQL setup and notebooks.
 
@@ -415,6 +419,75 @@ The workshop guides participants through persona mapping, question taxonomy crea
 
 ---
 
+### Cortex Agent Document Context
+
+**Location:** `cortex-agent-document-context/`
+
+Covers how to enable file/document uploads in a custom frontend calling the Cortex Agent REST API. Teaches the recommended architecture pattern: a backend that stages files + a UDF tool the agent uses to read them on demand via AI_PARSE_DOCUMENT.
+
+**Topics covered:**
+- Why file upload is not natively supported in agent:run (content type limitations)
+- Architecture: backend uploads to stage, agent reads via UDF tool
+- AI_PARSE_DOCUMENT for PDF/DOCX/PPTX/TXT/HTML
+- File type handling (rename .csv/.json to .txt for compatibility)
+- Multi-turn threaded conversations with document context
+- Production considerations (caching, security, context window limits)
+
+**Contents:**
+
+| File | Description |
+|------|-------------|
+| [`presentations/cortex-agent-document-context.html`](https://sfc-gh-perickson.github.io/demos-enablement/cortex-agent-document-context/presentations/cortex-agent-document-context.html) | Slide deck (9 slides) |
+| `presentations/cortex-agent-document-context-speaker-notes.md` | Speaker notes with internal context |
+| `lab/setup.sql` | SQL setup script (database, stage, UDF, semantic view, agent) |
+| `lab/cortex-agent-document-context-lab.ipynb` | Hands-on lab notebook (30 min) |
+| `lab/backend.py` | Flask backend for file upload to stage |
+| `lab/biteiq-chat-demo.html` | Single-file React chat app demo |
+| `lab/sample-docs/` | Sample files (TXT, CSV, PDF) for testing |
+
+#### Lab Prerequisites
+
+1. A Snowflake account with Cortex AI features enabled (AI_PARSE_DOCUMENT, Cortex Agents)
+2. Cross-region inference enabled for agent LLM calls
+3. Run `cortex-agent-document-context/lab/setup.sql` to create the `DOCUMENT_CONTEXT_LAB` database
+4. For the React demo: `pip install flask flask-cors` and run `python backend.py`
+
+The lab walks through uploading documents to stage, testing the UDF tool directly, calling the agent with file hints, multi-turn threaded conversations, and running the full React + backend demo.
+
+---
+
+### Cortex Agent Cost Observability
+
+**Location:** `cortex-agent-cost-observability/`
+
+Covers how to understand and manage the cost of Cortex Agent deployments using ACCOUNT_USAGE views. Answers: how many tokens are consumed, by whom, how much do Analyst tool calls cost, and what warehouse compute is triggered.
+
+**Topics covered:**
+- CORTEX_AGENT_USAGE_HISTORY for per-request token and credit consumption
+- Per-model token breakdown with cache hit ratios
+- CORTEX_ANALYST_USAGE_HISTORY for Analyst tool credits
+- QUERY_ATTRIBUTION_HISTORY for warehouse compute attribution
+- Total cost per request (tokens + compute)
+- Resource budgets for governance
+
+**Contents:**
+
+| File | Description |
+|------|-------------|
+| [`presentations/cortex-agent-cost-observability.html`](https://sfc-gh-perickson.github.io/demos-enablement/cortex-agent-cost-observability/presentations/cortex-agent-cost-observability.html) | Slide deck |
+| `lab/setup.sql` | SQL setup script (database, simulated fallback data) |
+| `lab/cortex-agent-cost-observability-lab.ipynb` | Hands-on lab notebook (30 min) |
+
+#### Lab Prerequisites
+
+1. A Snowflake account (ACCOUNTADMIN or role with ACCOUNT_USAGE access)
+2. Run `cortex-agent-cost-observability/lab/setup.sql` to create the `AGENT_COST_LAB` database
+3. Open `cortex-agent-cost-observability/lab/cortex-agent-cost-observability-lab.ipynb`
+
+The lab queries real ACCOUNT_USAGE views (with simulated fallback data) to analyze token consumption, per-user attribution, Analyst credits, warehouse compute, and daily cost trends.
+
+---
+
 ## Repository Structure
 
 ```
@@ -427,6 +500,22 @@ enablement/
 │   └── presentations/
 │       ├── server-side-agent-routing.html
 │       └── server-side-agent-routing-speaker-notes.md
+├── cortex-agent-cost-observability/
+│   ├── lab/
+│   │   ├── setup.sql
+│   │   └── cortex-agent-cost-observability-lab.ipynb
+│   └── presentations/
+│       └── cortex-agent-cost-observability.html
+├── cortex-agent-document-context/
+│   ├── lab/
+│   │   ├── setup.sql
+│   │   ├── cortex-agent-document-context-lab.ipynb
+│   │   ├── backend.py
+│   │   ├── biteiq-chat-demo.html
+│   │   └── sample-docs/
+│   └── presentations/
+│       ├── cortex-agent-document-context.html
+│       └── cortex-agent-document-context-speaker-notes.md
 ├── cortex-agent-multi-tenancy/
 │   ├── lab/
 │   │   ├── setup.sql
@@ -529,6 +618,8 @@ enablement/
    - **Dynamic Time-Period Metrics:** Run `dynamic-time-period-metrics/lab/setup.sql` before starting the notebook
    - **Model Registry:** Run `python model-registry/train_model.py` then open `model-registry/register_model.ipynb`
    - **Scoping Agentic Implementations:** Run `scoping-agentic-implementations/lab/setup.sql` before starting the notebook
+   - **Cortex Agent Document Context:** Run `cortex-agent-document-context/lab/setup.sql`, then optionally `python lab/backend.py` for the React demo
+   - **Cortex Agent Cost Observability:** Run `cortex-agent-cost-observability/lab/setup.sql` before starting the notebook
 
 ---
 
