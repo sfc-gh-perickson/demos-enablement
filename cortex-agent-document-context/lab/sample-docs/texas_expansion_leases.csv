@@ -1,0 +1,8 @@
+store_id,location,monthly_rent,lease_expires,sqft,parking_spaces,landlord,trade_area_pop,median_hhi,notes
+FB-501,Austin Downtown,18500,2025-06-30,2800,0,Lone Star Properties,45000,78000,Walk-up only; heavy foot traffic; near UT campus
+FB-502,Austin South Lamar,14200,2026-01-31,3200,25,Hill Country Holdings,32000,92000,Mixed residential/retail; growing area
+FB-503,Austin Domain,22000,2025-12-31,2400,40,Domain Partners LLC,58000,105000,Premium mixed-use development; highest foot traffic
+FB-504,San Antonio Riverwalk,16800,2025-09-30,2600,0,Alamo Real Estate,65000,62000,Tourist-heavy; seasonal variance; no parking
+FB-505,San Antonio Stone Oak,11500,2026-06-30,3500,45,NE SA Development,28000,115000,Suburban; drive-thru friendly; family demographic
+FB-506,Austin East Side,12800,2026-03-31,2900,15,East Austin Dev Co,38000,68000,Gentrifying area; young professional demographic
+FB-507,San Antonio Medical Center,15200,2025-11-30,3000,30,SA Medical Properties,42000,88000,Near hospitals; steady weekday lunch traffic

@@ -230,6 +230,14 @@ GRANT WRITE ON STAGE DOCUMENT_CONTEXT_LAB.PUBLIC.DOC_UPLOADS TO ROLE SYSADMIN;
 -- -----------------------------------------------------------------------------
 -- SETUP COMPLETE
 -- -----------------------------------------------------------------------------
+-- After running this script, upload sample docs to stage:
+--
+--   PUT file://sample-docs/competitive_landscape_q1_2024.txt @DOC_UPLOADS/reports AUTO_COMPRESS=FALSE OVERWRITE=TRUE;
+--   PUT file://sample-docs/texas_expansion_leases.csv @DOC_UPLOADS/data AUTO_COMPRESS=FALSE OVERWRITE=TRUE;
+--   PUT file://sample-docs/q2_board_summary.pdf @DOC_UPLOADS/reports AUTO_COMPRESS=FALSE OVERWRITE=TRUE;
+--
+-- Or from the notebook: session.file.put('sample-docs/q2_board_summary.pdf', '@DOC_UPLOADS/reports', auto_compress=False)
+-- -----------------------------------------------------------------------------
 
 SHOW TABLES IN SCHEMA DOCUMENT_CONTEXT_LAB.PUBLIC;
 SHOW STAGES IN SCHEMA DOCUMENT_CONTEXT_LAB.PUBLIC;

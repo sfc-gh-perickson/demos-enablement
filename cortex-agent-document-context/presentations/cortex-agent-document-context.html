@@ -251,32 +251,29 @@
     <!-- Architecture -->
     <section class="slide" id="architecture">
       <h2>Solution Architecture</h2>
-      <p style="margin-bottom: 2rem;">Give the agent a UDF tool. The middleware just uploads and hints.</p>
+      <p style="margin-bottom: 2rem;">Backend uploads file to stage. Agent reads it via UDF tool on demand.</p>
 
       <div class="flow-row anim-fade">
         <div class="flow-box">User + File</div>
         <span class="flow-arrow">&rarr;</span>
         <div class="flow-box">React Frontend</div>
         <span class="flow-arrow">&rarr;</span>
-        <div class="flow-box">Middleware</div>
+        <div class="flow-box">Backend (Flask/Express)</div>
         <span class="flow-arrow">&rarr;</span>
-        <div class="flow-box-accent">agent:run API</div>
-      </div>
-
-      <div class="flow-row anim-fade">
-        <div class="flow-box">Middleware</div>
-        <span class="flow-arrow">&darr;</span>
         <div class="flow-box">PUT to @stage</div>
-        <span style="width: 2rem;"></span>
-        <div class="flow-box-accent">Agent</div>
+      </div>
+      <div class="flow-row anim-fade">
+        <div class="flow-box">Backend</div>
         <span class="flow-arrow">&rarr;</span>
-        <div class="flow-box">read_document(file)</div>
+        <div class="flow-box-accent">agent:run + hint</div>
         <span class="flow-arrow">&rarr;</span>
-        <div class="flow-box">UDF + AI_PARSE_DOCUMENT</div>
+        <div class="flow-box">Agent calls read_document(file)</div>
+        <span class="flow-arrow">&rarr;</span>
+        <div class="flow-box">UDF: AI_PARSE_DOCUMENT</div>
       </div>
 
       <div class="highlight-box anim-fade" style="margin-top: 2rem;">
-        <strong>Key insight:</strong> The middleware does NOT parse the document. It uploads to stage and prepends a one-line hint. The agent autonomously decides if/when to read the file via its tool.
+        <strong>Why a backend?</strong> Snowflake's <code>PUT</code> command (the only way to upload to internal stages) is only available through Snowflake connectors (Python, JDBC, SnowSQL) — not the SQL API or REST API. The backend receives the file from the frontend and uses <code>session.file.put()</code> to stage it.
       </div>
     </section>
 
@@ -284,6 +281,23 @@
     <section class="slide" id="udf-tool">
       <h2>The UDF Tool: READ_STAGED_DOCUMENT</h2>
       <p style="margin-bottom: 1.5rem;">A SQL UDF registered as a generic tool on the agent.</p>
+
+      <div class="flow-row anim-fade">
+        <div class="flow-box">React Frontend</div>
+        <span class="flow-arrow">&rarr;</span>
+        <div class="flow-box">Backend (Flask/Express)</div>
+        <span class="flow-arrow">&rarr;</span>
+        <div class="flow-box">PUT to @stage</div>
+      </div>
+      <div class="flow-row anim-fade">
+        <div class="flow-box">Backend</div>
+        <span class="flow-arrow">&rarr;</span>
+        <div class="flow-box-accent">agent:run + hint</div>
+        <span class="flow-arrow">&rarr;</span>
+        <div class="flow-box">Agent calls read_document(file)</div>
+        <span class="flow-arrow">&rarr;</span>
+        <div class="flow-box">UDF: AI_PARSE_DOCUMENT</div>
+      </div>
 
       <pre class="anim-fade"><span class="keyword">CREATE FUNCTION</span> READ_STAGED_DOCUMENT(filename <span class="function">VARCHAR</span>)
 <span class="keyword">RETURNS</span> <span class="function">VARCHAR</span>
@@ -299,12 +313,12 @@ $$
   )
 $$;</pre>
 
-      <pre class="anim-fade"><span class="comment">-- Agent spec (excerpt)</span>
+      <pre class="anim-fade"><span class="comment">-- Agent spec: register as a generic tool</span>
 tools:
   - tool_spec:
       type: <span class="string">"generic"</span>
       name: <span class="string">"read_document"</span>
-      description: <span class="string">"Read and parse a document from the upload stage."</span>
+      description: <span class="string">"Read a document from the upload stage."</span>
       input_schema:
         type: object
         properties:
@@ -322,17 +336,17 @@ tool_resources:
 
     <!-- Middleware -->
     <section class="slide" id="middleware">
-      <h2>The Middleware Pattern</h2>
+      <h2>The Middleware (Backend)</h2>
       <p style="margin-bottom: 2rem;">Three responsibilities. No parsing logic.</p>
 
       <div class="card-grid anim-fade">
         <div class="card">
           <h4>1. Upload to Stage</h4>
-          <p>Receive file from frontend. Convert .csv/.json to .txt (rename only). PUT to <code>@DOC_UPLOADS</code>.</p>
+          <p>Receive file from frontend. Rename .csv/.json to .txt. <code>session.file.put()</code> to <code>@DOC_UPLOADS</code>.</p>
         </div>
         <div class="card">
           <h4>2. Prepend Hint</h4>
-          <p>Add a system-style text block: "The user uploaded 'reports/analysis.txt'. Use read_document to access it."</p>
+          <p>Add a text block: "The user uploaded 'reports/analysis.txt'. Use read_document to access it."</p>
         </div>
         <div class="card">
           <h4>3. Forward to Agent</h4>
@@ -340,18 +354,14 @@ tool_resources:
         </div>
       </div>
 
-      <pre class="anim-fade"><span class="comment">// What the middleware sends to agent:run</span>
-{
-  <span class="string">"thread_id"</span>: 1234,
-  <span class="string">"parent_message_id"</span>: 0,
-  <span class="string">"messages"</span>: [{
-    <span class="string">"role"</span>: <span class="string">"user"</span>,
-    <span class="string">"content"</span>: [
-      {<span class="string">"type"</span>: <span class="string">"text"</span>, <span class="string">"text"</span>: <span class="string">"[User uploaded 'reports/q2_plan.txt'. Use read_document if relevant.]"</span>},
-      {<span class="string">"type"</span>: <span class="string">"text"</span>, <span class="string">"text"</span>: <span class="string">"Which region has the most aggressive growth target?"</span>}
-    ]
-  }]
-}</pre>
+      <pre class="anim-fade"><span class="comment"># Python backend (Flask) — the upload endpoint</span>
+@app.route(<span class="string">"/upload"</span>, methods=[<span class="string">"POST"</span>])
+<span class="keyword">def</span> <span class="function">upload_file</span>():
+    f = request.files[<span class="string">"file"</span>]
+    <span class="comment"># Rename .csv/.json to .txt for AI_PARSE_DOCUMENT</span>
+    stage_name = rename_if_needed(f.filename)
+    session.file.put(tmp_path, <span class="string">"@DOC_UPLOADS/uploads"</span>)
+    <span class="keyword">return</span> {<span class="string">"staged_path"</span>: f<span class="string">"uploads/{stage_name}"</span>}</pre>
     </section>
 
     <!-- File Types -->
