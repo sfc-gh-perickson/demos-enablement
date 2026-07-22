@@ -258,7 +258,7 @@
         <span class="flow-arrow">&rarr;</span>
         <div class="flow-box">React Frontend</div>
         <span class="flow-arrow">&rarr;</span>
-        <div class="flow-box">Backend (Flask/Express)</div>
+        <div class="flow-box">Backend (FastAPI)</div>
         <span class="flow-arrow">&rarr;</span>
         <div class="flow-box">PUT to @stage</div>
       </div>
@@ -285,7 +285,7 @@
       <div class="flow-row anim-fade">
         <div class="flow-box">React Frontend</div>
         <span class="flow-arrow">&rarr;</span>
-        <div class="flow-box">Backend (Flask/Express)</div>
+        <div class="flow-box">Backend (FastAPI)</div>
         <span class="flow-arrow">&rarr;</span>
         <div class="flow-box">PUT to @stage</div>
       </div>
@@ -296,21 +296,40 @@
         <span class="flow-arrow">&rarr;</span>
         <div class="flow-box">Agent calls read_document(file)</div>
         <span class="flow-arrow">&rarr;</span>
-        <div class="flow-box">UDF: AI_PARSE_DOCUMENT</div>
+        <div class="flow-box">UDF reads file</div>
       </div>
 
-      <pre class="anim-fade"><span class="keyword">CREATE FUNCTION</span> READ_STAGED_DOCUMENT(filename <span class="function">VARCHAR</span>)
+      <pre class="anim-fade"><span class="comment">-- Python UDF: reads any file as raw text via SnowflakeFile</span>
+<span class="keyword">CREATE FUNCTION</span> READ_STAGED_DOCUMENT(scoped_url <span class="function">VARCHAR</span>)
+<span class="keyword">RETURNS</span> <span class="function">VARCHAR</span>
+<span class="keyword">LANGUAGE</span> PYTHON
+<span class="keyword">HANDLER</span> = <span class="string">'run'</span>
+<span class="keyword">AS</span> $$
+<span class="keyword">from</span> snowflake.snowpark.files <span class="keyword">import</span> SnowflakeFile
+
+<span class="keyword">def</span> <span class="function">run</span>(scoped_url):
+    <span class="keyword">with</span> SnowflakeFile.open(scoped_url, <span class="string">'r'</span>) <span class="keyword">as</span> f:
+        <span class="keyword">return</span> f.read()
+$$;
+
+<span class="comment">-- SQL wrapper: routes PDF/DOCX to AI_PARSE_DOCUMENT, everything else to raw read</span>
+<span class="keyword">CREATE FUNCTION</span> READ_DOCUMENT_BY_PATH(filename <span class="function">VARCHAR</span>)
 <span class="keyword">RETURNS</span> <span class="function">VARCHAR</span>
 <span class="keyword">LANGUAGE</span> SQL
 <span class="keyword">AS</span>
 $$
-  <span class="keyword">SELECT</span> <span class="function">COALESCE</span>(
-    <span class="function">AI_PARSE_DOCUMENT</span>(
-      <span class="function">TO_FILE</span>(<span class="string">'@DOC_UPLOADS'</span>, filename),
-      {<span class="string">'mode'</span>: <span class="string">'LAYOUT'</span>}
-    ):content::<span class="function">VARCHAR</span>,
-    <span class="string">'[Error: Could not parse document]'</span>
-  )
+  <span class="keyword">SELECT CASE</span>
+    <span class="keyword">WHEN</span> LOWER(filename) <span class="keyword">LIKE</span> <span class="string">'%.pdf'</span>
+      <span class="keyword">OR</span> LOWER(filename) <span class="keyword">LIKE</span> <span class="string">'%.docx'</span>
+      <span class="keyword">OR</span> LOWER(filename) <span class="keyword">LIKE</span> <span class="string">'%.pptx'</span>
+    <span class="keyword">THEN</span> <span class="function">AI_PARSE_DOCUMENT</span>(
+        <span class="function">TO_FILE</span>(<span class="string">'@DOC_UPLOADS'</span>, filename),
+        {<span class="string">'mode'</span>: <span class="string">'LAYOUT'</span>}
+      ):content::<span class="function">VARCHAR</span>
+    <span class="keyword">ELSE</span> READ_STAGED_DOCUMENT(
+        <span class="function">BUILD_SCOPED_FILE_URL</span>(<span class="string">'@DOC_UPLOADS'</span>, filename)
+      )
+  <span class="keyword">END</span>
 $$;</pre>
 
       <pre class="anim-fade"><span class="comment">-- Agent spec: register as a generic tool</span>
@@ -328,7 +347,7 @@ tools:
 tool_resources:
   read_document:
     type: function
-    identifier: <span class="string">"DB.SCHEMA.READ_STAGED_DOCUMENT"</span>
+    identifier: <span class="string">"DB.SCHEMA.READ_DOCUMENT_BY_PATH"</span>
     execution_environment:
       type: warehouse
       warehouse: MY_WH</pre>
@@ -337,16 +356,16 @@ tool_resources:
     <!-- Middleware -->
     <section class="slide" id="middleware">
       <h2>The Middleware (Backend)</h2>
-      <p style="margin-bottom: 2rem;">Three responsibilities. No parsing logic.</p>
+      <p style="margin-bottom: 2rem;">Three responsibilities. No parsing, no file-type logic.</p>
 
       <div class="card-grid anim-fade">
         <div class="card">
           <h4>1. Upload to Stage</h4>
-          <p>Receive file from frontend. Rename .csv/.json to .txt. <code>session.file.put()</code> to <code>@DOC_UPLOADS</code>.</p>
+          <p>Receive file from frontend. <code>session.file.put()</code> to <code>@DOC_UPLOADS</code>. No renaming needed.</p>
         </div>
         <div class="card">
           <h4>2. Prepend Hint</h4>
-          <p>Add a text block: "The user uploaded 'reports/analysis.txt'. Use read_document to access it."</p>
+          <p>Add a text block: "The user uploaded 'uploads/analysis.csv'. Use read_document to access it."</p>
         </div>
         <div class="card">
           <h4>3. Forward to Agent</h4>
@@ -354,35 +373,34 @@ tool_resources:
         </div>
       </div>
 
-      <pre class="anim-fade"><span class="comment"># Python backend (Flask) — the upload endpoint</span>
-@app.route(<span class="string">"/upload"</span>, methods=[<span class="string">"POST"</span>])
-<span class="keyword">def</span> <span class="function">upload_file</span>():
-    f = request.files[<span class="string">"file"</span>]
-    <span class="comment"># Rename .csv/.json to .txt for AI_PARSE_DOCUMENT</span>
-    stage_name = rename_if_needed(f.filename)
+      <pre class="anim-fade"><span class="comment"># Python backend (FastAPI) — the upload endpoint</span>
+@app.post(<span class="string">"/upload"</span>)
+<span class="keyword">async def</span> <span class="function">upload_file</span>(file: UploadFile):
+    content = <span class="keyword">await</span> file.read()
+    Path(tmp_path).write_bytes(content)
     session.file.put(tmp_path, <span class="string">"@DOC_UPLOADS/uploads"</span>)
-    <span class="keyword">return</span> {<span class="string">"staged_path"</span>: f<span class="string">"uploads/{stage_name}"</span>}</pre>
+    <span class="keyword">return</span> {<span class="string">"staged_path"</span>: f<span class="string">"uploads/{file.filename}"</span>}</pre>
     </section>
 
     <!-- File Types -->
     <section class="slide" id="file-types">
       <h2>File Type Handling</h2>
-      <p style="margin-bottom: 2rem;"><code>AI_PARSE_DOCUMENT</code> handles most formats. CSV/JSON just need a rename.</p>
+      <p style="margin-bottom: 2rem;">The UDF routes by extension. No middleware logic needed.</p>
 
       <div class="anim-fade" style="width: 100%; overflow-x: auto;">
         <table>
           <thead><tr><th>File Type</th><th>Middleware Action</th><th>UDF Behavior</th></tr></thead>
           <tbody>
             <tr><td>PDF, DOCX, PPTX</td><td>Upload as-is</td><td>AI_PARSE_DOCUMENT (LAYOUT)</td></tr>
-            <tr><td>TXT, HTML</td><td>Upload as-is</td><td>AI_PARSE_DOCUMENT (LAYOUT)</td></tr>
-            <tr><td>JPEG, PNG, TIF</td><td>Upload as-is</td><td>AI_PARSE_DOCUMENT (OCR/LAYOUT)</td></tr>
-            <tr><td>CSV, JSON, MD</td><td>Rename to .txt</td><td>AI_PARSE_DOCUMENT reads as text</td></tr>
+            <tr><td>CSV, JSON, TXT, MD</td><td>Upload as-is</td><td>Raw text read via SnowflakeFile</td></tr>
+            <tr><td>HTML, XML</td><td>Upload as-is</td><td>Raw text read via SnowflakeFile</td></tr>
+            <tr><td>JPEG, PNG, TIF</td><td>Upload as-is</td><td>AI_PARSE_DOCUMENT (OCR)</td></tr>
           </tbody>
         </table>
       </div>
 
       <div class="highlight-box anim-fade">
-        <strong>Why rename?</strong> <code>AI_PARSE_DOCUMENT</code> does not support .csv/.json extensions. Renaming to .txt is a no-op on the content -- the function reads it as plain text, preserving the original structure (headers, delimiters, etc.).
+        <strong>No renaming needed.</strong> The UDF checks the file extension: PDF/DOCX/PPTX route to <code>AI_PARSE_DOCUMENT</code> for structured parsing. Everything else is read as raw text via <code>SnowflakeFile</code> — CSVs, JSON, markdown all come through as-is.
       </div>
     </section>
 
