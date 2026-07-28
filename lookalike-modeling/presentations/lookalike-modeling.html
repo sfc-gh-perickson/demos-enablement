@@ -1,0 +1,625 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="snowflake-source" content="cortex-agent-authored">
+  <title>Lookalike Modeling with Cortex Agent Skills — Snowflake</title>
+  <script type="application/json" id="snowflake-report-metadata">
+  {
+    "generated": "2026-07-28",
+    "intent": "Enablement presentation: Intelligent lookalike modeling with Cortex Agent Skills and Feature Store",
+    "sections": [
+      {"id": "title", "title": "Title slide"},
+      {"id": "challenge", "title": "The challenge"},
+      {"id": "architecture", "title": "Two-sided architecture"},
+      {"id": "lookalike-explained", "title": "What is lookalike modeling"},
+      {"id": "feature-store", "title": "Feature Store as governed catalog"},
+      {"id": "agent-skills", "title": "Cortex Agent Skills"},
+      {"id": "skill-workflow", "title": "The lookalike skill workflow"},
+      {"id": "feature-selection", "title": "Intelligent feature selection"},
+      {"id": "demo-trace", "title": "Demo: agent trace"},
+      {"id": "registry-experiments", "title": "Model Registry + Experiments"},
+      {"id": "monitoring", "title": "DS monitoring toolkit"},
+      {"id": "quality-gates", "title": "Quality gates"},
+      {"id": "scale", "title": "Scale and performance"},
+      {"id": "next-steps", "title": "Next steps"}
+    ]
+  }
+  </script>
+  <style>
+    :root {
+      color-scheme: light dark;
+      --bg: #0F1B2D;
+      --sidebar-bg: #1B2A4A;
+      --primary: #29B5E8;
+      --accent: #7C3AED;
+      --text: #E2E8F0;
+      --text-muted: #94A3B8;
+      --card-bg: #162236;
+      --border: #2D4A6F;
+      --green: #10B981;
+      --orange: #F59E0B;
+      --red: #EF4444;
+    }
+
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      font-family: -apple-system, system-ui, 'Segoe UI', sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.6;
+      overflow-x: hidden;
+    }
+
+    .progress-bar {
+      position: fixed;
+      top: 0;
+      left: 0;
+      height: 3px;
+      background: linear-gradient(90deg, var(--primary), var(--accent));
+      z-index: 1000;
+      transition: width 0.1s;
+    }
+
+    .sidebar {
+      position: fixed;
+      left: 0;
+      top: 0;
+      width: 260px;
+      height: 100vh;
+      background: var(--sidebar-bg);
+      padding: 2rem 1.5rem;
+      overflow-y: auto;
+      border-right: 1px solid var(--border);
+      z-index: 100;
+    }
+
+    .sidebar h2 {
+      font-size: 0.85rem;
+      font-weight: 600;
+      color: var(--primary);
+      margin-bottom: 1.5rem;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+
+    .sidebar a {
+      display: block;
+      color: var(--text-muted);
+      text-decoration: none;
+      padding: 0.5rem 0.75rem;
+      border-radius: 6px;
+      font-size: 0.85rem;
+      margin-bottom: 0.25rem;
+      transition: all 0.2s;
+    }
+
+    .sidebar a:hover, .sidebar a.active {
+      color: var(--text);
+      background: rgba(41, 181, 232, 0.1);
+    }
+
+    .sidebar a.active {
+      border-left: 3px solid var(--primary);
+      padding-left: calc(0.75rem - 3px);
+    }
+
+    .main {
+      margin-left: 260px;
+      padding: 0;
+    }
+
+    .slide {
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      padding: 4rem 3rem;
+      max-width: 1200px;
+      margin: 0 auto;
+    }
+
+    .slide h1 {
+      font-size: 2.8rem;
+      font-weight: 700;
+      margin-bottom: 1rem;
+      background: linear-gradient(135deg, var(--primary), var(--accent));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+      text-align: center;
+    }
+
+    .slide h2 {
+      font-size: 1.75rem;
+      font-weight: 600;
+      color: var(--text);
+      margin-bottom: 1.5rem;
+      text-align: center;
+    }
+
+    .slide h3 {
+      font-size: 1.25rem;
+      font-weight: 500;
+      color: var(--text-muted);
+      margin-bottom: 1rem;
+    }
+
+    .slide p {
+      font-size: 1.1rem;
+      color: var(--text-muted);
+      max-width: 700px;
+      text-align: center;
+    }
+
+    .subtitle { font-size: 1.3rem; color: var(--text-muted); margin-top: 0.5rem; font-weight: 300; }
+
+    .stat-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 1.5rem;
+      width: 100%;
+      margin: 2rem 0;
+    }
+
+    .stat-card {
+      background: var(--card-bg);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 1.5rem;
+      text-align: center;
+    }
+
+    .stat-card .value { font-size: 2rem; font-weight: 700; color: var(--primary); }
+    .stat-card .label { font-size: 0.85rem; color: var(--text-muted); margin-top: 0.5rem; }
+
+    .card-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+      gap: 1.5rem;
+      width: 100%;
+      margin: 2rem 0;
+    }
+
+    .card {
+      background: var(--card-bg);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 1.5rem;
+    }
+
+    .card h4 { font-size: 1rem; font-weight: 600; color: var(--text); margin-bottom: 0.75rem; }
+    .card p { font-size: 0.9rem; color: var(--text-muted); text-align: left; }
+    .card .card-icon { font-size: 1.5rem; margin-bottom: 0.75rem; display: block; }
+
+    .flow-steps {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      flex-wrap: wrap;
+      margin: 2rem 0;
+    }
+
+    .flow-step {
+      background: var(--card-bg);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 0.75rem 1.25rem;
+      font-size: 0.9rem;
+      color: var(--text);
+    }
+
+    .flow-arrow { color: var(--primary); font-size: 1.2rem; }
+
+    .code-block {
+      background: #0d1520;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 1.5rem;
+      font-family: 'SF Mono', 'Fira Code', monospace;
+      font-size: 0.85rem;
+      color: var(--text);
+      overflow-x: auto;
+      width: 100%;
+      margin: 1rem 0;
+      white-space: pre;
+      line-height: 1.5;
+    }
+
+    .highlight { color: var(--primary); }
+    .comment { color: var(--text-muted); }
+
+    .two-col {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 2rem;
+      width: 100%;
+      margin: 2rem 0;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 1.5rem 0;
+      font-size: 0.9rem;
+    }
+
+    th {
+      background: var(--card-bg);
+      color: var(--primary);
+      font-weight: 600;
+      padding: 0.75rem 1rem;
+      text-align: left;
+      border-bottom: 2px solid var(--border);
+    }
+
+    td {
+      padding: 0.75rem 1rem;
+      border-bottom: 1px solid var(--border);
+      color: var(--text);
+    }
+
+    .tag {
+      display: inline-block;
+      padding: 0.2rem 0.6rem;
+      border-radius: 4px;
+      font-size: 0.75rem;
+      font-weight: 600;
+    }
+
+    .tag-green { background: rgba(16, 185, 129, 0.2); color: var(--green); }
+    .tag-orange { background: rgba(245, 158, 11, 0.2); color: var(--orange); }
+    .tag-red { background: rgba(239, 68, 68, 0.2); color: var(--red); }
+  </style>
+</head>
+<body>
+  <div class="progress-bar" id="progressBar"></div>
+
+  <nav class="sidebar">
+    <h2>Lookalike Modeling</h2>
+    <a href="#title">Title</a>
+    <a href="#challenge">The Challenge</a>
+    <a href="#architecture">Architecture</a>
+    <a href="#lookalike-explained">Lookalike Modeling</a>
+    <a href="#feature-store">Feature Store</a>
+    <a href="#agent-skills">Agent Skills</a>
+    <a href="#skill-workflow">Skill Workflow</a>
+    <a href="#feature-selection">Feature Selection</a>
+    <a href="#demo-trace">Demo Trace</a>
+    <a href="#registry-experiments">Registry + Experiments</a>
+    <a href="#monitoring">DS Monitoring</a>
+    <a href="#quality-gates">Quality Gates</a>
+    <a href="#scale">Scale</a>
+    <a href="#next-steps">Next Steps</a>
+  </nav>
+
+  <div class="main">
+
+    <!-- Slide 1: Title -->
+    <section class="slide" id="title">
+      <h1>Intelligent Lookalike Modeling</h1>
+      <p class="subtitle">with Cortex Agent Skills + Feature Store</p>
+      <p style="margin-top: 2rem;">Self-service audience expansion for marketing teams,<br>governed monitoring for data science.</p>
+      <div class="stat-grid" style="margin-top: 3rem;">
+        <div class="stat-card"><div class="value">Agent</div><div class="label">Creates models on demand</div></div>
+        <div class="stat-card"><div class="value">Feature Store</div><div class="label">Governed feature catalog</div></div>
+        <div class="stat-card"><div class="value">DS Monitor</div><div class="label">Validates at scale</div></div>
+      </div>
+    </section>
+
+    <!-- Slide 2: The Challenge -->
+    <section class="slide" id="challenge">
+      <h2>The Challenge</h2>
+      <p>Two audiences, one platform</p>
+      <div class="two-col" style="margin-top: 2rem;">
+        <div class="card">
+          <span class="card-icon">Account Managers</span>
+          <h4>Non-Technical Users Need Models</h4>
+          <p>"Build me a lookalike audience for my Home &amp; Garden campaign."</p>
+          <p style="margin-top: 0.5rem;">They want results in 5 minutes, not a ticket to the DS team.</p>
+        </div>
+        <div class="card">
+          <span class="card-icon">Data Scientists</span>
+          <h4>DS Teams Need Governance</h4>
+          <p>"If 50 users run models, I need to gut-check them quickly."</p>
+          <p style="margin-top: 0.5rem;">They need to validate feature selections, monitor drift, and flag bad models.</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- Slide 3: Architecture -->
+    <section class="slide" id="architecture">
+      <h2>Two-Sided Architecture</h2>
+      <div class="flow-steps">
+        <div class="flow-step">User (CoWork)</div>
+        <span class="flow-arrow">&#8594;</span>
+        <div class="flow-step">Cortex Agent</div>
+        <span class="flow-arrow">&#8594;</span>
+        <div class="flow-step">SKILL.md</div>
+        <span class="flow-arrow">&#8594;</span>
+        <div class="flow-step">Feature Store</div>
+        <span class="flow-arrow">&#8594;</span>
+        <div class="flow-step">Train + Score</div>
+        <span class="flow-arrow">&#8594;</span>
+        <div class="flow-step">Registry</div>
+      </div>
+      <div class="flow-steps" style="margin-top: 1rem;">
+        <div class="flow-step" style="border-color: var(--accent);">DS Team</div>
+        <span class="flow-arrow">&#8594;</span>
+        <div class="flow-step">Experiments</div>
+        <span class="flow-arrow">&#8594;</span>
+        <div class="flow-step">Lift Analysis</div>
+        <span class="flow-arrow">&#8594;</span>
+        <div class="flow-step">Feature Audit</div>
+        <span class="flow-arrow">&#8594;</span>
+        <div class="flow-step">Quality Gates</div>
+        <span class="flow-arrow">&#8594;</span>
+        <div class="flow-step">APPROVED / REVIEW</div>
+      </div>
+      <p style="margin-top: 2rem;">The agent creates. The DS team governs. Same platform, same data, full lineage.</p>
+    </section>
+
+    <!-- Slide 4: What is Lookalike Modeling -->
+    <section class="slide" id="lookalike-explained">
+      <h2>What is Lookalike Modeling?</h2>
+      <p>Find new prospects who "look like" your best existing customers.</p>
+      <div class="flow-steps" style="margin-top: 2rem;">
+        <div class="flow-step">Seed Audience<br><small>Known converters</small></div>
+        <span class="flow-arrow">&#8594;</span>
+        <div class="flow-step">Feature Engineering<br><small>RFM, affinity, engagement</small></div>
+        <span class="flow-arrow">&#8594;</span>
+        <div class="flow-step">Binary Classifier<br><small>Seed=1 vs Non-seed=0</small></div>
+        <span class="flow-arrow">&#8594;</span>
+        <div class="flow-step">Score Universe<br><small>Probability per consumer</small></div>
+        <span class="flow-arrow">&#8594;</span>
+        <div class="flow-step">Decile Ranking<br><small>Top deciles = activation audience</small></div>
+      </div>
+      <div class="stat-grid" style="margin-top: 2rem;">
+        <div class="stat-card"><div class="value">100K+</div><div class="label">Consumer universe scored</div></div>
+        <div class="stat-card"><div class="value">3-5x</div><div class="label">Lift in top decile</div></div>
+        <div class="stat-card"><div class="value">5 min</div><div class="label">Target model runtime</div></div>
+      </div>
+    </section>
+
+    <!-- Slide 5: Feature Store -->
+    <section class="slide" id="feature-store">
+      <h2>Feature Store as Governed Catalog</h2>
+      <p>The agent browses registered feature views — not raw tables. Governed definitions prevent drift.</p>
+      <table style="margin-top: 2rem;">
+        <thead><tr><th>Feature View</th><th>Features</th><th>Domain</th></tr></thead>
+        <tbody>
+          <tr><td>CUSTOMER_DEMOGRAPHICS_FV</td><td>age, income, homeowner, education, ...</td><td>Static attributes</td></tr>
+          <tr><td>PURCHASE_RFM_FV</td><td>recency, frequency, monetary, velocity</td><td>Purchase behavior</td></tr>
+          <tr><td>CATEGORY_AFFINITY_FV</td><td>pct_electronics, pct_home_garden, ...</td><td>Category preferences</td></tr>
+          <tr><td>CHANNEL_ENGAGEMENT_FV</td><td>email_open_rate, web_visits, mail_response</td><td>Channel signals</td></tr>
+          <tr><td>GEO_DENSITY_FV</td><td>urbanicity, zip_density, DMA</td><td>Geographic targeting</td></tr>
+        </tbody>
+      </table>
+      <p style="margin-top: 1rem;">Each feature has a description the agent reads to understand relevance.</p>
+    </section>
+
+    <!-- Slide 6: Agent Skills -->
+    <section class="slide" id="agent-skills">
+      <h2>Cortex Agent Skills</h2>
+      <p>A SKILL.md file on a stage — the agent discovers and executes it automatically.</p>
+      <div class="two-col" style="margin-top: 2rem;">
+        <div>
+          <h3>What is a Skill?</h3>
+          <div class="card" style="margin-top: 1rem;">
+            <p><strong>name:</strong> lookalike_modeler</p>
+            <p><strong>description:</strong> Build a lookalike audience model...</p>
+            <p><strong>instructions:</strong> Multi-step workflow</p>
+            <p><strong>scripts:</strong> profile_and_select.py, train_and_score.py</p>
+          </div>
+        </div>
+        <div>
+          <h3>Why Skills?</h3>
+          <div class="card" style="margin-top: 1rem;">
+            <p>Portable — reuse across agents</p>
+            <p style="margin-top: 0.5rem;">Versionable — store on stage or Git</p>
+            <p style="margin-top: 0.5rem;">Scriptable — Python for heavy computation</p>
+            <p style="margin-top: 0.5rem;">Discoverable — agent auto-selects when relevant</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Slide 7: Skill Workflow -->
+    <section class="slide" id="skill-workflow">
+      <h2>The Lookalike Skill Workflow</h2>
+      <div class="card-grid" style="grid-template-columns: repeat(3, 1fr);">
+        <div class="card">
+          <span class="card-icon">Step 1-2</span>
+          <h4>Profile the Seed</h4>
+          <p>Run profile_and_select.py to understand how the seed differs from the universe across all Feature Store views.</p>
+        </div>
+        <div class="card">
+          <span class="card-icon">Step 3</span>
+          <h4>Select Features</h4>
+          <p>LLM reasons about the profile, proposes features. Statistical validation (MI + correlation) prunes weak signals.</p>
+        </div>
+        <div class="card">
+          <span class="card-icon">Step 4-5</span>
+          <h4>Train + Report</h4>
+          <p>XGBoost via Feature Store. Score universe, compute lift, register model, report results in plain language.</p>
+        </div>
+      </div>
+      <p style="margin-top: 2rem;">The agent makes different feature selections per seed — not a one-size-fits-all template.</p>
+    </section>
+
+    <!-- Slide 8: Feature Selection -->
+    <section class="slide" id="feature-selection">
+      <h2>Intelligent Feature Selection</h2>
+      <p>LLM reasoning + statistical validation = governed intelligence</p>
+      <div class="two-col" style="margin-top: 2rem;">
+        <div class="card">
+          <h4>LLM Reasoning</h4>
+          <p>"This seed over-indexes on homeowners aged 35-44 with high H&amp;G spend. I should prioritize: HOMEOWNER, PCT_HOME_GARDEN, AGE, MAIL_RESPONSE_RATE..."</p>
+          <p style="margin-top: 1rem; color: var(--primary);">Proposes 15-25 candidates</p>
+        </div>
+        <div class="card">
+          <h4>Statistical Validation</h4>
+          <p>For each proposed feature, compute:</p>
+          <p style="margin-top: 0.5rem;">Mutual Information (MI &ge; 0.01)</p>
+          <p>Point-biserial correlation (|r| &ge; 0.05)</p>
+          <p style="margin-top: 1rem; color: var(--green);">Keeps 8-20 validated features</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- Slide 9: Demo Trace -->
+    <section class="slide" id="demo-trace">
+      <h2>Demo: Agent Trace</h2>
+      <p>"Build me a lookalike for Home &amp; Garden Buyers"</p>
+      <div class="code-block"><span class="comment"># Agent discovers lookalike_modeler skill</span>
+<span class="comment"># Step 1: Identifies seed</span>
+<span class="highlight">profile_and_select.py --action profile_seed --seed_name home_garden_buyers</span>
+
+<span class="comment"># Step 2: LLM reasons about profile output</span>
+<span class="comment"># "Seed over-indexes: HOMEOWNER (2.1x), PCT_HOME_GARDEN (3.4x), MAIL_RESPONSE_RATE (1.8x)"</span>
+
+<span class="comment"># Step 3: Validates proposed features</span>
+<span class="highlight">profile_and_select.py --action validate_features --feature_list [...]</span>
+<span class="comment"># Drops 3 features with MI < 0.01</span>
+
+<span class="comment"># Step 4: Trains and scores</span>
+<span class="highlight">train_and_score.py --seed_name home_garden_buyers --model_name lookalike_hg_v1</span>
+<span class="comment"># AUC: 0.78, Lift@D1: 3.2x, Confidence: High</span></div>
+    </section>
+
+    <!-- Slide 10: Registry + Experiments -->
+    <section class="slide" id="registry-experiments">
+      <h2>Model Registry + Experiment Tracking</h2>
+      <p>Every agent-created model is versioned, logged, and comparable.</p>
+      <table>
+        <thead><tr><th>Model</th><th>AUC</th><th>Lift@D1</th><th>Features</th><th>Status</th></tr></thead>
+        <tbody>
+          <tr><td>lookalike_home_garden</td><td>0.78</td><td>3.2x</td><td>12</td><td><span class="tag tag-green">APPROVED</span></td></tr>
+          <tr><td>lookalike_digital_first</td><td>0.72</td><td>2.8x</td><td>14</td><td><span class="tag tag-green">APPROVED</span></td></tr>
+          <tr><td>lookalike_family_value</td><td>0.69</td><td>2.1x</td><td>11</td><td><span class="tag tag-orange">REVIEW</span></td></tr>
+        </tbody>
+      </table>
+      <p>Experiments log: metrics, feature selections, feature views used, hyperparameters.</p>
+    </section>
+
+    <!-- Slide 11: DS Monitoring -->
+    <section class="slide" id="monitoring">
+      <h2>DS Monitoring Toolkit</h2>
+      <div class="card-grid" style="grid-template-columns: repeat(2, 1fr);">
+        <div class="card">
+          <h4>Cumulative Gains</h4>
+          <p>How many seed members does each decile capture? Top decile should capture 20-30% with 10% of the universe.</p>
+        </div>
+        <div class="card">
+          <h4>Lift Analysis</h4>
+          <p>Lift per decile vs. random baseline. Decile 1 should exceed 2x. Below 1.5x = flag for review.</p>
+        </div>
+        <div class="card">
+          <h4>Feature Selection Audit</h4>
+          <p>Do the agent's top features align with domain knowledge? "H&G model should be driven by HOMEOWNER."</p>
+        </div>
+        <div class="card">
+          <h4>PSI Drift Detection</h4>
+          <p>Population Stability Index tracks scoring distribution shift. PSI > 0.2 triggers retraining.</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- Slide 12: Quality Gates -->
+    <section class="slide" id="quality-gates">
+      <h2>Quality Gates</h2>
+      <p>Automated pass/fail before any model reaches production.</p>
+      <table>
+        <thead><tr><th>Check</th><th>Threshold</th><th>Rationale</th></tr></thead>
+        <tbody>
+          <tr><td>AUC</td><td>&ge; 0.65</td><td>Minimum discrimination ability</td></tr>
+          <tr><td>Lift @ Decile 1</td><td>&ge; 2.0x</td><td>Top decile must outperform random</td></tr>
+          <tr><td>PSI</td><td>&lt; 0.2</td><td>Scoring distribution is stable</td></tr>
+          <tr><td>Feature Count</td><td>8-30</td><td>Guards against under/over-fitting</td></tr>
+          <tr><td>Feature Coherence</td><td>All MI &gt; 0.01</td><td>No hallucinated feature names</td></tr>
+        </tbody>
+      </table>
+      <p style="margin-top: 1.5rem;">Models passing all checks: <span class="tag tag-green">APPROVED</span><br>
+      Models failing any check: <span class="tag tag-orange">NEEDS_REVIEW</span> — escalated to DS team</p>
+    </section>
+
+    <!-- Slide 13: Scale -->
+    <section class="slide" id="scale">
+      <h2>Built for Scale</h2>
+      <div class="stat-grid">
+        <div class="stat-card"><div class="value">750+</div><div class="label">Monthly models in production</div></div>
+        <div class="stat-card"><div class="value">5 min</div><div class="label">Target runtime per model</div></div>
+        <div class="stat-card"><div class="value">260M</div><div class="label">Consumer universe (production)</div></div>
+      </div>
+      <div class="card-grid" style="grid-template-columns: repeat(3, 1fr); margin-top: 2rem;">
+        <div class="card">
+          <h4>Feature Store Prevents Drift</h4>
+          <p>All 750 models pull from the same governed definitions. No ad-hoc feature computation.</p>
+        </div>
+        <div class="card">
+          <h4>Experiments at Scale</h4>
+          <p>Every run logged with feature selections. DS team queries across all runs.</p>
+        </div>
+        <div class="card">
+          <h4>Self-Service + Governance</h4>
+          <p>Non-technical users create. DS team validates. No bottleneck.</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- Slide 14: Next Steps -->
+    <section class="slide" id="next-steps">
+      <h2>Next Steps</h2>
+      <div class="card-grid" style="grid-template-columns: repeat(2, 1fr);">
+        <div class="card">
+          <h4>Hands-On Lab</h4>
+          <p>Build the Feature Store, create the skill, invoke the agent, monitor the outputs. 45-60 minutes.</p>
+        </div>
+        <div class="card">
+          <h4>Streamlit Dashboard</h4>
+          <p>Build a visual monitoring interface for the DS team to review all agent-created models.</p>
+        </div>
+        <div class="card">
+          <h4>Online Serving</h4>
+          <p>Enable sub-second feature retrieval for real-time scoring scenarios.</p>
+        </div>
+        <div class="card">
+          <h4>Skill Enhancement</h4>
+          <p>Add derived feature engineering: interaction terms, category ratios, binning strategies.</p>
+        </div>
+      </div>
+      <p style="margin-top: 3rem; font-size: 1.5rem; color: var(--primary);">Questions?</p>
+    </section>
+
+  </div>
+
+  <script>
+    // Progress bar
+    document.addEventListener('scroll', function() {
+      var scrollTop = window.scrollY;
+      var docHeight = document.documentElement.scrollHeight - window.innerHeight;
+      var progress = (scrollTop / docHeight) * 100;
+      document.getElementById('progressBar').style.width = progress + '%';
+    });
+
+    // Active sidebar link
+    var sections = document.querySelectorAll('.slide');
+    var navLinks = document.querySelectorAll('.sidebar a');
+
+    var observer = new IntersectionObserver(function(entries) {
+      entries.forEach(function(entry) {
+        if (entry.isIntersecting) {
+          navLinks.forEach(function(link) { link.classList.remove('active'); });
+          var activeLink = document.querySelector('.sidebar a[href="#' + entry.target.id + '"]');
+          if (activeLink) activeLink.classList.add('active');
+        }
+      });
+    }, { threshold: 0.3 });
+
+    sections.forEach(function(section) { observer.observe(section); });
+  </script>
+</body>
+</html>
