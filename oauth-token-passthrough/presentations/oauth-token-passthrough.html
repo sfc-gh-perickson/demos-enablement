@@ -1,0 +1,1015 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>OAuth Token Passthrough for Cortex Agents</title>
+  <style>
+    :root {
+      --bg: #0f1117;
+      --surface: #1a1d27;
+      --surface-alt: #232733;
+      --border: #2e3345;
+      --text: #e4e7ef;
+      --text-muted: #8b92a8;
+      --accent: #29b5f6;
+      --accent-dim: rgba(41, 181, 246, 0.12);
+      --green: #4caf50;
+      --orange: #ff9800;
+      --red: #f44336;
+      --purple: #ab47bc;
+      --sidebar-width: 240px;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Segoe UI', Roboto, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.6;
+      overflow-x: hidden;
+    }
+
+    /* Progress Bar */
+    .progress-bar {
+      position: fixed;
+      top: 0;
+      left: 0;
+      height: 3px;
+      background: var(--accent);
+      z-index: 1000;
+      transition: width 0.1s;
+    }
+
+    /* Sidebar */
+    .sidebar {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: var(--sidebar-width);
+      height: 100vh;
+      background: var(--surface);
+      border-right: 1px solid var(--border);
+      padding: 2rem 1.25rem;
+      overflow-y: auto;
+      z-index: 100;
+    }
+
+    .sidebar h3 {
+      font-size: 0.75rem;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      color: var(--accent);
+      margin-bottom: 1rem;
+      font-weight: 700;
+    }
+
+    .sidebar .nav-section {
+      margin-bottom: 1.5rem;
+    }
+
+    .sidebar .nav-section-title {
+      font-size: 0.65rem;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--text-muted);
+      margin-bottom: 0.5rem;
+      font-weight: 600;
+    }
+
+    .sidebar a {
+      display: block;
+      padding: 0.35rem 0.75rem;
+      color: var(--text-muted);
+      text-decoration: none;
+      font-size: 0.8rem;
+      border-radius: 4px;
+      margin-bottom: 2px;
+      transition: all 0.2s;
+    }
+
+    .sidebar a:hover {
+      color: var(--text);
+      background: var(--surface-alt);
+    }
+
+    .sidebar a.active {
+      color: var(--accent);
+      background: var(--accent-dim);
+    }
+
+    .sidebar .github-link {
+      position: absolute;
+      bottom: 1.5rem;
+      left: 1.25rem;
+      right: 1.25rem;
+      padding: 0.5rem 0.75rem;
+      background: var(--surface-alt);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      color: var(--text-muted);
+      font-size: 0.75rem;
+      text-align: center;
+    }
+
+    .sidebar .github-link:hover {
+      border-color: var(--accent);
+      color: var(--accent);
+    }
+
+    /* Main Content */
+    .main {
+      margin-left: var(--sidebar-width);
+      min-height: 100vh;
+    }
+
+    .slide {
+      padding: 4rem 3rem;
+      max-width: 1200px;
+      margin: 0 auto;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .slide h2 {
+      font-size: 1.75rem;
+      font-weight: 700;
+      margin-bottom: 0.75rem;
+      background: linear-gradient(135deg, var(--text), var(--accent));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+
+    .slide h3 {
+      font-size: 1.1rem;
+      font-weight: 600;
+      color: var(--text);
+      margin-bottom: 0.5rem;
+    }
+
+    .slide h4 {
+      font-size: 0.95rem;
+      font-weight: 600;
+      color: var(--accent);
+      margin-bottom: 0.5rem;
+    }
+
+    .slide p {
+      color: var(--text-muted);
+      font-size: 0.95rem;
+    }
+
+    .slide ul, .slide ol {
+      color: var(--text-muted);
+      font-size: 0.9rem;
+      padding-left: 1.25rem;
+    }
+
+    .slide li {
+      margin-bottom: 0.35rem;
+    }
+
+    /* Hero */
+    .hero {
+      padding: 6rem 3rem 4rem;
+      text-align: center;
+      max-width: 1200px;
+      margin: 0 auto;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .hero h1 {
+      font-size: 2.5rem;
+      font-weight: 800;
+      background: linear-gradient(135deg, var(--text) 0%, var(--accent) 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+      margin-bottom: 1rem;
+      line-height: 1.2;
+    }
+
+    .hero .subtitle {
+      font-size: 1.1rem;
+      color: var(--text-muted);
+      margin-bottom: 2.5rem;
+    }
+
+    /* Stat Grid */
+    .stat-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 1rem;
+      margin: 2rem 0;
+    }
+
+    .stat-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 1.25rem;
+      text-align: center;
+    }
+
+    .stat-card .stat-value {
+      font-size: 1.5rem;
+      font-weight: 700;
+      color: var(--accent);
+      display: block;
+    }
+
+    .stat-card .stat-label {
+      font-size: 0.8rem;
+      color: var(--text-muted);
+      margin-top: 0.25rem;
+    }
+
+    /* Card Grid */
+    .card-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+      gap: 1rem;
+      margin: 1.5rem 0;
+    }
+
+    .card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 1.25rem;
+    }
+
+    .card:hover {
+      border-color: var(--accent);
+    }
+
+    /* Two Column */
+    .two-col {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 1.5rem;
+      margin: 1.5rem 0;
+    }
+
+    /* Three Column */
+    .three-col {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 1rem;
+      margin: 1.5rem 0;
+    }
+
+    /* Highlight Box */
+    .highlight-box {
+      background: var(--accent-dim);
+      border: 1px solid var(--accent);
+      border-radius: 8px;
+      padding: 1.25rem;
+      margin: 1.5rem 0;
+    }
+
+    .highlight-box p {
+      color: var(--text);
+    }
+
+    /* Context Box */
+    .context-box {
+      background: var(--surface-alt);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 1.25rem;
+      margin: 1.5rem 0;
+    }
+
+    .context-box p {
+      color: var(--text);
+    }
+
+    /* Warning Box */
+    .warning-box {
+      background: rgba(255, 152, 0, 0.08);
+      border: 1px solid var(--orange);
+      border-radius: 8px;
+      padding: 1.25rem;
+      margin: 1.5rem 0;
+    }
+
+    .warning-box p {
+      color: var(--text);
+    }
+
+    /* Flow Diagram */
+    .flow-diagram {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.5rem;
+      margin: 2rem 0;
+      flex-wrap: wrap;
+    }
+
+    .flow-step {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 1rem 1.25rem;
+      text-align: center;
+      min-width: 100px;
+    }
+
+    .flow-step.active {
+      border-color: var(--accent);
+      background: var(--accent-dim);
+    }
+
+    .flow-step .step-label {
+      font-size: 0.7rem;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: var(--text-muted);
+      margin-bottom: 0.25rem;
+    }
+
+    .flow-step .step-title {
+      font-size: 0.85rem;
+      font-weight: 600;
+      color: var(--text);
+    }
+
+    .flow-arrow {
+      color: var(--text-muted);
+      font-size: 1.25rem;
+    }
+
+    /* Tables */
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 1rem 0;
+      font-size: 0.85rem;
+    }
+
+    th, td {
+      padding: 0.6rem 0.75rem;
+      border: 1px solid var(--border);
+      text-align: left;
+    }
+
+    th {
+      background: var(--surface-alt);
+      font-weight: 600;
+      color: var(--text);
+    }
+
+    td {
+      color: var(--text-muted);
+    }
+
+    /* Code */
+    pre {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 1.25rem;
+      overflow-x: auto;
+      font-family: 'SF Mono', 'Fira Code', 'JetBrains Mono', monospace;
+      font-size: 0.8rem;
+      line-height: 1.7;
+      margin: 1rem 0;
+    }
+
+    code {
+      font-family: 'SF Mono', 'Fira Code', 'JetBrains Mono', monospace;
+      background: var(--surface-alt);
+      padding: 0.15rem 0.4rem;
+      border-radius: 3px;
+      font-size: 0.85rem;
+    }
+
+    .keyword { color: #c792ea; }
+    .string { color: #c3e88d; }
+    .function { color: #82aaff; }
+    .comment { color: #546e7a; }
+    .number { color: #f78c6c; }
+
+    /* Badges */
+    .badge-green {
+      background: rgba(76, 175, 80, 0.15);
+      color: var(--green);
+      padding: 0.15rem 0.5rem;
+      border-radius: 4px;
+      font-size: 0.75rem;
+      font-weight: 600;
+    }
+
+    .badge-orange {
+      background: rgba(255, 152, 0, 0.15);
+      color: var(--orange);
+      padding: 0.15rem 0.5rem;
+      border-radius: 4px;
+      font-size: 0.75rem;
+      font-weight: 600;
+    }
+
+    .badge-red {
+      background: rgba(244, 67, 54, 0.15);
+      color: var(--red);
+      padding: 0.15rem 0.5rem;
+      border-radius: 4px;
+      font-size: 0.75rem;
+      font-weight: 600;
+    }
+
+    .badge-blue {
+      display: inline-block;
+      background: var(--accent);
+      color: #fff;
+      padding: 0.2rem 0.6rem;
+      border-radius: 99px;
+      font-size: 0.7rem;
+      font-weight: 600;
+      letter-spacing: 0.02em;
+      text-decoration: none;
+    }
+    .badge-blue:hover {
+      opacity: 0.85;
+    }
+
+    /* Animations */
+    .anim-fade {
+      opacity: 0;
+      transform: translateY(20px);
+      transition: opacity 0.6s ease, transform 0.6s ease;
+    }
+
+    .anim-fade.visible {
+      opacity: 1;
+      transform: translateY(0);
+    }
+
+    /* Responsive */
+    @media (max-width: 900px) {
+      .sidebar { display: none; }
+      .main { margin-left: 0; }
+      .stat-grid { grid-template-columns: repeat(2, 1fr); }
+      .two-col { grid-template-columns: 1fr; }
+      .three-col { grid-template-columns: 1fr; }
+      .hero h1 { font-size: 1.75rem; }
+    }
+  </style>
+</head>
+<body>
+  <div class="progress-bar"></div>
+
+  <!-- Sidebar -->
+  <nav class="sidebar">
+    <h3>OAuth Passthrough</h3>
+
+    <div class="nav-section">
+      <div class="nav-section-title">Concepts</div>
+      <a href="#hero">Overview</a>
+      <a href="#the-problem">The Problem</a>
+      <a href="#architecture">Architecture</a>
+    </div>
+
+    <div class="nav-section">
+      <div class="nav-section-title">Implementation</div>
+      <a href="#security-integration">Security Integration</a>
+      <a href="#user-mapping">User Mapping</a>
+      <a href="#token-flow">Token Flow</a>
+    </div>
+
+    <div class="nav-section">
+      <div class="nav-section-title">Integration</div>
+      <a href="#agentcore-relay">AgentCore Relay</a>
+      <a href="#error-handling">Error Handling</a>
+      <a href="#multi-tenancy-combo">+ Multi-Tenancy</a>
+    </div>
+
+    <div class="nav-section">
+      <div class="nav-section-title">Production</div>
+      <a href="#best-practices">Best Practices</a>
+      <a href="#takeaways">Key Takeaways</a>
+    </div>
+
+    <a href="https://github.com/sfc-gh-perickson/demos-enablement/tree/main/oauth-token-passthrough" class="github-link" target="_blank">View on GitHub &rarr;</a>
+  </nav>
+
+  <!-- Main Content -->
+  <main class="main">
+
+    <!-- Slide 1: Hero -->
+    <section class="slide hero" id="hero">
+      <h1>OAuth Token Passthrough:<br/>Per-User Identity for Cortex Agents</h1>
+      <p class="subtitle">Pass an Entra ID token from your application through to Snowflake &mdash; the agent runs as the authenticated user, not a shared service account.</p>
+
+      <div class="stat-grid anim-fade">
+        <div class="stat-card">
+          <span class="stat-value">Per-User</span>
+          <span class="stat-label">Agent runs with caller's privileges</span>
+        </div>
+        <div class="stat-card">
+          <span class="stat-value">No Secrets</span>
+          <span class="stat-label">Token-based &mdash; no password storage</span>
+        </div>
+        <div class="stat-card">
+          <span class="stat-value">JWT</span>
+          <span class="stat-label">Standard OAuth 2.0 / OIDC flow</span>
+        </div>
+        <div class="stat-card">
+          <span class="stat-value">Audit</span>
+          <span class="stat-label">True user identity in query history</span>
+        </div>
+      </div>
+
+      <div class="context-box anim-fade">
+        <p><strong>Core pattern:</strong> Your application obtains an OAuth token from Entra ID on behalf of the user, then passes it as a Bearer token to the Cortex Agent REST API. Snowflake validates the JWT via an External OAuth security integration, maps it to a Snowflake user, and the agent session runs with that user's roles and privileges.</p>
+      </div>
+
+      <p style="margin-top: 1rem;"><a href="https://docs.snowflake.com/en/user-guide/oauth-ext-overview" target="_blank" class="badge-blue">Docs: External OAuth</a></p>
+    </section>
+
+    <!-- Slide 2: The Problem -->
+    <section class="slide" id="the-problem">
+      <h2>The Problem</h2>
+      <p style="margin-bottom: 1.5rem;">Why a shared service account breaks identity, auditability, and least-privilege.</p>
+
+      <div class="card-grid anim-fade">
+        <div class="card">
+          <h4>Lost Identity</h4>
+          <p>With a shared service account, all agent queries appear as the same user in <code>QUERY_HISTORY</code>. You can't tell who asked what or attribute costs to individuals.</p>
+        </div>
+        <div class="card">
+          <h4>Over-Privileged</h4>
+          <p>The service account needs access to <em>all</em> data any user might query. Every user effectively has the union of all privileges &mdash; violating least-privilege.</p>
+        </div>
+        <div class="card">
+          <h4>Compliance Gap</h4>
+          <p>Regulations (GDPR, SOX, HIPAA) require knowing <em>who</em> accessed data. A shared account makes individual access attribution impossible without application-layer workarounds.</p>
+        </div>
+        <div class="card">
+          <h4>Session Attributes Aren't Auth</h4>
+          <p>Multi-tenancy session attributes provide <em>authorization</em> boundaries, but they don't solve <em>authentication</em>. You still need to prove the user is who they claim to be.</p>
+        </div>
+      </div>
+
+      <div class="highlight-box anim-fade">
+        <p><strong>Token passthrough solves authentication.</strong> Each API call proves the caller's identity with a cryptographically signed token. Snowflake maps that token to a real user &mdash; giving you true per-user audit trails, privilege enforcement, and accountability.</p>
+      </div>
+    </section>
+
+    <!-- Slide 3: Architecture -->
+    <section class="slide" id="architecture">
+      <h2>Architecture: End-to-End Token Flow</h2>
+      <p style="margin-bottom: 1.5rem;">From user login to per-user agent execution in six steps.</p>
+
+      <div class="flow-diagram anim-fade">
+        <div class="flow-step">
+          <div class="step-label">Step 1</div>
+          <div class="step-title">User logs in (Entra ID)</div>
+        </div>
+        <div class="flow-arrow">&rarr;</div>
+        <div class="flow-step">
+          <div class="step-label">Step 2</div>
+          <div class="step-title">App receives JWT</div>
+        </div>
+        <div class="flow-arrow">&rarr;</div>
+        <div class="flow-step">
+          <div class="step-label">Step 3</div>
+          <div class="step-title">App relays token to Snowflake</div>
+        </div>
+        <div class="flow-arrow">&rarr;</div>
+        <div class="flow-step active">
+          <div class="step-label">Step 4</div>
+          <div class="step-title">External OAuth validates JWT</div>
+        </div>
+        <div class="flow-arrow">&rarr;</div>
+        <div class="flow-step">
+          <div class="step-label">Step 5</div>
+          <div class="step-title">Maps to Snowflake user</div>
+        </div>
+        <div class="flow-arrow">&rarr;</div>
+        <div class="flow-step">
+          <div class="step-label">Step 6</div>
+          <div class="step-title">Agent runs as that user</div>
+        </div>
+      </div>
+
+      <div class="two-col anim-fade">
+        <div class="card">
+          <h4>What Snowflake Validates</h4>
+          <ul>
+            <li>JWT signature (via JWKS endpoint)</li>
+            <li>Issuer matches Entra ID tenant</li>
+            <li>Audience matches your app registration</li>
+            <li>Token not expired (<code>exp</code> claim)</li>
+            <li>Required scopes present</li>
+          </ul>
+        </div>
+        <div class="card">
+          <h4>What Snowflake Does NOT Do</h4>
+          <ul>
+            <li>Does not contact Entra ID at runtime (offline validation)</li>
+            <li>Does not store the token</li>
+            <li>Does not manage user passwords</li>
+            <li>Does not handle token refresh &mdash; your app does</li>
+          </ul>
+        </div>
+      </div>
+
+      <p style="margin-top: 1rem;">
+        <a href="https://docs.snowflake.com/en/user-guide/oauth-ext-overview" target="_blank" class="badge-blue">Docs: External OAuth</a>
+        <a href="https://docs.snowflake.com/en/user-guide/oauth-ext-microsoft-entra-id" target="_blank" class="badge-blue" style="margin-left: 0.5rem;">Docs: Entra ID Setup</a>
+      </p>
+    </section>
+
+    <!-- Slide 4: Security Integration -->
+    <section class="slide" id="security-integration">
+      <h2>External OAuth Security Integration</h2>
+      <p style="margin-bottom: 1.5rem;">The Snowflake object that tells the platform how to validate Entra ID tokens.</p>
+
+      <pre class="anim-fade"><span class="comment">-- Create the External OAuth security integration for Entra ID</span>
+<span class="keyword">CREATE OR REPLACE</span> SECURITY INTEGRATION entra_oauth_int
+  <span class="keyword">TYPE</span> = EXTERNAL_OAUTH
+  ENABLED = <span class="number">TRUE</span>
+  EXTERNAL_OAUTH_TYPE = AZURE
+  EXTERNAL_OAUTH_ISSUER = <span class="string">'https://sts.windows.net/&lt;your-tenant-id&gt;/'</span>
+  EXTERNAL_OAUTH_JWS_KEYS_URL = <span class="string">'https://login.microsoftonline.com/&lt;your-tenant-id&gt;/discovery/v2.0/keys'</span>
+  EXTERNAL_OAUTH_AUDIENCE_LIST = (<span class="string">'https://&lt;your-snowflake-account&gt;.snowflakecomputing.com'</span>)
+  EXTERNAL_OAUTH_TOKEN_USER_MAPPING_CLAIM = <span class="string">'upn'</span>
+  EXTERNAL_OAUTH_SNOWFLAKE_USER_MAPPING_ATTRIBUTE = <span class="string">'login_name'</span>
+  EXTERNAL_OAUTH_ANY_ROLE_MODE = <span class="string">'ENABLE'</span>;</pre>
+
+      <div class="three-col anim-fade">
+        <div class="card">
+          <h4>Issuer &amp; Keys</h4>
+          <p>The issuer URL identifies your Entra ID tenant. The JWS keys URL provides the public keys Snowflake uses to verify JWT signatures &mdash; no shared secrets needed.</p>
+        </div>
+        <div class="card">
+          <h4>Audience</h4>
+          <p>Must match the <code>aud</code> claim in the token. This is the app registration's Application ID URI or your Snowflake account URL. Mismatches cause immediate rejection.</p>
+        </div>
+        <div class="card">
+          <h4>User Mapping</h4>
+          <p>Maps the <code>upn</code> (User Principal Name) claim from the JWT to a Snowflake user's <code>login_name</code>. This is the identity bridge between Entra ID and Snowflake.</p>
+        </div>
+      </div>
+
+      <div class="warning-box anim-fade">
+        <p><strong>Critical:</strong> The user mapping claim (<code>upn</code> or <code>email</code>) must exactly match the <code>login_name</code> of a Snowflake user. If no match is found, authentication fails with "User not found" &mdash; this is by design (no implicit user creation).</p>
+      </div>
+
+      <p style="margin-top: 1rem;"><a href="https://docs.snowflake.com/en/user-guide/oauth-ext-microsoft-entra-id" target="_blank" class="badge-blue">Docs: Entra ID Integration</a></p>
+    </section>
+
+    <!-- Slide 5: User Mapping -->
+    <section class="slide" id="user-mapping">
+      <h2>User Mapping</h2>
+      <p style="margin-bottom: 1.5rem;">Bridging Entra ID identities to Snowflake users via <code>login_name</code>.</p>
+
+      <pre class="anim-fade"><span class="comment">-- Create a Snowflake user mapped to an Entra ID identity</span>
+<span class="keyword">CREATE OR REPLACE</span> USER alice_smith
+  LOGIN_NAME = <span class="string">'alice.smith@contoso.com'</span>
+  DISPLAY_NAME = <span class="string">'Alice Smith'</span>
+  DEFAULT_ROLE = ANALYST_ROLE
+  DEFAULT_WAREHOUSE = AGENT_WH;
+
+<span class="comment">-- Grant the user's role access to the agent</span>
+<span class="keyword">GRANT</span> USAGE <span class="keyword">ON</span> DATABASE oauth_passthrough_lab <span class="keyword">TO ROLE</span> analyst_role;
+<span class="keyword">GRANT</span> USAGE <span class="keyword">ON</span> SCHEMA oauth_passthrough_lab.main <span class="keyword">TO ROLE</span> analyst_role;
+<span class="keyword">GRANT</span> SNOWFLAKE.CORTEX.ACTIVATE_AGENT
+  <span class="keyword">ON</span> AGENT oauth_passthrough_lab.main.my_agent
+  <span class="keyword">TO ROLE</span> analyst_role;</pre>
+
+      <div class="two-col anim-fade">
+        <div class="card">
+          <h4>How Mapping Works</h4>
+          <table>
+            <tr><th>JWT Claim</th><th>Snowflake Attribute</th></tr>
+            <tr><td><code>upn</code>: alice.smith@contoso.com</td><td><code>login_name</code>: alice.smith@contoso.com</td></tr>
+            <tr><td><code>roles</code>: [analyst]</td><td>User's <code>DEFAULT_ROLE</code> or granted roles</td></tr>
+          </table>
+          <p style="margin-top: 0.75rem;">The mapping is case-insensitive. Snowflake looks up the user by <code>login_name</code> and establishes a session with that user's default role.</p>
+        </div>
+        <div class="card">
+          <h4>No Password Required</h4>
+          <p>Users authenticated via External OAuth never need a Snowflake password. They can't log in via Snowsight or snowsql &mdash; their access is exclusively via token-based API calls.</p>
+          <p style="margin-top: 0.75rem;">This is ideal for external users who interact only through your application layer (Teams bot, web app, mobile app).</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- Slide 6: Token Flow -->
+    <section class="slide" id="token-flow">
+      <h2>Calling the Agent with a Token</h2>
+      <p style="margin-bottom: 1.5rem;">The API call that makes it all work &mdash; a standard Bearer token in the Authorization header.</p>
+
+      <pre class="anim-fade"><span class="comment"># Obtain a token (MSAL device code flow for testing)</span>
+<span class="keyword">import</span> msal
+
+app = msal.PublicClientApplication(
+    client_id=<span class="string">"&lt;your-app-client-id&gt;"</span>,
+    authority=<span class="string">"https://login.microsoftonline.com/&lt;your-tenant-id&gt;"</span>
+)
+
+flow = app.initiate_device_flow(
+    scopes=[<span class="string">"https://&lt;account&gt;.snowflakecomputing.com/.default"</span>]
+)
+<span class="function">print</span>(flow[<span class="string">"message"</span>])  <span class="comment"># User visits URL and enters code</span>
+
+result = app.acquire_token_by_device_flow(flow)
+access_token = result[<span class="string">"access_token"</span>]</pre>
+
+      <pre class="anim-fade"><span class="comment"># Call the Cortex Agent REST API with the Bearer token</span>
+<span class="keyword">import</span> requests
+
+response = requests.post(
+    <span class="string">"https://&lt;account&gt;.snowflakecomputing.com/api/v2/cortex/agent:run"</span>,
+    headers={
+        <span class="string">"Authorization"</span>: <span class="string">f"Bearer </span>{access_token}<span class="string">"</span>,
+        <span class="string">"Content-Type"</span>: <span class="string">"application/json"</span>,
+    },
+    json={
+        <span class="string">"agent_name"</span>: <span class="string">"oauth_passthrough_lab.main.my_agent"</span>,
+        <span class="string">"messages"</span>: [{<span class="string">"role"</span>: <span class="string">"user"</span>, <span class="string">"content"</span>: <span class="string">"Show my sales data"</span>}]
+    }
+)</pre>
+
+      <div class="highlight-box anim-fade">
+        <p><strong>Key insight:</strong> The agent session runs as <code>alice.smith@contoso.com</code> &mdash; not a service account. Any row access policies, masking policies, or role-based grants apply exactly as if Alice logged in directly. The agent can only access data Alice is authorized to see.</p>
+      </div>
+    </section>
+
+    <!-- Slide 7: AgentCore Relay -->
+    <section class="slide" id="agentcore-relay">
+      <h2>AgentCore Relay Pattern</h2>
+      <p style="margin-bottom: 1.5rem;">How AWS AgentCore (or any orchestrator) forwards the user's token to Snowflake.</p>
+
+      <pre class="anim-fade"><span class="comment"># AgentCore tool implementation that relays the user's token</span>
+<span class="keyword">class</span> <span class="function">SnowflakeAgentTool</span>:
+    <span class="keyword">def</span> <span class="function">invoke</span>(self, query: str, user_context: dict) -> str:
+        <span class="comment"># The user's OAuth token is available in the context</span>
+        <span class="comment"># AgentCore preserves it from the Teams/app authentication</span>
+        user_token = user_context[<span class="string">"oauth_token"</span>]
+
+        response = requests.post(
+            <span class="string">f"https://{SNOWFLAKE_ACCOUNT}.snowflakecomputing.com/api/v2/cortex/agent:run"</span>,
+            headers={
+                <span class="string">"Authorization"</span>: <span class="string">f"Bearer </span>{user_token}<span class="string">"</span>,
+                <span class="string">"Content-Type"</span>: <span class="string">"application/json"</span>,
+            },
+            json={
+                <span class="string">"agent_name"</span>: <span class="string">"my_db.my_schema.my_agent"</span>,
+                <span class="string">"messages"</span>: [{<span class="string">"role"</span>: <span class="string">"user"</span>, <span class="string">"content"</span>: query}]
+            }
+        )
+        <span class="keyword">return</span> response.json()</pre>
+
+      <div class="two-col anim-fade">
+        <div class="card">
+          <h4>Why Relay?</h4>
+          <ul>
+            <li>AgentCore authenticates the user at the Teams layer</li>
+            <li>The same token is forwarded to Snowflake &mdash; no service account needed</li>
+            <li>Snowflake sees the real user identity on every request</li>
+            <li>Token refresh is handled by AgentCore/MSAL, not Snowflake</li>
+          </ul>
+        </div>
+        <div class="card">
+          <h4>Architecture Benefit</h4>
+          <ul>
+            <li>Zero credential management in AgentCore</li>
+            <li>No Snowflake service account password to rotate</li>
+            <li>Each user's privileges enforced automatically</li>
+            <li>Full audit trail: Snowflake sees <em>Alice</em>, not <em>service_bot</em></li>
+          </ul>
+        </div>
+      </div>
+    </section>
+
+    <!-- Slide 8: Error Handling -->
+    <section class="slide" id="error-handling">
+      <h2>Error Cases &amp; Troubleshooting</h2>
+      <p style="margin-bottom: 1.5rem;">Common failure modes and how to diagnose them.</p>
+
+      <div class="card-grid anim-fade">
+        <div class="card">
+          <h4><span class="badge-red">401</span> Invalid Audience</h4>
+          <p>The <code>aud</code> claim in the JWT doesn't match <code>EXTERNAL_OAUTH_AUDIENCE_LIST</code>. Fix: ensure the app registration's Application ID URI matches the audience configured in Snowflake.</p>
+        </div>
+        <div class="card">
+          <h4><span class="badge-red">401</span> Token Expired</h4>
+          <p>The JWT's <code>exp</code> claim is in the past. Fix: implement token refresh in your app layer (MSAL handles this automatically with <code>acquire_token_silent</code>).</p>
+        </div>
+        <div class="card">
+          <h4><span class="badge-red">401</span> User Not Found</h4>
+          <p>The <code>upn</code> claim doesn't match any Snowflake user's <code>login_name</code>. Fix: create the user with the matching login_name, or check for case/domain mismatches.</p>
+        </div>
+        <div class="card">
+          <h4><span class="badge-orange">403</span> Insufficient Privileges</h4>
+          <p>Token is valid and user maps correctly, but the user's role lacks access to the agent or data. Fix: grant <code>SNOWFLAKE.CORTEX.ACTIVATE_AGENT</code> and necessary data privileges.</p>
+        </div>
+        <div class="card">
+          <h4><span class="badge-red">401</span> Signature Validation Failed</h4>
+          <p>The JWS keys URL returns keys that don't match the token signature. Possible causes: wrong tenant ID in the integration, or a stale JWKS cache (Snowflake refreshes periodically).</p>
+        </div>
+        <div class="card">
+          <h4><span class="badge-orange">400</span> Integration Disabled</h4>
+          <p>The security integration has <code>ENABLED = FALSE</code>. Fix: <code>ALTER SECURITY INTEGRATION entra_oauth_int SET ENABLED = TRUE</code>.</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- Slide 9: Multi-Tenancy Combo -->
+    <section class="slide" id="multi-tenancy-combo">
+      <h2>Combining with Multi-Tenancy</h2>
+      <p style="margin-bottom: 1.5rem;">Token passthrough + session attributes = authentication + authorization in one call.</p>
+
+      <pre class="anim-fade"><span class="comment"># Pass both the user's OAuth token AND session attributes</span>
+response = requests.post(
+    <span class="string">"https://&lt;account&gt;.snowflakecomputing.com/api/v2/cortex/agent:run"</span>,
+    headers={
+        <span class="string">"Authorization"</span>: <span class="string">f"Bearer </span>{user_token}<span class="string">"</span>,
+        <span class="string">"Content-Type"</span>: <span class="string">"application/json"</span>,
+    },
+    json={
+        <span class="string">"agent_name"</span>: <span class="string">"my_db.my_schema.tenant_agent"</span>,
+        <span class="string">"messages"</span>: [{<span class="string">"role"</span>: <span class="string">"user"</span>, <span class="string">"content"</span>: <span class="string">"Show revenue trends"</span>}],
+        <span class="string">"variables"</span>: {
+            <span class="string">"tenant_id"</span>: {
+                <span class="string">"value"</span>: <span class="string">"acme_corp"</span>,
+                <span class="string">"is_immutable_session_attribute"</span>: <span class="number">true</span>
+            }
+        }
+    }
+)</pre>
+
+      <div class="two-col anim-fade">
+        <div class="card">
+          <h4>Authentication (Token)</h4>
+          <ul>
+            <li>Proves <em>who</em> the user is (cryptographic proof)</li>
+            <li>Maps to a Snowflake user with specific roles</li>
+            <li>Enables per-user audit trails</li>
+            <li>Enforces role-based grants (RBAC)</li>
+          </ul>
+        </div>
+        <div class="card">
+          <h4>Authorization (Session Attributes)</h4>
+          <ul>
+            <li>Defines <em>what data</em> the user can see</li>
+            <li>Drives row access policies (tenant filtering)</li>
+            <li>Drives masking policies (column-level)</li>
+            <li>Immutable &mdash; can't be altered by the agent</li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="highlight-box anim-fade">
+        <p><strong>Best of both worlds:</strong> The token gives you cryptographic identity proof and per-user audit trails. Session attributes give you fine-grained data filtering without creating per-user roles. Together they cover the full authentication + authorization stack.</p>
+      </div>
+
+      <p style="margin-top: 1rem;"><a href="../cortex-agent-multi-tenancy/" class="badge-blue">Related: Multi-Tenancy Module</a></p>
+    </section>
+
+    <!-- Slide 10: Best Practices -->
+    <section class="slide" id="best-practices">
+      <h2>Best Practices</h2>
+      <p style="margin-bottom: 1.5rem;">Production patterns for secure, reliable token passthrough deployments.</p>
+
+      <div class="card-grid anim-fade">
+        <div class="card">
+          <h4>Always Validate Audience</h4>
+          <p>Set <code>EXTERNAL_OAUTH_AUDIENCE_LIST</code> to your specific Snowflake account URL. Never use a wildcard. This ensures tokens issued for other services can't be replayed against your Snowflake account.</p>
+        </div>
+        <div class="card">
+          <h4>Handle Token Refresh</h4>
+          <p>Entra ID access tokens expire in ~60-90 minutes. Your app must use <code>acquire_token_silent</code> (MSAL) to refresh before expiry. Never cache tokens without checking expiration.</p>
+        </div>
+        <div class="card">
+          <h4>Map Users Proactively</h4>
+          <p>Pre-create Snowflake users for all Entra ID users who need agent access. An unmapped user gets a hard 401 &mdash; there's no graceful fallback. Automate user provisioning via SCIM or a sync script.</p>
+        </div>
+        <div class="card">
+          <h4>Least-Privilege Roles</h4>
+          <p>Each mapped user should have a role with minimal grants: access to the agent, the semantic view, and nothing else. Don't grant ACCOUNTADMIN to OAuth-authenticated users.</p>
+        </div>
+        <div class="card">
+          <h4>Monitor with Usage History</h4>
+          <p>Query <code>CORTEX_AGENT_USAGE_HISTORY</code> to see which real users are calling the agent, token counts, and costs. This view shows the mapped user &mdash; giving you true per-person attribution.</p>
+        </div>
+        <div class="card">
+          <h4>Combine Patterns</h4>
+          <p>Use token passthrough for authentication (who is this?) and session attributes for authorization (what can they see?). They're complementary, not competing approaches.</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- Slide 11: Key Takeaways -->
+    <section class="slide" id="takeaways">
+      <h2>Key Takeaways</h2>
+
+      <div class="anim-fade" style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 0.75rem; width: 100%; margin: 2rem 0;">
+        <div class="flow-step">
+          <div class="step-label">1</div>
+          <div class="step-title">Create Security Integration</div>
+        </div>
+        <div class="flow-step">
+          <div class="step-label">2</div>
+          <div class="step-title">Map Users via login_name</div>
+        </div>
+        <div class="flow-step active">
+          <div class="step-label">3</div>
+          <div class="step-title">Pass Bearer Token</div>
+        </div>
+        <div class="flow-step">
+          <div class="step-label">4</div>
+          <div class="step-title">Agent Runs as User</div>
+        </div>
+      </div>
+
+      <div class="card-grid anim-fade" style="margin-top: 2rem;">
+        <div class="card">
+          <h4>Summary</h4>
+          <ul>
+            <li>External OAuth lets Snowflake validate Entra ID tokens without runtime IdP calls</li>
+            <li>The <code>upn</code> claim maps to a Snowflake user's <code>login_name</code> &mdash; the identity bridge</li>
+            <li>Each agent session runs with the authenticated user's privileges &mdash; not a shared service account</li>
+            <li>Combine with session attributes for row/column-level filtering on top of per-user RBAC</li>
+            <li>Full audit trail in <code>CORTEX_AGENT_USAGE_HISTORY</code> with true user identity</li>
+          </ul>
+        </div>
+        <div class="card">
+          <h4>Getting Started</h4>
+          <ul>
+            <li><strong>Step 1:</strong> Register an app in Entra ID with Snowflake as the audience</li>
+            <li><strong>Step 2:</strong> Create the External OAuth security integration in Snowflake</li>
+            <li><strong>Step 3:</strong> Create Snowflake users with <code>login_name</code> matching Entra ID UPN</li>
+            <li><strong>Step 4:</strong> Grant agent access to the user's role</li>
+            <li><strong>Step 5:</strong> Test with MSAL device code flow + Bearer token API call</li>
+            <li><strong>Step 6:</strong> Integrate into your application (Teams bot, AgentCore, custom app)</li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="highlight-box anim-fade" style="text-align: center; margin-top: 1.5rem;">
+        <p><strong>Token passthrough gives you real identity, real audit trails, and real least-privilege</strong> &mdash; without managing Snowflake passwords or over-privileging a service account.</p>
+      </div>
+
+      <div class="card anim-fade" style="margin-top: 1.5rem; width: 100%;">
+        <h4>Documentation Quick Reference</h4>
+        <ul>
+          <li><a href="https://docs.snowflake.com/en/user-guide/oauth-ext-overview" target="_blank" class="badge-blue">External OAuth Overview</a> &mdash; concepts and supported IdPs</li>
+          <li><a href="https://docs.snowflake.com/en/user-guide/oauth-ext-microsoft-entra-id" target="_blank" class="badge-blue">Entra ID Setup</a> &mdash; step-by-step integration configuration</li>
+          <li><a href="https://docs.snowflake.com/en/user-guide/snowflake-cortex/cortex-agents-setup" target="_blank" class="badge-blue">Cortex Agent Setup</a> &mdash; agent creation, API configuration</li>
+          <li><a href="https://docs.snowflake.com/en/user-guide/snowflake-cortex/cortex-agents-multi-tenancy" target="_blank" class="badge-blue">Multi-Tenancy</a> &mdash; complementary session attribute pattern</li>
+          <li><a href="https://learn.microsoft.com/en-us/entra/msal/python/" target="_blank" class="badge-blue">MSAL Python</a> &mdash; Microsoft Authentication Library for token acquisition</li>
+        </ul>
+      </div>
+    </section>
+
+  </main>
+
+  <script>
+    // Progress bar
+    const progressBar = document.querySelector('.progress-bar');
+    window.addEventListener('scroll', () => {
+      const scrollTop = window.scrollY;
+      const docHeight = document.documentElement.scrollHeight - window.innerHeight;
+      progressBar.style.width = (scrollTop / docHeight * 100) + '%';
+    });
+
+    // Scroll animations
+    const observer = new IntersectionObserver((entries) => {
+      entries.forEach(entry => {
+        if (entry.isIntersecting) {
+          entry.target.classList.add('visible');
+        }
+      });
+    }, { threshold: 0.1 });
+
+    document.querySelectorAll('.anim-fade').forEach(el => observer.observe(el));
+
+    // Active nav tracking
+    const sections = document.querySelectorAll('.slide');
+    const navLinks = document.querySelectorAll('.sidebar a');
+
+    window.addEventListener('scroll', () => {
+      let current = '';
+      sections.forEach(section => {
+        const sectionTop = section.offsetTop - 200;
+        if (window.scrollY >= sectionTop) {
+          current = section.getAttribute('id');
+        }
+      });
+      navLinks.forEach(link => {
+        link.classList.remove('active');
+        if (link.getAttribute('href') === '#' + current) {
+          link.classList.add('active');
+        }
+      });
+    });
+  </script>
+</body>
+</html>

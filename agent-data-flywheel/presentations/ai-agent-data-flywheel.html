@@ -1,0 +1,831 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>The AI Agent Data Flywheel — Snowflake</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+
+    :root {
+      --bg: #0F1B2D;
+      --sidebar-bg: #1B2A4A;
+      --primary: #29B5E8;
+      --accent: #7C3AED;
+      --text: #E2E8F0;
+      --text-muted: #94A3B8;
+      --card-bg: #162236;
+      --border: #2D4A6F;
+      --green: #10B981;
+      --orange: #F59E0B;
+      --red: #EF4444;
+    }
+
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      font-family: 'Inter', sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.6;
+      overflow-x: hidden;
+    }
+
+    .progress-bar {
+      position: fixed;
+      top: 0;
+      left: 0;
+      height: 3px;
+      background: linear-gradient(90deg, var(--primary), var(--accent));
+      z-index: 1000;
+      transition: width 0.1s;
+    }
+
+    .sidebar {
+      position: fixed;
+      left: 0;
+      top: 0;
+      width: 260px;
+      height: 100vh;
+      background: var(--sidebar-bg);
+      padding: 2rem 1.5rem;
+      overflow-y: auto;
+      border-right: 1px solid var(--border);
+      z-index: 100;
+    }
+
+    .sidebar h2 {
+      font-size: 0.85rem;
+      font-weight: 600;
+      color: var(--primary);
+      margin-bottom: 1.5rem;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+
+    .sidebar a {
+      display: block;
+      color: var(--text-muted);
+      text-decoration: none;
+      padding: 0.5rem 0.75rem;
+      border-radius: 6px;
+      font-size: 0.85rem;
+      margin-bottom: 0.25rem;
+      transition: all 0.2s;
+    }
+
+    .sidebar a:hover,
+    .sidebar a.active {
+      color: var(--text);
+      background: rgba(41, 181, 232, 0.1);
+    }
+
+    .sidebar a.active {
+      border-left: 3px solid var(--primary);
+      padding-left: calc(0.75rem - 3px);
+    }
+
+    .main {
+      margin-left: 260px;
+      padding: 0;
+    }
+
+    .slide {
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      padding: 4rem 3rem;
+      max-width: 1200px;
+      margin: 0 auto;
+    }
+
+    .slide h1 {
+      font-size: 2.8rem;
+      font-weight: 700;
+      margin-bottom: 1rem;
+      background: linear-gradient(135deg, var(--primary), var(--accent));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+      text-align: center;
+    }
+
+    .slide h2 {
+      font-size: 1.75rem;
+      font-weight: 600;
+      color: var(--text);
+      margin-bottom: 1.5rem;
+      text-align: center;
+    }
+
+    .slide h3 {
+      font-size: 1.25rem;
+      font-weight: 500;
+      color: var(--text-muted);
+      margin-bottom: 1rem;
+    }
+
+    .slide p {
+      font-size: 1.1rem;
+      color: var(--text-muted);
+      max-width: 700px;
+      text-align: center;
+    }
+
+    .slide .subtitle {
+      font-size: 1.3rem;
+      color: var(--text-muted);
+      margin-top: 0.5rem;
+      font-weight: 300;
+    }
+
+    .stat-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 1.5rem;
+      width: 100%;
+      margin: 2rem 0;
+    }
+
+    .stat-card {
+      background: var(--card-bg);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 1.5rem;
+      text-align: center;
+    }
+
+    .stat-card .value {
+      font-size: 2rem;
+      font-weight: 700;
+      color: var(--primary);
+    }
+
+    .stat-card .label {
+      font-size: 0.85rem;
+      color: var(--text-muted);
+      margin-top: 0.5rem;
+    }
+
+    .card-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+      gap: 1.5rem;
+      width: 100%;
+      margin: 2rem 0;
+    }
+
+    .card-grid-3 {
+      grid-template-columns: repeat(3, 1fr);
+    }
+
+    .card-grid-2 {
+      grid-template-columns: repeat(2, 1fr);
+    }
+
+    .card {
+      background: var(--card-bg);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 1.5rem;
+    }
+
+    .card h4 {
+      font-size: 1rem;
+      font-weight: 600;
+      color: var(--text);
+      margin-bottom: 0.75rem;
+    }
+
+    .card p {
+      font-size: 0.9rem;
+      color: var(--text-muted);
+      text-align: left;
+    }
+
+    .card .card-icon {
+      font-size: 1.5rem;
+      margin-bottom: 0.75rem;
+      display: block;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 2rem 0;
+      font-size: 0.9rem;
+    }
+
+    th {
+      background: var(--card-bg);
+      color: var(--primary);
+      font-weight: 600;
+      padding: 0.75rem 1rem;
+      text-align: left;
+      border-bottom: 2px solid var(--border);
+    }
+
+    td {
+      padding: 0.75rem 1rem;
+      border-bottom: 1px solid var(--border);
+      color: var(--text);
+    }
+
+    tr:hover td {
+      background: rgba(41, 181, 232, 0.05);
+    }
+
+    .highlight-box {
+      background: rgba(41, 181, 232, 0.1);
+      border: 1px solid var(--primary);
+      border-radius: 12px;
+      padding: 1.5rem;
+      margin: 1.5rem 0;
+      width: 100%;
+    }
+
+    .context-box {
+      background: rgba(124, 58, 237, 0.1);
+      border: 1px solid var(--accent);
+      border-radius: 12px;
+      padding: 1.5rem;
+      margin: 1.5rem 0;
+      width: 100%;
+    }
+
+    .badge-green { background: rgba(16, 185, 129, 0.15); color: var(--green); padding: 0.25rem 0.75rem; border-radius: 99px; font-size: 0.8rem; font-weight: 500; }
+    .badge-blue { background: rgba(41, 181, 232, 0.15); color: var(--primary); padding: 0.25rem 0.75rem; border-radius: 99px; font-size: 0.8rem; font-weight: 500; }
+    .badge-purple { background: rgba(124, 58, 237, 0.15); color: var(--accent); padding: 0.25rem 0.75rem; border-radius: 99px; font-size: 0.8rem; font-weight: 500; }
+    .badge-orange { background: rgba(245, 158, 11, 0.15); color: var(--orange); padding: 0.25rem 0.75rem; border-radius: 99px; font-size: 0.8rem; font-weight: 500; }
+
+    .score-high { color: var(--green); font-weight: 600; }
+    .score-mid { color: var(--orange); font-weight: 600; }
+    .score-low { color: var(--red); font-weight: 600; }
+
+    .slide ul {
+      list-style: none;
+      width: 100%;
+      max-width: 700px;
+    }
+
+    .slide ul li {
+      padding: 0.75rem 0;
+      padding-left: 1.5rem;
+      position: relative;
+      color: var(--text);
+      font-size: 1.05rem;
+    }
+
+    .slide ul li::before {
+      content: '';
+      position: absolute;
+      left: 0;
+      top: 50%;
+      transform: translateY(-50%);
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: var(--primary);
+    }
+
+    /* Flywheel diagram */
+    .flywheel-container {
+      position: relative;
+      width: 520px;
+      height: 520px;
+      margin: 2rem auto;
+    }
+
+    .flywheel-ring {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      width: 440px;
+      height: 440px;
+      margin-top: -220px;
+      margin-left: -220px;
+      border: 3px solid var(--border);
+      border-radius: 50%;
+      animation: spin 20s linear infinite;
+    }
+
+    @keyframes spin {
+      from { transform: rotate(0deg); }
+      to { transform: rotate(360deg); }
+    }
+
+    .flywheel-ring::before {
+      content: '';
+      position: absolute;
+      top: -8px;
+      left: 50%;
+      margin-left: -8px;
+      width: 16px;
+      height: 16px;
+      background: var(--primary);
+      border-radius: 50%;
+    }
+
+    .flywheel-center {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      text-align: center;
+      z-index: 2;
+    }
+
+    .flywheel-center h3 {
+      font-size: 1.1rem;
+      color: var(--primary);
+      font-weight: 600;
+    }
+
+    .flywheel-center p {
+      font-size: 0.8rem;
+      color: var(--text-muted);
+    }
+
+    .flywheel-node {
+      position: absolute;
+      width: 140px;
+      text-align: center;
+      z-index: 3;
+    }
+
+    .flywheel-node .node-label {
+      background: var(--card-bg);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 0.75rem;
+      font-size: 0.8rem;
+      font-weight: 500;
+      color: var(--text);
+    }
+
+    .flywheel-node.top { top: 0; left: 50%; transform: translateX(-50%); }
+    .flywheel-node.right { top: 50%; right: -10px; transform: translateY(-50%); }
+    .flywheel-node.bottom { bottom: 0; left: 50%; transform: translateX(-50%); }
+    .flywheel-node.left { top: 50%; left: -10px; transform: translateY(-50%); }
+    .flywheel-node.top-right { top: 60px; right: 20px; }
+    .flywheel-node.bottom-right { bottom: 60px; right: 20px; }
+    .flywheel-node.bottom-left { bottom: 60px; left: 20px; }
+    .flywheel-node.top-left { top: 60px; left: 20px; }
+
+    /* Comparison */
+    .vs-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 2rem;
+      width: 100%;
+      margin: 2rem 0;
+    }
+
+    .vs-col {
+      background: var(--card-bg);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 2rem;
+    }
+
+    .vs-col.highlight {
+      border-color: var(--primary);
+      box-shadow: 0 0 30px rgba(41, 181, 232, 0.1);
+    }
+
+    .vs-col h4 {
+      font-size: 1.1rem;
+      font-weight: 600;
+      margin-bottom: 1rem;
+      color: var(--text);
+    }
+
+    .vs-col ul {
+      list-style: none;
+    }
+
+    .vs-col ul li {
+      padding: 0.5rem 0;
+      padding-left: 1.25rem;
+      position: relative;
+      font-size: 0.9rem;
+      color: var(--text-muted);
+    }
+
+    .vs-col ul li::before {
+      content: '';
+      position: absolute;
+      left: 0;
+      top: 50%;
+      transform: translateY(-50%);
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+    }
+
+    .vs-col.highlight ul li::before {
+      background: var(--green);
+    }
+
+    .vs-col:not(.highlight) ul li::before {
+      background: var(--text-muted);
+    }
+
+    .anim-fade {
+      opacity: 0;
+      transform: translateY(20px);
+      transition: opacity 0.6s ease, transform 0.6s ease;
+    }
+
+    .anim-fade.visible {
+      opacity: 1;
+      transform: translateY(0);
+    }
+
+    .pill-row {
+      display: flex;
+      gap: 0.5rem;
+      flex-wrap: wrap;
+      margin-top: 0.75rem;
+    }
+
+    @media (max-width: 900px) {
+      .sidebar { display: none; }
+      .main { margin-left: 0; }
+      .stat-grid { grid-template-columns: repeat(2, 1fr); }
+      .slide { padding: 2rem 1.5rem; }
+      .vs-grid { grid-template-columns: 1fr; }
+      .card-grid-3 { grid-template-columns: 1fr; }
+      .flywheel-container { width: 320px; height: 320px; }
+    }
+  </style>
+</head>
+<body>
+  <div class="progress-bar"></div>
+
+  <nav class="sidebar">
+    <h2>Agent Data Flywheel</h2>
+    <a href="#hero">Overview</a>
+    <a href="#problem">The Strategic Problem</a>
+    <a href="#converged-data">Converged Data Advantage</a>
+    <a href="#pillar-business">Business Data</a>
+    <a href="#pillar-eval">Evaluation Data</a>
+    <a href="#pillar-observability">Observability Data</a>
+    <a href="#flywheel">The Flywheel</a>
+    <a href="#improvement">Improvement Levers</a>
+    <a href="#differentiation">Why Snowflake Wins</a>
+    <a href="#closing">Strategic Takeaway</a>
+  </nav>
+
+  <main class="main">
+
+    <!-- Hero -->
+    <section class="slide" id="hero">
+      <h1>The AI Agent Data Flywheel</h1>
+      <p class="subtitle">How Snowflake's converged data architecture turns every agent interaction into compounding intelligence</p>
+      <div class="stat-grid anim-fade" style="margin-top: 3rem;">
+        <div class="stat-card">
+          <div class="value">3</div>
+          <div class="label">Data Pillars Converged</div>
+        </div>
+        <div class="stat-card">
+          <div class="value">1</div>
+          <div class="label">Governed Platform</div>
+        </div>
+        <div class="stat-card">
+          <div class="value">&infin;</div>
+          <div class="label">Compounding Returns</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- The Strategic Problem -->
+    <section class="slide" id="problem">
+      <h2>The Strategic Problem</h2>
+      <p style="margin-bottom: 2rem;">Most AI agent platforms treat deployment as the finish line. In reality, it's the starting point of a continuous improvement challenge.</p>
+      <div class="card-grid card-grid-2 anim-fade">
+        <div class="card">
+          <h4>Fragmented Agent Stacks</h4>
+          <p>Business data in one system, interaction logs in another, evaluations in a third. No single system of record for understanding agent performance holistically.</p>
+        </div>
+        <div class="card">
+          <h4>No Learning Loop</h4>
+          <p>Without converged data, teams can't close the loop from "what went wrong" to "how do we improve." Agents stagnate rather than compound.</p>
+        </div>
+        <div class="card">
+          <h4>Governance Gaps</h4>
+          <p>Improvement data (user queries, feedback, tool traces) is as sensitive as the business data itself. Fragmented systems multiply compliance risk.</p>
+        </div>
+        <div class="card">
+          <h4>Manual Iteration</h4>
+          <p>Without a flywheel, every improvement cycle requires expensive manual analysis, data movement, and ad-hoc tooling. It doesn't scale.</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- Converged Data Advantage -->
+    <section class="slide" id="converged-data">
+      <h2>The Converged Data Advantage</h2>
+      <p style="margin-bottom: 2rem;">Snowflake uniquely positions all three data pillars required for continuous agent improvement in a single governed platform.</p>
+      <div class="card-grid card-grid-3 anim-fade">
+        <div class="card" style="border-top: 3px solid var(--primary);">
+          <span class="card-icon">&#x1F4CA;</span>
+          <h4>Business Data</h4>
+          <p>The structured and unstructured data your agents reason over. Tables, documents, knowledge bases &mdash; the source of truth users ask questions about.</p>
+          <div class="pill-row">
+            <span class="badge-blue">Cortex Analyst</span>
+            <span class="badge-blue">Cortex Search</span>
+          </div>
+        </div>
+        <div class="card" style="border-top: 3px solid var(--accent);">
+          <span class="card-icon">&#x2705;</span>
+          <h4>Evaluation Data</h4>
+          <p>Structured assessments of agent responses: correctness scores, groundedness checks, relevance metrics, human ratings, and regression tests.</p>
+          <div class="pill-row">
+            <span class="badge-purple">Agent Evaluations</span>
+            <span class="badge-purple">Verified Queries</span>
+          </div>
+        </div>
+        <div class="card" style="border-top: 3px solid var(--green);">
+          <span class="card-icon">&#x1F50D;</span>
+          <h4>Observability Data</h4>
+          <p>How users actually interact: queries asked, tools invoked, latency, token usage, thumbs-up/down feedback, session patterns, and failure modes.</p>
+          <div class="pill-row">
+            <span class="badge-green">Threads</span>
+            <span class="badge-green">Traces</span>
+            <span class="badge-green">Feedback</span>
+          </div>
+        </div>
+      </div>
+      <div class="highlight-box anim-fade" style="margin-top: 1.5rem;">
+        <strong>Key Insight:</strong> When all three data types live in the same platform with unified governance, you can JOIN them &mdash; correlating user behavior with agent accuracy to identify exactly where and how to improve.
+      </div>
+    </section>
+
+    <!-- Pillar 1: Business Data -->
+    <section class="slide" id="pillar-business">
+      <h2>Pillar 1: Business Data</h2>
+      <p style="margin-bottom: 2rem;">The foundation your agents reason over &mdash; already governed, cataloged, and query-ready in Snowflake.</p>
+      <div class="card-grid card-grid-2 anim-fade">
+        <div class="card">
+          <h4>Structured Data via Cortex Analyst</h4>
+          <p>Semantic views define the business meaning of your data. Agents generate SQL from natural language, grounded in your actual schema and business logic. No hallucinated joins.</p>
+        </div>
+        <div class="card">
+          <h4>Unstructured Data via Cortex Search</h4>
+          <p>Documents, policies, contracts, support tickets &mdash; indexed and retrievable with hybrid semantic + keyword search. Agents pull the right context at inference time.</p>
+        </div>
+        <div class="card">
+          <h4>Unified Governance</h4>
+          <p>Row-level security, masking policies, and RBAC apply equally whether a human or an agent queries the data. No shadow copies, no governance bypass.</p>
+        </div>
+        <div class="card">
+          <h4>Always Current</h4>
+          <p>Dynamic tables, streams, and tasks keep agent-accessible data fresh. No stale exports sitting in a vector store that diverged from reality weeks ago.</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- Pillar 2: Evaluation Data -->
+    <section class="slide" id="pillar-eval">
+      <h2>Pillar 2: Evaluation Data</h2>
+      <p style="margin-bottom: 2rem;">Systematic measurement of agent quality &mdash; the signal that tells you where improvement is needed.</p>
+      <div class="card-grid card-grid-3 anim-fade">
+        <div class="card">
+          <h4>Cortex Agent Evaluations</h4>
+          <p>Run structured eval suites against your agent. Measure SQL correctness, response groundedness, and tool selection accuracy across test sets.</p>
+        </div>
+        <div class="card">
+          <h4>Verified Queries</h4>
+          <p>Gold-standard question-to-SQL pairs that serve as both guardrails and regression tests. When an agent's answer matches a verified query, confidence is high.</p>
+        </div>
+        <div class="card">
+          <h4>Human Feedback Loop</h4>
+          <p>End-user ratings and free-text comments captured natively in CoWork. Structured feedback stored alongside the agent trace for root-cause analysis.</p>
+        </div>
+      </div>
+      <div class="context-box anim-fade" style="margin-top: 1rem;">
+        <strong>Why this matters strategically:</strong> Evaluation data stored in Snowflake tables means you can query it with SQL, join it to observability traces, and build dashboards that show improvement trends over time &mdash; all without a separate MLOps platform.
+      </div>
+    </section>
+
+    <!-- Pillar 3: Observability Data -->
+    <section class="slide" id="pillar-observability">
+      <h2>Pillar 3: Observability Data</h2>
+      <p style="margin-bottom: 2rem;">Every agent interaction generates rich telemetry that feeds the improvement loop.</p>
+      <div class="card-grid card-grid-2 anim-fade">
+        <div class="card">
+          <h4>Threads &amp; Conversation State</h4>
+          <p>Persistent, multi-turn conversation histories. Understand not just individual queries but user journeys &mdash; where do they succeed, where do they get stuck?</p>
+        </div>
+        <div class="card">
+          <h4>Tool Invocation Traces</h4>
+          <p>Which tools did the agent call? What SQL did Analyst generate? Which search results came back? Full reasoning trace from plan &rarr; execute &rarr; reflect.</p>
+        </div>
+        <div class="card">
+          <h4>Latency &amp; Token Metrics</h4>
+          <p>Time-to-first-token, total response time, token consumption per tool call. Identify cost hotspots and optimize for both quality and efficiency.</p>
+        </div>
+        <div class="card">
+          <h4>User Behavior Signals</h4>
+          <p>Query patterns, peak usage, topic clustering, abandonment rates. Understand what users actually need vs. what you designed for.</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- The Flywheel -->
+    <section class="slide" id="flywheel">
+      <h2>The Flywheel in Action</h2>
+      <p style="margin-bottom: 1.5rem;">Every interaction makes the next one better. This is not a pipeline &mdash; it's a compounding system.</p>
+      <div class="flywheel-container anim-fade">
+        <div class="flywheel-ring"></div>
+        <div class="flywheel-center">
+          <h3>Converged<br>Data Platform</h3>
+          <p>Snowflake</p>
+        </div>
+        <div class="flywheel-node top">
+          <div class="node-label"><strong>Deploy</strong><br>Agent goes live</div>
+        </div>
+        <div class="flywheel-node top-right">
+          <div class="node-label"><strong>Interact</strong><br>Users ask questions</div>
+        </div>
+        <div class="flywheel-node right">
+          <div class="node-label"><strong>Observe</strong><br>Capture traces &amp; feedback</div>
+        </div>
+        <div class="flywheel-node bottom-right">
+          <div class="node-label"><strong>Evaluate</strong><br>Score quality &amp; accuracy</div>
+        </div>
+        <div class="flywheel-node bottom">
+          <div class="node-label"><strong>Analyze</strong><br>Identify failure patterns</div>
+        </div>
+        <div class="flywheel-node bottom-left">
+          <div class="node-label"><strong>Improve</strong><br>Fine-tune, add skills, refine</div>
+        </div>
+        <div class="flywheel-node left">
+          <div class="node-label"><strong>Validate</strong><br>Run evals on changes</div>
+        </div>
+        <div class="flywheel-node top-left">
+          <div class="node-label"><strong>Redeploy</strong><br>Ship improved agent</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Improvement Levers -->
+    <section class="slide" id="improvement">
+      <h2>Improvement Levers</h2>
+      <p style="margin-bottom: 2rem;">Converged data unlocks multiple improvement vectors &mdash; from fast tactical fixes to deep model customization.</p>
+      <div class="anim-fade" style="width: 100%; overflow-x: auto;">
+        <table>
+          <thead>
+            <tr>
+              <th>Lever</th>
+              <th>Data Required</th>
+              <th>Impact</th>
+              <th>Time to Value</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><strong>Refine Instructions</strong></td>
+              <td>Observability + Evaluation</td>
+              <td>Fix common misinterpretations</td>
+              <td class="score-high">Immediate</td>
+            </tr>
+            <tr>
+              <td><strong>Add Verified Queries</strong></td>
+              <td>Evaluation + Business Data</td>
+              <td>Guarantee accuracy on key questions</td>
+              <td class="score-high">Days</td>
+            </tr>
+            <tr>
+              <td><strong>Expand Skills</strong></td>
+              <td>Observability (failure patterns)</td>
+              <td>New capabilities for unhandled tasks</td>
+              <td class="score-mid">Days-Weeks</td>
+            </tr>
+            <tr>
+              <td><strong>Enrich Search Corpus</strong></td>
+              <td>Observability (missed retrievals)</td>
+              <td>Better recall on unstructured questions</td>
+              <td class="score-mid">Days</td>
+            </tr>
+            <tr>
+              <td><strong>Fine-Tune Model</strong></td>
+              <td>All three pillars</td>
+              <td>Domain-specific accuracy + latency gains</td>
+              <td class="score-mid">Weeks</td>
+            </tr>
+            <tr>
+              <td><strong>Custom Tools / MCP</strong></td>
+              <td>Observability (tool gaps)</td>
+              <td>Extend agent reach to new systems</td>
+              <td class="score-mid">Weeks</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="highlight-box anim-fade" style="margin-top: 1rem;">
+        <strong>The key:</strong> You don't need all levers at once. Start with instruction refinement and verified queries (fast, high-impact), then graduate to fine-tuning as you accumulate enough interaction data. The flywheel <em>accelerates</em> over time.
+      </div>
+    </section>
+
+    <!-- Differentiation -->
+    <section class="slide" id="differentiation">
+      <h2>Why Snowflake Wins This</h2>
+      <p style="margin-bottom: 2rem;">The architectural moat: data convergence is not something you can bolt on after the fact.</p>
+      <div class="vs-grid anim-fade">
+        <div class="vs-col">
+          <h4 style="color: var(--text-muted);">Hyperscaler Agent Platforms<br><span style="font-size: 0.8rem; font-weight: 400;">(AWS AgentCore, Azure AI Agent Service, GCP Vertex Agent Builder)</span></h4>
+          <ul>
+            <li>Orchestration runtime &mdash; good at routing and tool calling</li>
+            <li>Data lives elsewhere (S3, RDS, third-party). Must ETL to improve.</li>
+            <li>Observability scattered across CloudWatch / App Insights / Cloud Logging</li>
+            <li>Evaluation requires external MLOps tooling (SageMaker, Azure ML)</li>
+            <li>Fine-tuning disconnected from interaction data &mdash; separate workflow</li>
+            <li>No native semantic layer over customer data</li>
+            <li>Governance bolted on across services; no unified RBAC</li>
+          </ul>
+        </div>
+        <div class="vs-col highlight">
+          <h4 style="color: var(--primary);">Snowflake Cortex Agents</h4>
+          <ul>
+            <li>Agent runtime <strong>and</strong> data platform &mdash; no gap between reasoning and data</li>
+            <li>Business data already in Snowflake &mdash; zero data movement to improve</li>
+            <li>Observability (threads, traces, feedback) stored as Snowflake tables</li>
+            <li>Native agent evaluations &mdash; run evals with SQL, no external tools</li>
+            <li>Fine-tuning reads directly from the same tables the agent queries</li>
+            <li>Cortex Analyst's semantic views = built-in semantic layer</li>
+            <li>Single RBAC model governs data, agents, evals, and improvement data</li>
+          </ul>
+        </div>
+      </div>
+      <div class="context-box anim-fade" style="margin-top: 1.5rem;">
+        <strong>The fundamental difference:</strong> Hyperscalers sell an agent <em>runtime</em>. Snowflake delivers an agent <em>data system</em>. The flywheel only works when the data is converged &mdash; not when it's scattered across 5 services that require integration work to close the loop.
+      </div>
+    </section>
+
+    <!-- Closing -->
+    <section class="slide" id="closing">
+      <h2>Strategic Takeaway</h2>
+      <div class="card-grid card-grid-3 anim-fade">
+        <div class="card">
+          <h4>Consolidation = Velocity</h4>
+          <p>Every service boundary you eliminate between agent data and improvement data is a week of integration work you skip and a governance risk you remove.</p>
+        </div>
+        <div class="card">
+          <h4>Compound, Don't Iterate</h4>
+          <p>Agents that get better from usage create lock-in that no replatform can replicate. Your improvement data <em>is</em> the moat.</p>
+        </div>
+        <div class="card">
+          <h4>Start the Flywheel Now</h4>
+          <p>Deploy a Cortex Agent with observability on. Accumulate interactions. The data you collect today funds the improvements you ship next quarter.</p>
+        </div>
+      </div>
+      <div class="highlight-box anim-fade" style="margin-top: 2rem; text-align: center;">
+        <p style="font-size: 1.15rem; color: var(--text); margin: 0;"><strong>The best time to start the flywheel was yesterday.<br>The second best time is your next Cortex Agent deployment.</strong></p>
+      </div>
+    </section>
+
+  </main>
+
+  <script>
+    const progressBar = document.querySelector('.progress-bar');
+    window.addEventListener('scroll', () => {
+      const scrollTop = window.scrollY;
+      const docHeight = document.documentElement.scrollHeight - window.innerHeight;
+      progressBar.style.width = (scrollTop / docHeight * 100) + '%';
+    });
+
+    const observer = new IntersectionObserver((entries) => {
+      entries.forEach(entry => {
+        if (entry.isIntersecting) {
+          entry.target.classList.add('visible');
+        }
+      });
+    }, { threshold: 0.1 });
+
+    document.querySelectorAll('.anim-fade').forEach(el => observer.observe(el));
+
+    const sections = document.querySelectorAll('.slide');
+    const navLinks = document.querySelectorAll('.sidebar a');
+
+    window.addEventListener('scroll', () => {
+      let current = '';
+      sections.forEach(section => {
+        const sectionTop = section.offsetTop - 200;
+        if (window.scrollY >= sectionTop) {
+          current = section.getAttribute('id');
+        }
+      });
+      navLinks.forEach(link => {
+        link.classList.remove('active');
+        if (link.getAttribute('href') === '#' + current) {
+          link.classList.add('active');
+        }
+      });
+    });
+  </script>
+</body>
+</html>
