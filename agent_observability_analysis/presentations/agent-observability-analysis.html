@@ -1,0 +1,1045 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Agent Observability & Analysis — From Interactions to Intelligence</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+
+    :root {
+      --bg: #0F1B2D;
+      --sidebar-bg: #1B2A4A;
+      --primary: #29B5E8;
+      --accent: #7C3AED;
+      --text: #E2E8F0;
+      --text-muted: #94A3B8;
+      --card-bg: #162236;
+      --border: #2D4A6F;
+      --green: #10B981;
+      --orange: #F59E0B;
+      --red: #EF4444;
+    }
+
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      font-family: 'Inter', sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.6;
+      overflow-x: hidden;
+    }
+
+    .progress-bar {
+      position: fixed;
+      top: 0;
+      left: 0;
+      height: 3px;
+      background: linear-gradient(90deg, var(--primary), var(--accent));
+      z-index: 1000;
+      transition: width 0.1s;
+    }
+
+    .sidebar {
+      position: fixed;
+      left: 0;
+      top: 0;
+      width: 260px;
+      height: 100vh;
+      background: var(--sidebar-bg);
+      padding: 2rem 1.5rem;
+      overflow-y: auto;
+      border-right: 1px solid var(--border);
+      z-index: 100;
+    }
+
+    .sidebar h2 {
+      font-size: 0.85rem;
+      font-weight: 600;
+      color: var(--primary);
+      margin-bottom: 1.5rem;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+
+    .sidebar a {
+      display: block;
+      color: var(--text-muted);
+      text-decoration: none;
+      padding: 0.5rem 0.75rem;
+      border-radius: 6px;
+      font-size: 0.85rem;
+      margin-bottom: 0.25rem;
+      transition: all 0.2s;
+    }
+
+    .sidebar a:hover,
+    .sidebar a.active {
+      color: var(--text);
+      background: rgba(41, 181, 232, 0.1);
+    }
+
+    .sidebar a.active {
+      border-left: 3px solid var(--primary);
+      padding-left: calc(0.75rem - 3px);
+    }
+
+    .main {
+      margin-left: 260px;
+      padding: 0;
+    }
+
+    .slide {
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      padding: 4rem 3rem;
+      max-width: 1200px;
+      margin: 0 auto;
+    }
+
+    .slide h1 {
+      font-size: 2.8rem;
+      font-weight: 700;
+      margin-bottom: 1rem;
+      background: linear-gradient(135deg, var(--primary), var(--accent));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+      text-align: center;
+    }
+
+    .slide h2 {
+      font-size: 1.75rem;
+      font-weight: 600;
+      color: var(--text);
+      margin-bottom: 1.5rem;
+      text-align: center;
+    }
+
+    .slide h3 {
+      font-size: 1.25rem;
+      font-weight: 500;
+      color: var(--text-muted);
+      margin-bottom: 1rem;
+    }
+
+    .slide p {
+      font-size: 1.1rem;
+      color: var(--text-muted);
+      max-width: 700px;
+      text-align: center;
+    }
+
+    .slide .subtitle {
+      font-size: 1.3rem;
+      color: var(--text-muted);
+      margin-top: 0.5rem;
+      font-weight: 300;
+    }
+
+    .stat-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 1.5rem;
+      width: 100%;
+      margin: 2rem 0;
+    }
+
+    .stat-grid-3 {
+      grid-template-columns: repeat(3, 1fr);
+    }
+
+    .stat-card {
+      background: var(--card-bg);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 1.5rem;
+      text-align: center;
+    }
+
+    .stat-card .value {
+      font-size: 2rem;
+      font-weight: 700;
+      color: var(--primary);
+    }
+
+    .stat-card .label {
+      font-size: 0.85rem;
+      color: var(--text-muted);
+      margin-top: 0.5rem;
+    }
+
+    .card-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+      gap: 1.5rem;
+      width: 100%;
+      margin: 2rem 0;
+    }
+
+    .card-grid-3 {
+      grid-template-columns: repeat(3, 1fr);
+    }
+
+    .card-grid-2 {
+      grid-template-columns: repeat(2, 1fr);
+    }
+
+    .card {
+      background: var(--card-bg);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 1.5rem;
+    }
+
+    .card h4 {
+      font-size: 1rem;
+      font-weight: 600;
+      color: var(--text);
+      margin-bottom: 0.75rem;
+    }
+
+    .card p {
+      font-size: 0.9rem;
+      color: var(--text-muted);
+      text-align: left;
+    }
+
+    .card .card-number {
+      font-size: 2rem;
+      font-weight: 700;
+      color: var(--primary);
+      margin-bottom: 0.5rem;
+      display: block;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 2rem 0;
+      font-size: 0.9rem;
+    }
+
+    th {
+      background: var(--card-bg);
+      color: var(--primary);
+      font-weight: 600;
+      padding: 0.75rem 1rem;
+      text-align: left;
+      border-bottom: 2px solid var(--border);
+    }
+
+    td {
+      padding: 0.75rem 1rem;
+      border-bottom: 1px solid var(--border);
+      color: var(--text);
+    }
+
+    tr:hover td {
+      background: rgba(41, 181, 232, 0.05);
+    }
+
+    .highlight-box {
+      background: rgba(41, 181, 232, 0.1);
+      border: 1px solid var(--primary);
+      border-radius: 12px;
+      padding: 1.5rem;
+      margin: 1.5rem 0;
+      width: 100%;
+    }
+
+    .context-box {
+      background: rgba(124, 58, 237, 0.1);
+      border: 1px solid var(--accent);
+      border-radius: 12px;
+      padding: 1.5rem;
+      margin: 1.5rem 0;
+      width: 100%;
+    }
+
+    .warning-box {
+      background: rgba(245, 158, 11, 0.1);
+      border: 1px solid var(--orange);
+      border-radius: 12px;
+      padding: 1.5rem;
+      margin: 1.5rem 0;
+      width: 100%;
+    }
+
+    .badge-green { background: rgba(16, 185, 129, 0.15); color: var(--green); padding: 0.25rem 0.75rem; border-radius: 99px; font-size: 0.8rem; font-weight: 500; }
+    .badge-blue { background: rgba(41, 181, 232, 0.15); color: var(--primary); padding: 0.25rem 0.75rem; border-radius: 99px; font-size: 0.8rem; font-weight: 500; }
+    .badge-purple { background: rgba(124, 58, 237, 0.15); color: var(--accent); padding: 0.25rem 0.75rem; border-radius: 99px; font-size: 0.8rem; font-weight: 500; }
+    .badge-orange { background: rgba(245, 158, 11, 0.15); color: var(--orange); padding: 0.25rem 0.75rem; border-radius: 99px; font-size: 0.8rem; font-weight: 500; }
+    .badge-red { background: rgba(239, 68, 68, 0.15); color: var(--red); padding: 0.25rem 0.75rem; border-radius: 99px; font-size: 0.8rem; font-weight: 500; }
+
+    .score-high { color: var(--green); font-weight: 600; }
+    .score-mid { color: var(--orange); font-weight: 600; }
+    .score-low { color: var(--red); font-weight: 600; }
+
+    .slide ul {
+      list-style: none;
+      width: 100%;
+      max-width: 700px;
+    }
+
+    .slide ul li {
+      padding: 0.75rem 0;
+      padding-left: 1.5rem;
+      position: relative;
+      color: var(--text);
+      font-size: 1.05rem;
+    }
+
+    .slide ul li::before {
+      content: '';
+      position: absolute;
+      left: 0;
+      top: 50%;
+      transform: translateY(-50%);
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: var(--primary);
+    }
+
+    /* Flywheel */
+    .flywheel-container {
+      position: relative;
+      width: 480px;
+      height: 480px;
+      margin: 2rem auto;
+    }
+
+    .flywheel-ring {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      width: 400px;
+      height: 400px;
+      margin-top: -200px;
+      margin-left: -200px;
+      border: 3px solid var(--border);
+      border-radius: 50%;
+      animation: spin 20s linear infinite;
+    }
+
+    @keyframes spin {
+      from { transform: rotate(0deg); }
+      to { transform: rotate(360deg); }
+    }
+
+    .flywheel-ring::before {
+      content: '';
+      position: absolute;
+      top: -8px;
+      left: 50%;
+      margin-left: -8px;
+      width: 16px;
+      height: 16px;
+      background: var(--primary);
+      border-radius: 50%;
+    }
+
+    .flywheel-center {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      text-align: center;
+      z-index: 2;
+    }
+
+    .flywheel-center h3 {
+      font-size: 1.1rem;
+      color: var(--primary);
+      font-weight: 600;
+    }
+
+    .flywheel-center p {
+      font-size: 0.8rem;
+      color: var(--text-muted);
+    }
+
+    .flywheel-node {
+      position: absolute;
+      width: 130px;
+      text-align: center;
+      z-index: 3;
+    }
+
+    .flywheel-node .node-label {
+      background: var(--card-bg);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 0.6rem;
+      font-size: 0.75rem;
+      font-weight: 500;
+      color: var(--text);
+    }
+
+    .flywheel-node.top { top: 0; left: 50%; transform: translateX(-50%); }
+    .flywheel-node.right { top: 50%; right: -10px; transform: translateY(-50%); }
+    .flywheel-node.bottom { bottom: 0; left: 50%; transform: translateX(-50%); }
+    .flywheel-node.left { top: 50%; left: -10px; transform: translateY(-50%); }
+    .flywheel-node.top-right { top: 50px; right: 15px; }
+    .flywheel-node.bottom-right { bottom: 50px; right: 15px; }
+    .flywheel-node.bottom-left { bottom: 50px; left: 15px; }
+    .flywheel-node.top-left { top: 50px; left: 15px; }
+
+    .code-block {
+      background: var(--card-bg);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 1.25rem;
+      font-family: 'JetBrains Mono', 'Fira Code', monospace;
+      font-size: 0.8rem;
+      color: var(--text);
+      overflow-x: auto;
+      width: 100%;
+      margin: 1rem 0;
+      white-space: pre;
+      line-height: 1.5;
+    }
+
+    .code-block .keyword { color: var(--accent); }
+    .code-block .function { color: var(--primary); }
+    .code-block .string { color: var(--green); }
+    .code-block .comment { color: var(--text-muted); }
+
+    .pill-row {
+      display: flex;
+      gap: 0.5rem;
+      flex-wrap: wrap;
+      margin-top: 0.75rem;
+    }
+
+    /* Flow diagram */
+    .flow-container {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      margin: 2rem 0;
+      flex-wrap: wrap;
+      justify-content: center;
+      width: 100%;
+    }
+
+    .flow-step {
+      background: var(--card-bg);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 0.75rem 1.25rem;
+      text-align: center;
+      min-width: 120px;
+    }
+
+    .flow-step.active {
+      border-color: var(--primary);
+      box-shadow: 0 0 12px rgba(41, 181, 232, 0.2);
+    }
+
+    .flow-step .step-title {
+      font-size: 0.75rem;
+      font-weight: 600;
+      color: var(--primary);
+      text-transform: uppercase;
+      letter-spacing: 0.03em;
+    }
+
+    .flow-step .step-desc {
+      font-size: 0.8rem;
+      color: var(--text-muted);
+      margin-top: 0.25rem;
+    }
+
+    .flow-arrow {
+      color: var(--text-muted);
+      font-size: 1.2rem;
+    }
+
+    .anim-fade {
+      opacity: 0;
+      transform: translateY(20px);
+      transition: opacity 0.6s ease, transform 0.6s ease;
+    }
+
+    .anim-fade.visible {
+      opacity: 1;
+      transform: translateY(0);
+    }
+
+    @media (max-width: 900px) {
+      .sidebar { display: none; }
+      .main { margin-left: 0; }
+      .stat-grid { grid-template-columns: repeat(2, 1fr); }
+      .slide { padding: 2rem 1.5rem; }
+      .card-grid-3 { grid-template-columns: 1fr; }
+      .flywheel-container { width: 320px; height: 320px; }
+    }
+  </style>
+</head>
+<body>
+  <div class="progress-bar"></div>
+
+  <nav class="sidebar">
+    <h2>Observability & Analysis</h2>
+    <a href="#hero">Overview</a>
+    <a href="#flywheel">The Data Flywheel</a>
+    <a href="#three-pillars">Three Data Pillars</a>
+    <a href="#scenario">The Demo Agent</a>
+    <a href="#notebook-flow">Notebook Architecture</a>
+    <a href="#observability-schema">Observability Schema</a>
+    <a href="#signal-mining">Mining Feedback Signals</a>
+    <a href="#rephrase-detection">Rephrase Detection</a>
+    <a href="#eval-assembly">Eval Dataset Assembly</a>
+    <a href="#eval-execution">Running Evaluations</a>
+    <a href="#improvement-levers">Improvement Levers</a>
+    <a href="#closing">Closing the Loop</a>
+  </nav>
+
+  <main class="main">
+
+    <!-- Hero -->
+    <section class="slide" id="hero">
+      <h1>Agent Observability & Analysis</h1>
+      <p class="subtitle">How to mine production agent interactions into evaluation datasets that drive continuous improvement</p>
+      <div class="card-grid card-grid-3 anim-fade" style="margin-top: 3rem;">
+        <div class="card" style="border-top: 3px solid var(--primary);">
+          <h4>The Problem</h4>
+          <p>You deployed an agent. Users are interacting with it. Some are happy, some aren't. How do you systematically find and fix the failures?</p>
+        </div>
+        <div class="card" style="border-top: 3px solid var(--accent);">
+          <h4>The Approach</h4>
+          <p>Mine observability data for three types of signal &mdash; explicit feedback, implicit rephrasing, and intent trends &mdash; to build targeted evaluation datasets.</p>
+        </div>
+        <div class="card" style="border-top: 3px solid var(--green);">
+          <h4>The Outcome</h4>
+          <p>An automated pipeline that continuously tests your agent on its real weak spots, not hypothetical ones. Every interaction makes the next version better.</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- The Flywheel -->
+    <section class="slide" id="flywheel">
+      <h2>The Agent Data Flywheel</h2>
+      <p style="margin-bottom: 1.5rem;">Deployment is the starting line, not the finish. Every interaction compounds into improvement when your data is converged.</p>
+      <div class="flywheel-container anim-fade">
+        <div class="flywheel-ring"></div>
+        <div class="flywheel-center">
+          <h3>Converged<br>Platform</h3>
+          <p>Snowflake</p>
+        </div>
+        <div class="flywheel-node top">
+          <div class="node-label"><strong>Deploy</strong><br>Agent goes live</div>
+        </div>
+        <div class="flywheel-node top-right">
+          <div class="node-label"><strong>Observe</strong><br>Capture traces</div>
+        </div>
+        <div class="flywheel-node right">
+          <div class="node-label"><strong>Mine</strong><br>Extract signal</div>
+        </div>
+        <div class="flywheel-node bottom-right">
+          <div class="node-label"><strong>Evaluate</strong><br>Score quality</div>
+        </div>
+        <div class="flywheel-node bottom">
+          <div class="node-label"><strong>Analyze</strong><br>Find failures</div>
+        </div>
+        <div class="flywheel-node bottom-left">
+          <div class="node-label"><strong>Improve</strong><br>Refine agent</div>
+        </div>
+        <div class="flywheel-node left">
+          <div class="node-label"><strong>Validate</strong><br>Run evals</div>
+        </div>
+        <div class="flywheel-node top-left">
+          <div class="node-label"><strong>Redeploy</strong><br>Ship improvement</div>
+        </div>
+      </div>
+      <div class="highlight-box anim-fade" style="margin-top: 1rem;">
+        <strong>Key Insight:</strong> The flywheel only works when business data, observability data, and evaluation data live in the same platform. Snowflake's converged architecture eliminates the integration tax that kills improvement loops.
+      </div>
+    </section>
+
+    <!-- Three Pillars -->
+    <section class="slide" id="three-pillars">
+      <h2>Three Data Pillars, One Platform</h2>
+      <p style="margin-bottom: 2rem;">Continuous agent improvement requires three types of data working together under unified governance.</p>
+      <div class="card-grid card-grid-3 anim-fade">
+        <div class="card" style="border-top: 3px solid var(--primary);">
+          <h4>Business Data</h4>
+          <p>The structured and unstructured data agents reason over. Tables, documents, knowledge bases &mdash; the source of truth users ask questions about.</p>
+          <div class="pill-row">
+            <span class="badge-blue">Cortex Analyst</span>
+            <span class="badge-blue">Cortex Search</span>
+          </div>
+        </div>
+        <div class="card" style="border-top: 3px solid var(--green);">
+          <h4>Observability Data</h4>
+          <p>Every interaction captured: queries asked, tools invoked, latency, feedback, thread structure, and rephrase patterns.</p>
+          <div class="pill-row">
+            <span class="badge-green">Threads</span>
+            <span class="badge-green">Traces</span>
+            <span class="badge-green">Feedback</span>
+          </div>
+        </div>
+        <div class="card" style="border-top: 3px solid var(--accent);">
+          <h4>Evaluation Data</h4>
+          <p>Systematic assessments: correctness scores, tool selection accuracy, groundedness checks, and regression tests mined from production.</p>
+          <div class="pill-row">
+            <span class="badge-purple">Evaluations</span>
+            <span class="badge-purple">Verified Queries</span>
+          </div>
+        </div>
+      </div>
+      <div class="context-box anim-fade" style="margin-top: 1rem;">
+        <strong>Why convergence matters:</strong> When all three data types live in the same platform, you can JOIN them &mdash; correlating user behavior with agent accuracy to identify exactly where and how to improve. No ETL, no integration lag, no governance gaps.
+      </div>
+    </section>
+
+    <!-- The Scenario -->
+    <section class="slide" id="scenario">
+      <h2>The Demo: CMO Assistant Agent</h2>
+      <p style="margin-bottom: 2rem;">A multi-tool Cortex Agent that answers marketing performance questions using both structured data and strategy documents.</p>
+      <div class="card-grid card-grid-2 anim-fade">
+        <div class="card">
+          <h4>Tool 1: Cortex Analyst (campaign_analytics)</h4>
+          <p>Queries structured campaign performance data via a semantic view &mdash; spend, revenue, impressions, clicks, conversions, ROI, CPC, and CPA broken down by channel and time period.</p>
+          <div class="pill-row">
+            <span class="badge-blue">text_to_sql</span>
+            <span class="badge-blue">Semantic View</span>
+          </div>
+        </div>
+        <div class="card">
+          <h4>Tool 2: Cortex Search (strategy_search)</h4>
+          <p>Searches marketing strategy documents &mdash; attribution methodology, budget allocation rules, channel benchmarks, Q4 planning briefs, and brand guidelines.</p>
+          <div class="pill-row">
+            <span class="badge-green">Hybrid Search</span>
+            <span class="badge-green">max_results: 3</span>
+          </div>
+        </div>
+      </div>
+      <div class="code-block anim-fade"><span class="comment">-- Agent specification (simplified)</span>
+<span class="keyword">CREATE</span> <span class="keyword">AGENT</span> CMO_ASSISTANT <span class="keyword">FROM SPECIFICATION</span> $$
+tools:
+  - tool_spec:
+      type: cortex_analyst_text_to_sql
+      name: campaign_analytics
+  - tool_spec:
+      type: cortex_search
+      name: strategy_search
+tool_resources:
+  campaign_analytics:
+    semantic_view: CMO_EVAL_LAB.PUBLIC.CMO_ANALYTICS
+  strategy_search:
+    name: CMO_EVAL_LAB.PUBLIC.STRATEGY_SEARCH_SVC
+$$</div>
+      <div class="highlight-box anim-fade">
+        <strong>Why this agent?</strong> It has two tools that require orchestration &mdash; the agent must decide whether to query data, search documents, or do both. This creates natural failure modes: wrong tool selection, missing cross-references, and incomplete answers when only one tool is consulted.
+      </div>
+    </section>
+
+    <!-- Notebook Architecture -->
+    <section class="slide" id="notebook-flow">
+      <h2>Notebook Architecture</h2>
+      <p style="margin-bottom: 2rem;">The <code>observability-to-evals.ipynb</code> notebook demonstrates the full Observe &rarr; Mine &rarr; Evaluate pipeline in 10 sections.</p>
+      <div class="flow-container anim-fade">
+        <div class="flow-step">
+          <div class="step-title">Setup</div>
+          <div class="step-desc">Create agent</div>
+        </div>
+        <div class="flow-arrow">&rarr;</div>
+        <div class="flow-step">
+          <div class="step-title">Traffic</div>
+          <div class="step-desc">Send ~100 queries</div>
+        </div>
+        <div class="flow-arrow">&rarr;</div>
+        <div class="flow-step">
+          <div class="step-title">Feedback</div>
+          <div class="step-desc">Submit thumbs via API</div>
+        </div>
+        <div class="flow-arrow">&rarr;</div>
+        <div class="flow-step">
+          <div class="step-title">Rephrase</div>
+          <div class="step-desc">Multi-turn threads</div>
+        </div>
+        <div class="flow-arrow">&rarr;</div>
+        <div class="flow-step active">
+          <div class="step-title">Mine</div>
+          <div class="step-desc">Extract signals</div>
+        </div>
+        <div class="flow-arrow">&rarr;</div>
+        <div class="flow-step active">
+          <div class="step-title">Evaluate</div>
+          <div class="step-desc">Run evals</div>
+        </div>
+      </div>
+      <div class="card-grid card-grid-2 anim-fade" style="margin-top: 1rem;">
+        <div class="card">
+          <h4>Sections 1&ndash;4: Simulate Production</h4>
+          <p>Creates the agent, sends a realistic distribution of queries via REST API (analytics 40%, strategy 25%, multi-tool 15%, executive summary 10%, out-of-scope 10%), submits feedback, and sends multi-turn rephrase conversations using threads.</p>
+        </div>
+        <div class="card">
+          <h4>Sections 5&ndash;10: Mine &amp; Evaluate</h4>
+          <p>Queries <code>GET_AI_OBSERVABILITY_EVENTS</code> to extract explicit feedback, detect rephrase patterns, classify intents, assemble an eval dataset with auto-generated ground truth, and runs <code>EXECUTE_AI_EVALUATION</code>.</p>
+        </div>
+      </div>
+      <div class="warning-box anim-fade">
+        <strong>Note:</strong> The notebook simulates production traffic because you can't wait weeks for organic usage in a demo. In a real deployment, sections 1&ndash;4 happen naturally over time. You'd start at section 5 with your actual observability data.
+      </div>
+    </section>
+
+    <!-- Observability Schema -->
+    <section class="slide" id="observability-schema">
+      <h2>Observability Events Schema</h2>
+      <p style="margin-bottom: 2rem;">All agent telemetry is accessible via a single table function with rich semi-structured attributes.</p>
+      <div class="anim-fade" style="width: 100%; overflow-x: auto;">
+        <table>
+          <thead>
+            <tr>
+              <th>Event Type</th>
+              <th>Key Field</th>
+              <th>Access Path</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><strong>Agent Run</strong></td>
+              <td>User Query</td>
+              <td><code>RECORD_ATTRIBUTES:"ai.observability.record_root.input"</code></td>
+            </tr>
+            <tr>
+              <td><strong>Agent Run</strong></td>
+              <td>Agent Response</td>
+              <td><code>RECORD_ATTRIBUTES:"ai.observability.record_root.output"</code></td>
+            </tr>
+            <tr>
+              <td><strong>Agent Run</strong></td>
+              <td>Request ID</td>
+              <td><code>RECORD_ATTRIBUTES:"snow.ai.observability.agent.request_id"</code></td>
+            </tr>
+            <tr>
+              <td><strong>Agent Run</strong></td>
+              <td>Duration (ms)</td>
+              <td><code>RECORD_ATTRIBUTES:"snow.ai.observability.agent.duration"</code></td>
+            </tr>
+            <tr>
+              <td><strong>Thread</strong></td>
+              <td>First Message</td>
+              <td><code>RECORD_ATTRIBUTES:"snow.ai.observability.agent.first_message_in_thread"</code></td>
+            </tr>
+            <tr>
+              <td><strong>Thread</strong></td>
+              <td>Parent Message ID</td>
+              <td><code>RECORD_ATTRIBUTES:"snow.ai.observability.agent.parent_message_id"</code></td>
+            </tr>
+            <tr>
+              <td><strong>Feedback</strong></td>
+              <td>Thumbs Up/Down</td>
+              <td><code>VALUE:positive::BOOLEAN</code></td>
+            </tr>
+            <tr>
+              <td><strong>Feedback</strong></td>
+              <td>User Comment</td>
+              <td><code>VALUE:feedback_message::VARCHAR</code></td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="code-block anim-fade"><span class="comment">-- Access all events for your agent</span>
+<span class="keyword">SELECT</span> * <span class="keyword">FROM</span> <span class="function">TABLE</span>(SNOWFLAKE.LOCAL.<span class="function">GET_AI_OBSERVABILITY_EVENTS</span>(
+    <span class="string">'CMO_EVAL_LAB'</span>, <span class="string">'PUBLIC'</span>, <span class="string">'CMO_ASSISTANT'</span>, <span class="string">'CORTEX AGENT'</span>
+))
+<span class="keyword">WHERE</span> RECORD:name = <span class="string">'AgentV2RequestResponseInfo'</span></div>
+    </section>
+
+    <!-- Signal Mining -->
+    <section class="slide" id="signal-mining">
+      <h2>Three Mining Techniques</h2>
+      <p style="margin-bottom: 2rem;">Each technique extracts a different type of improvement signal from the same observability table.</p>
+      <div class="card-grid card-grid-3 anim-fade">
+        <div class="card">
+          <span class="card-number">1</span>
+          <h4>Explicit Feedback</h4>
+          <p>Filter for <code>CORTEX_AGENT_FEEDBACK</code> events. Extract the <code>feedback_message</code> text alongside the positive/negative signal. Join back to the original query via a mapping table.</p>
+          <div class="pill-row">
+            <span class="badge-red">High priority</span>
+            <span class="badge-blue">Sparse signal</span>
+          </div>
+        </div>
+        <div class="card">
+          <span class="card-number">2</span>
+          <h4>Implicit Rephrase Detection</h4>
+          <p>Find multi-turn threads where the follow-up is semantically similar to the first message. Use a two-step filter: embedding similarity + LLM confirmation to distinguish frustration from follow-up.</p>
+          <div class="pill-row">
+            <span class="badge-orange">Medium priority</span>
+            <span class="badge-green">Dense signal</span>
+          </div>
+        </div>
+        <div class="card">
+          <span class="card-number">3</span>
+          <h4>Intent Classification</h4>
+          <p>Classify all queries into intent categories using <code>CORTEX.COMPLETE</code>. Cross-reference with feedback rates to identify which intents have the highest failure rate &mdash; focus improvement there.</p>
+          <div class="pill-row">
+            <span class="badge-green">Low priority</span>
+            <span class="badge-purple">Coverage</span>
+          </div>
+        </div>
+      </div>
+      <div class="highlight-box anim-fade" style="margin-top: 1rem;">
+        <strong>Key principle:</strong> In production, ~80% of queries receive no explicit feedback. Implicit signals (rephrases, abandonment) unlock evaluation signal from the silent majority of users who never click thumbs down.
+      </div>
+    </section>
+
+    <!-- Rephrase Detection -->
+    <section class="slide" id="rephrase-detection">
+      <h2>Rephrase Detection: Technical Flow</h2>
+      <p style="margin-bottom: 2rem;">The two-step approach achieves high precision by filtering out legitimate follow-up questions.</p>
+      <div class="card-grid card-grid-2 anim-fade">
+        <div class="card">
+          <h4>Step 1: Embedding Similarity Filter</h4>
+          <p>For each turn where <code>parent_message_id &gt; 0</code>, compare it against <code>first_message_in_thread</code>. Pairs exceeding a cosine similarity threshold (0.6) proceed to step 2.</p>
+          <div class="code-block" style="margin-top: 1rem; font-size: 0.7rem;"><span class="function">VECTOR_COSINE_SIMILARITY</span>(
+  <span class="function">SNOWFLAKE.CORTEX.EMBED_TEXT_768</span>(
+    <span class="string">'snowflake-arctic-embed-m-v1.5'</span>, FIRST_MSG)::VECTOR(FLOAT,768),
+  <span class="function">SNOWFLAKE.CORTEX.EMBED_TEXT_768</span>(
+    <span class="string">'snowflake-arctic-embed-m-v1.5'</span>, CURRENT_MSG)::VECTOR(FLOAT,768)
+) &gt; <span class="string">0.6</span></div>
+        </div>
+        <div class="card">
+          <h4>Step 2: LLM Intent Confirmation</h4>
+          <p><code>CORTEX.COMPLETE</code> classifies the pair as REPHRASE (user unsatisfied, same question reworded) or FOLLOW_UP (genuinely new question building on the topic). Only confirmed rephrases become eval candidates.</p>
+          <div class="code-block" style="margin-top: 1rem; font-size: 0.7rem;"><span class="function">SNOWFLAKE.CORTEX.COMPLETE</span>(<span class="string">'mistral-large2'</span>,
+  <span class="string">'Two messages from same user:
+  Msg 1: '</span> || FIRST_MSG || <span class="string">'
+  Msg 2: '</span> || CURRENT_MSG || <span class="string">'
+  REPHRASE or FOLLOW_UP?'</span>
+)</div>
+        </div>
+      </div>
+      <div class="warning-box anim-fade" style="margin-top: 1.5rem;">
+        <strong>Why not similarity alone?</strong> "What was Q4 ROI?" followed by "And how does Q3 compare?" scores high similarity (same topic) but is a legitimate follow-up. "What was Q4 ROI?" followed by "I meant ROI broken down by channel specifically" is a rephrase indicating dissatisfaction. The LLM distinguishes these.
+      </div>
+    </section>
+
+    <!-- Eval Assembly -->
+    <section class="slide" id="eval-assembly">
+      <h2>Assembling the Evaluation Dataset</h2>
+      <p style="margin-bottom: 2rem;">All three mining sources feed into a single prioritized table, then ground truth is auto-generated for each candidate.</p>
+      <div class="anim-fade" style="width: 100%; overflow-x: auto;">
+        <table>
+          <thead>
+            <tr>
+              <th>Source</th>
+              <th>Priority</th>
+              <th>What it captures</th>
+              <th>Selection Logic</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><strong>Explicit Negative</strong></td>
+              <td><span class="badge-red">High</span></td>
+              <td>Known failures with user explanation of what went wrong</td>
+              <td>All thumbs-down with non-empty feedback_message</td>
+            </tr>
+            <tr>
+              <td><strong>Implicit Rephrase</strong></td>
+              <td><span class="badge-orange">Medium</span></td>
+              <td>Frustration signal from the silent majority</td>
+              <td>Similarity &gt; 0.6 AND LLM confirms REPHRASE</td>
+            </tr>
+            <tr>
+              <td><strong>Intent Sample</strong></td>
+              <td><span class="badge-green">Low</span></td>
+              <td>Broad coverage across all usage patterns</td>
+              <td>3 random queries per classified intent</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="card-grid card-grid-2 anim-fade" style="margin-top: 1rem;">
+        <div class="card">
+          <h4>Ground Truth Generation</h4>
+          <p><code>CORTEX.COMPLETE</code> generates a JSON object with <code>ground_truth_output</code> (expected answer) and <code>expected_tools</code> (which tools should be called). The prompt incorporates the user's feedback text so the ground truth addresses the specific gap.</p>
+        </div>
+        <div class="card">
+          <h4>Deduplication &amp; Human Review</h4>
+          <p>Dataset is deduplicated by query text, keeping the highest-priority source. Auto-generated ground truth is a <em>draft</em> &mdash; a human SME reviews and refines the top candidates before running evals.</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- Eval Execution -->
+    <section class="slide" id="eval-execution">
+      <h2>Running the Evaluation</h2>
+      <p style="margin-bottom: 2rem;">The mined dataset feeds directly into Snowflake's native <code>EXECUTE_AI_EVALUATION</code> to score the agent.</p>
+      <div class="code-block anim-fade"><span class="comment">-- Evaluation config (YAML uploaded to stage)</span>
+dataset:
+  dataset_type: <span class="string">"CORTEX AGENT"</span>
+  table_name: <span class="string">"CMO_EVAL_LAB.PUBLIC.OBSERVABILITY_EVAL_DATASET"</span>
+  column_mapping:
+    query_text: <span class="string">"INPUT_QUERY"</span>
+    ground_truth: <span class="string">"GROUND_TRUTH"</span>
+
+evaluation:
+  agent_params:
+    agent_name: <span class="string">"CMO_EVAL_LAB.PUBLIC.CMO_ASSISTANT"</span>
+
+metrics:
+  - <span class="string">"answer_correctness"</span>
+  - <span class="string">"logical_consistency"</span>
+  - name: <span class="string">"tool_selection"</span>    <span class="comment"># custom metric</span>
+    prompt: |
+      Score how well the agent selected the correct tools.
+      Compare {{ground_truth}} expected tools against {{tool_info}}.</div>
+      <div class="card-grid card-grid-3 anim-fade" style="margin-top: 1.5rem;">
+        <div class="card">
+          <h4>Built-in Metrics</h4>
+          <p><code>answer_correctness</code> and <code>logical_consistency</code> &mdash; LLM-as-judge scoring out of the box, no custom prompts needed.</p>
+        </div>
+        <div class="card">
+          <h4>Custom Metrics</h4>
+          <p>Define your own metric with a prompt template. Here we score tool selection by comparing expected vs. actual tools from the trace.</p>
+        </div>
+        <div class="card">
+          <h4>Per-Source Analysis</h4>
+          <p>JOIN eval results back to the mining source table to see which signal type surfaces the hardest questions &mdash; validating that the mining approach works.</p>
+        </div>
+      </div>
+      <div class="highlight-box anim-fade" style="margin-top: 1rem;">
+        <strong>The validation loop:</strong> If negative-feedback-sourced questions consistently score lowest, the mining is working &mdash; you're successfully surfacing real failure modes, not testing the agent on things it already does well.
+      </div>
+    </section>
+
+    <!-- Improvement Levers -->
+    <section class="slide" id="improvement-levers">
+      <h2>From Evaluation to Improvement</h2>
+      <p style="margin-bottom: 2rem;">Classifying negative feedback with <code>CORTEX.COMPLETE</code> reveals systemic patterns that map directly to improvement actions.</p>
+      <div class="anim-fade" style="width: 100%; overflow-x: auto;">
+        <table>
+          <thead>
+            <tr>
+              <th>Issue Category</th>
+              <th>What it means</th>
+              <th>Improvement Lever</th>
+              <th>Speed</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><strong>Missing Detail</strong></td>
+              <td>Agent gave a partial answer, didn't retrieve the right context</td>
+              <td>Enrich Cortex Search corpus; add verified queries to semantic view</td>
+              <td class="score-high">Days</td>
+            </tr>
+            <tr>
+              <td><strong>Wrong Answer</strong></td>
+              <td>Agent confused concepts or returned incorrect calculations</td>
+              <td>Refine orchestration instructions; add semantic view constraints</td>
+              <td class="score-high">Immediate</td>
+            </tr>
+            <tr>
+              <td><strong>Format Issue</strong></td>
+              <td>Answer content was correct but presentation was wrong</td>
+              <td>Update response instructions with explicit formatting rules</td>
+              <td class="score-high">Immediate</td>
+            </tr>
+            <tr>
+              <td><strong>Scope Error</strong></td>
+              <td>Agent attempted to answer something outside its capability</td>
+              <td>Add guardrails in orchestration to decline gracefully</td>
+              <td class="score-high">Immediate</td>
+            </tr>
+            <tr>
+              <td><strong>Tool Selection Error</strong></td>
+              <td>Agent used the wrong tool or didn't combine tools when needed</td>
+              <td>Refine orchestration instructions; clarify tool descriptions</td>
+              <td class="score-high">Immediate</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="context-box anim-fade" style="margin-top: 1.5rem;">
+        <strong>The classification prompt:</strong> <code>CORTEX.COMPLETE('mistral-large2', 'Classify this feedback: WRONG_ANSWER, MISSING_DETAIL, FORMAT_ISSUE, TOOL_SELECTION_ERROR, SCOPE_ERROR, HALLUCINATION. Feedback: ' || feedback_message)</code> &mdash; simple, fast, and gives you a distribution you can act on.
+      </div>
+    </section>
+
+    <!-- Closing -->
+    <section class="slide" id="closing">
+      <h2>Closing the Loop</h2>
+      <p style="margin-bottom: 2rem;">The observability-to-evaluation pipeline turns agent usage data into a compounding improvement engine.</p>
+      <div class="card-grid card-grid-3 anim-fade">
+        <div class="card">
+          <h4>Observe Continuously</h4>
+          <p>Every interaction is captured automatically. No instrumentation code, no separate logging system. <code>GET_AI_OBSERVABILITY_EVENTS</code> provides full access.</p>
+        </div>
+        <div class="card">
+          <h4>Mine Periodically</h4>
+          <p>Schedule mining with a Snowflake Task. As new feedback accumulates, the eval dataset grows organically &mdash; always testing the agent's real weak spots.</p>
+        </div>
+        <div class="card">
+          <h4>Evaluate on Every Change</h4>
+          <p>Before promoting agent versions, run the mined eval dataset as a regression gate. Improvements prove themselves against actual failure modes.</p>
+        </div>
+      </div>
+      <div class="highlight-box anim-fade" style="margin-top: 2rem; text-align: center; display: flex; justify-content: center;">
+        <p style="font-size: 1.15rem; color: var(--text); margin: 0; text-align: center;">
+          <strong>The key differentiator:</strong> Business data, observability data, and evaluation data all in one governed platform.<br>
+          No ETL. No integration lag. No governance gaps. Just a flywheel that compounds.
+        </p>
+      </div>
+      <div class="context-box anim-fade" style="margin-top: 1.5rem;">
+        <strong>Technical Prerequisites:</strong>
+        <ul style="margin-top: 0.75rem; list-style: none;">
+          <li style="padding: 0.25rem 0; font-size: 0.9rem;">&#x2022; <code>SNOWFLAKE.CORTEX_USER</code> database role granted</li>
+          <li style="padding: 0.25rem 0; font-size: 0.9rem;">&#x2022; <code>READ UNREDACTED AI OBSERVABILITY EVENTS TABLE</code> privilege (for feedback text)</li>
+          <li style="padding: 0.25rem 0; font-size: 0.9rem;">&#x2022; Cross-region inference enabled for CORTEX.COMPLETE</li>
+          <li style="padding: 0.25rem 0; font-size: 0.9rem;">&#x2022; Cortex Agent with observability enabled (automatic for all agents)</li>
+        </ul>
+      </div>
+    </section>
+
+  </main>
+
+  <script>
+    const progressBar = document.querySelector('.progress-bar');
+    window.addEventListener('scroll', () => {
+      const scrollTop = window.scrollY;
+      const docHeight = document.documentElement.scrollHeight - window.innerHeight;
+      progressBar.style.width = (scrollTop / docHeight * 100) + '%';
+    });
+
+    const observer = new IntersectionObserver((entries) => {
+      entries.forEach(entry => {
+        if (entry.isIntersecting) {
+          entry.target.classList.add('visible');
+        }
+      });
+    }, { threshold: 0.1 });
+
+    document.querySelectorAll('.anim-fade').forEach(el => observer.observe(el));
+
+    const sections = document.querySelectorAll('.slide');
+    const navLinks = document.querySelectorAll('.sidebar a');
+
+    window.addEventListener('scroll', () => {
+      let current = '';
+      sections.forEach(section => {
+        const sectionTop = section.offsetTop - 200;
+        if (window.scrollY >= sectionTop) {
+          current = section.getAttribute('id');
+        }
+      });
+      navLinks.forEach(link => {
+        link.classList.remove('active');
+        if (link.getAttribute('href') === '#' + current) {
+          link.classList.add('active');
+        }
+      });
+    });
+  </script>
+</body>
+</html>
