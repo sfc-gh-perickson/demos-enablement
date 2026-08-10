@@ -23,6 +23,8 @@ An internal enablement repository for Snowflake sales engineers and account exec
   - [Scoping Agentic Implementations](#scoping-agentic-implementations)
   - [Cortex Agent Document Context](#cortex-agent-document-context)
   - [Cortex Agent Cost Observability](#cortex-agent-cost-observability)
+  - [Agent Data Flywheel](#agent-data-flywheel)
+  - [Agent Observability & Analysis](#agent-observability--analysis)
 - [Repository Structure](#repository-structure)
 - [Getting Started](#getting-started)
 - [Presentation Format](#presentation-format)
@@ -31,7 +33,7 @@ An internal enablement repository for Snowflake sales engineers and account exec
 
 ## Overview
 
-This repository contains fifteen enablement modules covering key Cortex AI and Snowflake ML topics:
+This repository contains seventeen enablement modules covering key Cortex AI and Snowflake ML topics:
 
 | Module | Audience | Format | Slides |
 |--------|----------|--------|--------|
@@ -50,6 +52,8 @@ This repository contains fifteen enablement modules covering key Cortex AI and S
 | Scoping Agentic Implementations | Customers, SEs, Solution Architects | Presentation + Workshop | [View](https://sfc-gh-perickson.github.io/demos-enablement/scoping-agentic-implementations/presentations/scoping-agentic-implementations.html) |
 | Cortex Agent Document Context | SEs, Platform Engineers | Presentation + Hands-on Lab + React Demo | [View](https://sfc-gh-perickson.github.io/demos-enablement/cortex-agent-document-context/presentations/cortex-agent-document-context.html) |
 | Cortex Agent Cost Observability | SEs, FinOps Admins | Presentation + Hands-on Lab | [View](https://sfc-gh-perickson.github.io/demos-enablement/cortex-agent-cost-observability/presentations/cortex-agent-cost-observability.html) |
+| Agent Data Flywheel | SEs, AEs, Solution Architects | Presentation | [View](https://sfc-gh-perickson.github.io/demos-enablement/agent-data-flywheel/presentations/ai-agent-data-flywheel.html) |
+| Agent Observability & Analysis | SEs, ML Engineers, Platform Teams | Presentation + Hands-on Lab | [View](https://sfc-gh-perickson.github.io/demos-enablement/agent_observability_analysis/presentations/agent-observability-analysis.html) |
 
 Each module includes an HTML slide deck and companion speaker notes. The evaluations, many-model-training, feature-store, cortex-ai-observability, cortex-agent-multi-tenancy, and label-studio-spcs modules also provide complete hands-on labs with SQL setup and notebooks.
 
@@ -488,6 +492,62 @@ The lab queries real ACCOUNT_USAGE views (with simulated fallback data) to analy
 
 ---
 
+### Agent Data Flywheel
+
+**Location:** `agent-data-flywheel/`
+
+Covers the strategic narrative of how Snowflake's converged data architecture enables a compounding improvement loop for AI agents — business data, observability data, and evaluation data in one governed platform.
+
+**Topics covered:**
+- The strategic problem with fragmented agent stacks
+- Three data pillars (business, evaluation, observability)
+- The flywheel cycle: Deploy → Observe → Mine → Evaluate → Improve → Redeploy
+- Improvement levers (instructions, verified queries, search corpus, fine-tuning, custom tools)
+- Competitive differentiation vs. hyperscaler agent platforms
+
+**Contents:**
+
+| File | Description |
+|------|-------------|
+| [`presentations/ai-agent-data-flywheel.html`](https://sfc-gh-perickson.github.io/demos-enablement/agent-data-flywheel/presentations/ai-agent-data-flywheel.html) | Slide deck (10 slides) |
+| `presentations/ai-agent-data-flywheel-speaker-notes.md` | Speaker notes with internal context |
+
+---
+
+### Agent Observability & Analysis
+
+**Location:** `agent_observability_analysis/`
+
+Demonstrates the technical implementation of the Agent Data Flywheel — mining production observability data to build evaluation datasets that test an agent on its actual failure modes. Uses a CMO Assistant agent (Cortex Analyst + Cortex Search) as the example.
+
+**Topics covered:**
+- Observability events schema (`GET_AI_OBSERVABILITY_EVENTS`)
+- Three signal mining techniques: explicit feedback, implicit rephrase detection, intent classification
+- Two-step rephrase detection (embedding similarity + LLM confirmation)
+- Evaluation dataset assembly with auto-generated ground truth
+- Running `EXECUTE_AI_EVALUATION` against mined datasets
+- Issue classification and improvement lever mapping
+
+**Contents:**
+
+| File | Description |
+|------|-------------|
+| [`presentations/agent-observability-analysis.html`](https://sfc-gh-perickson.github.io/demos-enablement/agent_observability_analysis/presentations/agent-observability-analysis.html) | Slide deck (12 slides) |
+| `presentations/agent-observability-analysis-speaker-notes.md` | Speaker notes with internal context |
+| `observability-to-evals.ipynb` | Hands-on lab notebook (45-60 min) |
+
+#### Lab Prerequisites
+
+1. A Snowflake account with Cortex AI features enabled
+2. `SNOWFLAKE.CORTEX_USER` database role granted
+3. `READ UNREDACTED AI OBSERVABILITY EVENTS TABLE` privilege (for feedback text)
+4. Cross-region inference enabled
+5. Run `setup.sql` (if present) to create the `CMO_EVAL_LAB` database, or follow notebook Section 1
+
+The notebook walks through creating a demo agent, simulating production traffic via REST API, submitting feedback, detecting rephrases in threaded conversations, mining all three signal types from observability, assembling an eval dataset, and running evaluations.
+
+---
+
 ## Repository Structure
 
 ```
@@ -500,6 +560,15 @@ enablement/
 │   └── presentations/
 │       ├── server-side-agent-routing.html
 │       └── server-side-agent-routing-speaker-notes.md
+├── agent-data-flywheel/
+│   └── presentations/
+│       ├── ai-agent-data-flywheel.html
+│       └── ai-agent-data-flywheel-speaker-notes.md
+├── agent_observability_analysis/
+│   ├── observability-to-evals.ipynb
+│   └── presentations/
+│       ├── agent-observability-analysis.html
+│       └── agent-observability-analysis-speaker-notes.md
 ├── cortex-agent-cost-observability/
 │   ├── lab/
 │   │   ├── setup.sql
@@ -620,6 +689,7 @@ enablement/
    - **Scoping Agentic Implementations:** Run `scoping-agentic-implementations/lab/setup.sql` before starting the notebook
    - **Cortex Agent Document Context:** Run `cortex-agent-document-context/lab/setup.sql`, then optionally `python lab/backend.py` for the React demo
    - **Cortex Agent Cost Observability:** Run `cortex-agent-cost-observability/lab/setup.sql` before starting the notebook
+   - **Agent Observability & Analysis:** Follow notebook Section 1 in `agent_observability_analysis/observability-to-evals.ipynb` (self-contained setup)
 
 ---
 
