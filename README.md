@@ -554,7 +554,7 @@ The notebook walks through creating a demo agent, simulating production traffic 
 
 **Location:** `agentic-schema-mapping/`
 
-An all-in-Snowflake pipeline that maps messy CSV data into canonical financial table schemas. A Cortex Agent orchestrates the workflow via Snowflake Intelligence, using custom tools (stored procedures/UDFs) for profiling, AI-powered mapping proposals, entity resolution, and deterministic COPY INTO execution.
+An all-in-Snowflake pipeline that maps messy CSV data into canonical financial table schemas. A Cortex Agent orchestrates the workflow via Snowflake CoWork, using custom tools (stored procedures/UDFs) for profiling, AI-powered mapping proposals, entity resolution, and deterministic COPY INTO execution.
 
 **Topics covered:**
 - Cortex Agent with 6 custom tools (generic type backed by UDFs/procedures)
@@ -583,7 +583,7 @@ An all-in-Snowflake pipeline that maps messy CSV data into canonical financial t
 2. Run `seed_reference_data.sql` to populate reference tables
 3. Run `deploy.sql` to deploy UDFs, procedures, and the agent
 4. Upload CSVs to `@ACME_FINANCE.INGESTION.UPLOAD_STAGE`
-5. Open Snowflake Intelligence, select **Schema Mapper Agent**, and say "Map my expense file"
+5. Open Snowflake CoWork, select **Schema Mapper Agent**, and say "Map my expense file"
 
 ---
 
