@@ -55,7 +55,7 @@ This repository contains eighteen enablement modules covering key Cortex AI and 
 | Cortex Agent Cost Observability | SEs, FinOps Admins | Presentation + Hands-on Lab | [View](https://sfc-gh-perickson.github.io/demos-enablement/cortex-agent-cost-observability/presentations/cortex-agent-cost-observability.html) |
 | Agent Data Flywheel | SEs, AEs, Solution Architects | Presentation | [View](https://sfc-gh-perickson.github.io/demos-enablement/agent-data-flywheel/presentations/ai-agent-data-flywheel.html) |
 | Agent Observability & Analysis | SEs, ML Engineers, Platform Teams | Presentation + Hands-on Lab | [View](https://sfc-gh-perickson.github.io/demos-enablement/agent_observability_analysis/presentations/agent-observability-analysis.html) |
-| Agentic Schema Mapping | SEs, Data Engineers, Customers | Demo | — |
+| Agentic Schema Mapping | SEs, Data Engineers, Customers | Presentation + Demo | [View](https://sfc-gh-perickson.github.io/demos-enablement/agentic-schema-mapping/presentations/schema-mapper-demo.html) |
 
 Each module includes an HTML slide deck and companion speaker notes. The evaluations, many-model-training, feature-store, cortex-ai-observability, cortex-agent-multi-tenancy, and label-studio-spcs modules also provide complete hands-on labs with SQL setup and notebooks.
 
@@ -567,6 +567,10 @@ An all-in-Snowflake pipeline that maps messy CSV data into canonical financial t
 
 | File | Description |
 |------|-------------|
+| File | Description |
+|------|-------------|
+| [`presentations/schema-mapper-demo.html`](https://sfc-gh-perickson.github.io/demos-enablement/agentic-schema-mapping/presentations/schema-mapper-demo.html) | Slide deck |
+| `presentations/schema-mapper-speaker-notes.md` | Speaker notes |
 | `setup.sql` | DDL for database, schemas, stage, canonical tables, config tables, reference tables |
 | `seed_reference_data.sql` | Reference data (departments, GL accounts, vendors, expense categories, etc.) |
 | `deploy.sql` | All UDFs, stored procedures, and the Cortex Agent |
@@ -600,7 +604,10 @@ enablement/
 │   ├── seed_reference_data.sql
 │   ├── deploy.sql
 │   ├── semantic_view.yaml
-│   └── data/
+│   ├── data/
+│   └── presentations/
+│       ├── schema-mapper-demo.html
+│       └── schema-mapper-speaker-notes.md
 ├── agent-data-flywheel/
 │   └── presentations/
 │       ├── ai-agent-data-flywheel.html
