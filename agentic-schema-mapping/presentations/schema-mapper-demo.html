@@ -1,0 +1,1305 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Schema Mapper Agent — Demo Deck</title>
+    <style>
+        /* Design System — Dark theme discovery deck */
+        :root {
+            --bg-primary: #0f1117;
+            --bg-secondary: #1a1d27;
+            --bg-tertiary: #242836;
+            --text-primary: #e2e8f0;
+            --text-muted: #94a3b8;
+            --accent: #60a5fa;
+            --accent-dim: rgba(96, 165, 250, 0.12);
+            --success: #10b981;
+            --warning: #f59e0b;
+            --danger: #ef4444;
+            --border: rgba(148, 163, 184, 0.12);
+            --sidebar-width: 220px;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Inter', sans-serif;
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            line-height: 1.6;
+            overflow-x: hidden;
+        }
+
+        /* Progress bar */
+        .progress-container {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 3px;
+            background: var(--bg-secondary);
+            z-index: 1000;
+        }
+
+        .progress-bar {
+            height: 100%;
+            background: linear-gradient(90deg, var(--accent), #a78bfa);
+            width: 0%;
+            transition: width 0.1s ease;
+        }
+
+        /* Sidebar navigation */
+        .sidebar {
+            position: fixed;
+            left: 0;
+            top: 0;
+            width: var(--sidebar-width);
+            height: 100vh;
+            background: var(--bg-secondary);
+            border-right: 1px solid var(--border);
+            padding: 2rem 0;
+            z-index: 999;
+            overflow-y: auto;
+        }
+
+        .sidebar-logo {
+            padding: 0 1.2rem 1.5rem;
+            border-bottom: 1px solid var(--border);
+            margin-bottom: 1rem;
+        }
+
+        .sidebar-logo h3 {
+            font-size: 0.75rem;
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+            color: var(--accent);
+            font-weight: 600;
+        }
+
+        .sidebar-logo p {
+            font-size: 0.65rem;
+            color: var(--text-muted);
+            margin-top: 0.25rem;
+        }
+
+        .nav-links {
+            list-style: none;
+            padding: 0 0.8rem;
+        }
+
+        .nav-links a {
+            display: block;
+            padding: 0.4rem 0.8rem;
+            color: var(--text-muted);
+            text-decoration: none;
+            font-size: 0.7rem;
+            border-radius: 4px;
+            margin-bottom: 2px;
+            transition: all 0.2s ease;
+        }
+
+        .nav-links a:hover {
+            color: var(--text-primary);
+            background: var(--bg-tertiary);
+        }
+
+        .nav-links a.active {
+            color: var(--accent);
+            background: var(--accent-dim);
+        }
+
+        /* Main content */
+        main {
+            margin-left: var(--sidebar-width);
+            padding: 2rem 4rem;
+            max-width: 1100px;
+        }
+
+        .slide {
+            min-height: 85vh;
+            padding: 4rem 0;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .slide:last-child {
+            border-bottom: none;
+        }
+
+        .slide-number {
+            font-size: 0.65rem;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+            margin-bottom: 1rem;
+        }
+
+        h1 {
+            font-size: 2.2rem;
+            font-weight: 700;
+            line-height: 1.2;
+            margin-bottom: 0.5rem;
+        }
+
+        h2 {
+            font-size: 1.6rem;
+            font-weight: 700;
+            margin-bottom: 0.5rem;
+        }
+
+        h3 {
+            font-size: 1rem;
+            font-weight: 600;
+            margin-bottom: 0.5rem;
+        }
+
+        .subtitle {
+            color: var(--text-muted);
+            font-size: 0.9rem;
+            margin-bottom: 2rem;
+        }
+
+        .hero-stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+            gap: 1rem;
+            margin-top: 2rem;
+        }
+
+        .stat-card {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 1.2rem;
+            text-align: center;
+        }
+
+        .stat-card .value {
+            font-size: 1.8rem;
+            font-weight: 700;
+            color: var(--accent);
+        }
+
+        .stat-card .label {
+            font-size: 0.7rem;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            margin-top: 0.3rem;
+        }
+
+        /* Cards */
+        .card-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+            gap: 1rem;
+            margin-top: 1.5rem;
+        }
+
+        .card {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 1.5rem;
+        }
+
+        .card h3 {
+            color: var(--accent);
+            font-size: 0.85rem;
+            margin-bottom: 0.5rem;
+        }
+
+        .card p {
+            font-size: 0.8rem;
+            color: var(--text-muted);
+            line-height: 1.5;
+        }
+
+        /* Tables */
+        .data-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 1rem;
+            font-size: 0.78rem;
+        }
+
+        .data-table th {
+            background: var(--bg-tertiary);
+            padding: 0.6rem 0.8rem;
+            text-align: left;
+            font-weight: 600;
+            color: var(--text-primary);
+            border-bottom: 1px solid var(--border);
+        }
+
+        .data-table td {
+            padding: 0.5rem 0.8rem;
+            border-bottom: 1px solid var(--border);
+            color: var(--text-muted);
+        }
+
+        .data-table tr:hover td {
+            background: var(--bg-secondary);
+        }
+
+        /* Code blocks */
+        .code-block {
+            background: var(--bg-tertiary);
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            padding: 1rem 1.2rem;
+            font-family: 'SF Mono', 'Fira Code', monospace;
+            font-size: 0.75rem;
+            overflow-x: auto;
+            margin: 1rem 0;
+            color: var(--text-muted);
+            white-space: pre-wrap;
+            line-height: 1.6;
+        }
+
+        code {
+            font-family: 'SF Mono', 'Fira Code', monospace;
+            font-size: 0.75rem;
+            background: var(--bg-tertiary);
+            padding: 0.15rem 0.4rem;
+            border-radius: 3px;
+        }
+
+        /* Architecture diagram */
+        .arch-diagram {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 2rem;
+            margin: 1.5rem 0;
+            font-family: 'SF Mono', 'Fira Code', monospace;
+            font-size: 0.7rem;
+            white-space: pre;
+            line-height: 1.4;
+            overflow-x: auto;
+            color: var(--text-muted);
+        }
+
+        /* Highlight boxes */
+        .highlight-box {
+            border-radius: 8px;
+            padding: 1.2rem 1.5rem;
+            margin: 1.5rem 0;
+        }
+
+        .highlight-box.accent {
+            background: var(--accent-dim);
+            border: 1px solid rgba(96, 165, 250, 0.25);
+        }
+
+        .highlight-box.success {
+            background: rgba(16, 185, 129, 0.08);
+            border: 1px solid rgba(16, 185, 129, 0.25);
+        }
+
+        .highlight-box.warning {
+            background: rgba(245, 158, 11, 0.08);
+            border: 1px solid rgba(245, 158, 11, 0.25);
+        }
+
+        /* Bar chart */
+        .bar-chart {
+            margin: 1.5rem 0;
+        }
+
+        .bar-row {
+            display: flex;
+            align-items: center;
+            margin-bottom: 0.8rem;
+        }
+
+        .bar-label {
+            width: 160px;
+            font-size: 0.75rem;
+            color: var(--text-muted);
+        }
+
+        .bar-track {
+            flex: 1;
+            height: 28px;
+            background: var(--bg-tertiary);
+            border-radius: 4px;
+            overflow: hidden;
+            position: relative;
+        }
+
+        .bar-fill {
+            height: 100%;
+            border-radius: 4px;
+            display: flex;
+            align-items: center;
+            padding-left: 0.6rem;
+            font-size: 0.7rem;
+            font-weight: 600;
+            color: white;
+        }
+
+        .bar-fill.small {
+            background: linear-gradient(90deg, var(--accent), #a78bfa);
+            min-width: 80px;
+        }
+
+        .bar-fill.large {
+            background: linear-gradient(90deg, var(--danger), #f97316);
+            width: 95%;
+        }
+
+        /* Badges */
+        .badge {
+            display: inline-block;
+            padding: 0.15rem 0.5rem;
+            border-radius: 4px;
+            font-size: 0.65rem;
+            font-weight: 600;
+            text-transform: uppercase;
+        }
+
+        .badge-success {
+            background: rgba(16, 185, 129, 0.15);
+            color: var(--success);
+        }
+
+        .badge-warning {
+            background: rgba(245, 158, 11, 0.15);
+            color: var(--warning);
+        }
+
+        .badge-danger {
+            background: rgba(239, 68, 68, 0.15);
+            color: var(--danger);
+        }
+
+        /* Animations */
+        .anim-fade {
+            opacity: 0;
+            transform: translateY(20px);
+            transition: opacity 0.6s ease, transform 0.6s ease;
+        }
+
+        .anim-fade.visible {
+            opacity: 1;
+            transform: translateY(0);
+        }
+
+        /* Flow steps */
+        .flow-steps {
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+            margin: 1.5rem 0;
+        }
+
+        .flow-step {
+            display: flex;
+            align-items: flex-start;
+            gap: 1rem;
+            background: var(--bg-secondary);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 1.2rem;
+        }
+
+        .flow-step-number {
+            flex-shrink: 0;
+            width: 28px;
+            height: 28px;
+            border-radius: 50%;
+            background: var(--accent-dim);
+            border: 1px solid var(--accent);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.7rem;
+            font-weight: 700;
+            color: var(--accent);
+        }
+
+        .flow-step-content h4 {
+            font-size: 0.85rem;
+            margin-bottom: 0.3rem;
+        }
+
+        .flow-step-content p {
+            font-size: 0.78rem;
+            color: var(--text-muted);
+        }
+
+        /* Responsive */
+        @media (max-width: 900px) {
+            .sidebar {
+                display: none;
+            }
+            main {
+                margin-left: 0;
+                padding: 2rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="progress-container">
+        <div class="progress-bar" id="progressBar"></div>
+    </div>
+
+    <!-- Sidebar -->
+    <nav class="sidebar">
+        <div class="sidebar-logo">
+            <h3>Schema Mapper</h3>
+            <p>Schema Mapper Demo</p>
+        </div>
+        <ul class="nav-links">
+            <li><a href="#hero" class="active">Hero</a></li>
+            <li><a href="#problem">Problem Statement</a></li>
+            <li><a href="#solution">Solution Overview</a></li>
+            <li><a href="#architecture">Architecture</a></li>
+            <li><a href="#objects">SPs &amp; UDFs</a></li>
+            <li><a href="#workflow-discovery">Workflow: Discovery</a></li>
+            <li><a href="#workflow-execution">Workflow: Execution</a></li>
+            <li><a href="#operations">Operations Enum</a></li>
+            <li><a href="#tokens">Benchmark Results</a></li>
+            <li><a href="#cache">Mapping Cache</a></li>
+            <li><a href="#dates">Date Handling</a></li>
+            <li><a href="#solved">Requirements Solved</a></li>
+            <li><a href="#gaps">Gaps &amp; Future</a></li>
+            <li><a href="#next">Next Steps</a></li>
+            <li><a href="#demo">Demo Flow</a></li>
+        </ul>
+    </nav>
+
+    <!-- Main Content -->
+    <main>
+        <!-- Slide 1: Hero -->
+        <section class="slide" id="hero">
+            <div class="slide-content anim-fade">
+                <div class="slide-number">1 / 15</div>
+                <h1>Schema Mapper Agent</h1>
+                <p class="subtitle">All-in-Snowflake Data Ingestion Pipeline</p>
+                <div class="hero-stats">
+                    <div class="stat-card">
+                        <div class="value">0</div>
+                        <div class="label">Tokens / Row</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="value">&lt;5s</div>
+                        <div class="label">Cached Reload</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="value">166</div>
+                        <div class="label">Rows Loaded (test)</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="value">5</div>
+                        <div class="label">Agent Tools</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="value">~950</div>
+                        <div class="label">Tokens / New Format</div>
+                    </div>
+                </div>
+                <div class="highlight-box accent" style="margin-top: 2rem;">
+                    <p style="font-size: 0.85rem; color: var(--text-primary);">Live in a Snowflake account today. Demo-able via <strong>Snowflake Intelligence</strong>. No external services, no APIs, no ETL tools &mdash; everything runs inside one Snowflake account.</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- Slide 2: Problem Statement -->
+        <section class="slide" id="problem">
+            <div class="slide-content anim-fade">
+                <div class="slide-number">2 / 15</div>
+                <h2>Problem Statement</h2>
+                <p class="subtitle">The data ingestion challenge at scale</p>
+                <div class="card-grid">
+                    <div class="card">
+                        <h3>Format Chaos</h3>
+                        <p>Departments submit CSVs from travel systems, expense platforms, vendor portals. Column headers vary wildly between customers and even between months from the same customer.</p>
+                    </div>
+                    <div class="card">
+                        <h3>100s of Sources</h3>
+                        <p>Each with different source systems. Monthly recurring uploads. 100K records at the high end. Can't afford per-row LLM calls &mdash; column mapping is file-level, not row-level.</p>
+                    </div>
+                    <div class="card">
+                        <h3>Multiple Templates</h3>
+                        <p>Data must conform to exact canonical schemas (mileage, purchases, invoices, payroll, etc.). System must figure out WHICH template matches, not just map columns.</p>
+                    </div>
+                    <div class="card">
+                        <h3>Reliability Required</h3>
+                        <p>Finance-facing pipeline. Can't hallucinate mappings or lose data. Must be deterministic at execution time. Human approval mandatory before any data load.</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Slide 3: Solution Overview -->
+        <section class="slide" id="solution">
+            <div class="slide-content anim-fade">
+                <div class="slide-number">3 / 15</div>
+                <h2>Solution Overview</h2>
+                <p class="subtitle">Three-layer approach: smart orchestration, one-time AI, deterministic execution</p>
+                <div class="flow-steps">
+                    <div class="flow-step">
+                        <div class="flow-step-number">1</div>
+                        <div class="flow-step-content">
+                            <h4>Cortex Agent &mdash; Orchestration + User Interaction</h4>
+                            <p>Snowflake Intelligence chat interface. Routes user intent to tools, presents results, enforces human-in-the-loop approval. Never writes SQL directly.</p>
+                        </div>
+                    </div>
+                    <div class="flow-step">
+                        <div class="flow-step-number">2</div>
+                        <div class="flow-step-content">
+                            <h4>AI_COMPLETE &mdash; One-Time Mapping Proposal</h4>
+                            <p>Called exactly once per NEW file format (cache miss). Proposes which template matches and how to map each column. ~950 tokens mapping + ~900/entity resolution column. Cached thereafter.</p>
+                        </div>
+                    </div>
+                    <div class="flow-step">
+                        <div class="flow-step-number">3</div>
+                        <div class="flow-step-content">
+                            <h4>Deterministic SP &mdash; At-Scale Execution</h4>
+                            <p>No LLM touches data rows. SP builds COPY INTO from an operations enum. 100K rows load in seconds via a single deterministic SQL statement. Zero variability.</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="highlight-box success">
+                    <p style="font-size: 0.85rem; color: var(--text-primary);"><strong>Key insight:</strong> The LLM decides HOW to map (once). The SP executes the mapping (every time). No tokens per row, ever.</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- Slide 4: Architecture Diagram -->
+        <section class="slide" id="architecture">
+            <div class="slide-content anim-fade">
+                <div class="slide-number">4 / 15</div>
+                <h2>Architecture</h2>
+                <p class="subtitle">Agent &rarr; Tools &rarr; SPs/UDFs &rarr; COPY INTO</p>
+                
+                <!-- Visual architecture using HTML/CSS boxes -->
+                <div style="width: 100%; max-width: 900px; margin: 2rem auto;">
+                    <!-- Agent Layer -->
+                    <div style="background: linear-gradient(135deg, rgba(41,181,232,0.15), rgba(124,58,237,0.15)); border: 2px solid var(--accent); border-radius: 12px; padding: 1.5rem; margin-bottom: 1.5rem;">
+                        <div style="font-size: 0.85rem; font-weight: 700; color: var(--accent); margin-bottom: 0.75rem;">CORTEX AGENT — Snowflake Intelligence</div>
+                        <div style="font-size: 0.75rem; color: var(--text-muted); margin-bottom: 1rem;">Orchestrates workflow, presents results, gets user approval</div>
+                        <div style="display: grid; grid-template-columns: repeat(5, 1fr); gap: 0.75rem;">
+                            <div style="background: var(--bg); border: 1px solid var(--border); border-radius: 8px; padding: 0.75rem; text-align: center;">
+                                <div style="font-size: 0.7rem; font-weight: 600; color: var(--primary);">list_staged_files</div>
+                            </div>
+                            <div style="background: var(--bg); border: 1px solid var(--border); border-radius: 8px; padding: 0.75rem; text-align: center;">
+                                <div style="font-size: 0.7rem; font-weight: 600; color: var(--primary);">profile_file</div>
+                            </div>
+                            <div style="background: var(--bg); border: 1px solid var(--border); border-radius: 8px; padding: 0.75rem; text-align: center;">
+                                <div style="font-size: 0.7rem; font-weight: 600; color: var(--primary);">get_target_schemas</div>
+                            </div>
+                            <div style="background: var(--bg); border: 1px solid var(--border); border-radius: 8px; padding: 0.75rem; text-align: center;">
+                                <div style="font-size: 0.7rem; font-weight: 600; color: var(--primary);">propose_mapping</div>
+                            </div>
+                            <div style="background: var(--bg); border: 1px solid var(--border); border-radius: 8px; padding: 0.75rem; text-align: center;">
+                                <div style="font-size: 0.7rem; font-weight: 600; color: var(--primary);">execute_mapping</div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Arrow -->
+                    <div style="text-align: center; font-size: 1.5rem; color: var(--text-muted); margin: 0.5rem 0;">▼</div>
+                    
+                    <!-- Execution Layer -->
+                    <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 1rem; margin-bottom: 1.5rem;">
+                        <div style="background: var(--bg-secondary); border: 1px solid var(--border); border-radius: 8px; padding: 1rem;">
+                            <div style="font-size: 0.7rem; font-weight: 600; color: var(--text); margin-bottom: 0.5rem;">DIRECTORY</div>
+                            <div style="font-size: 0.65rem; color: var(--text-muted);">@UPLOAD_STAGE<br>+ INFORMATION_SCHEMA</div>
+                        </div>
+                        <div style="background: var(--bg-secondary); border: 1px solid var(--border); border-radius: 8px; padding: 1rem;">
+                            <div style="font-size: 0.7rem; font-weight: 600; color: var(--text); margin-bottom: 0.5rem;">SP_PROFILE_STAGED_FILE</div>
+                            <div style="font-size: 0.65rem; color: var(--text-muted);">INFER_SCHEMA<br>Sample 20 rows<br>Column stats</div>
+                        </div>
+                        <div style="background: var(--bg-secondary); border: 1px solid var(--border); border-radius: 8px; padding: 1rem;">
+                            <div style="font-size: 0.7rem; font-weight: 600; color: var(--text); margin-bottom: 0.5rem;">AI_COMPLETE</div>
+                            <div style="font-size: 0.65rem; color: var(--text-muted);">claude-4-sonnet<br>Schema + Profile → JSON mapping</div>
+                        </div>
+                        <div style="background: var(--bg-secondary); border: 1px solid var(--border); border-radius: 8px; padding: 1rem;">
+                            <div style="font-size: 0.7rem; font-weight: 600; color: var(--text); margin-bottom: 0.5rem;">SP_BUILD_AND_EXECUTE</div>
+                            <div style="font-size: 0.65rem; color: var(--text-muted);">Deterministic SQL<br>COPY INTO + transforms</div>
+                        </div>
+                    </div>
+                    
+                    <!-- Arrow -->
+                    <div style="text-align: center; font-size: 1.5rem; color: var(--text-muted); margin: 0.5rem 0;">▼</div>
+                    
+                    <!-- Data Layer -->
+                    <div style="display: grid; grid-template-columns: 1fr 2fr; gap: 1rem;">
+                        <div style="background: rgba(16,185,129,0.1); border: 1px solid #10B981; border-radius: 8px; padding: 1rem;">
+                            <div style="font-size: 0.7rem; font-weight: 600; color: #10B981; margin-bottom: 0.5rem;">MAPPING_CONFIGS</div>
+                            <div style="font-size: 0.65rem; color: var(--text-muted);">Cache layer<br>SHA256 hash → saved mapping<br>Auto-saves on success</div>
+                        </div>
+                        <div style="background: rgba(41,181,232,0.1); border: 1px solid var(--primary); border-radius: 8px; padding: 1rem;">
+                            <div style="font-size: 0.7rem; font-weight: 600; color: var(--primary); margin-bottom: 0.5rem;">CANONICAL TABLES</div>
+                            <div style="font-size: 0.65rem; color: var(--text-muted);">MILEAGE_CLAIMS &nbsp;|&nbsp; PURCHASE_EXPENSES &nbsp;|&nbsp; VENDOR_INVOICES</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Slide 5: Stored Procedures & UDFs -->
+        <section class="slide" id="objects">
+            <div class="slide-content anim-fade">
+                <div class="slide-number">5 / 15</div>
+                <h2>Stored Procedures &amp; UDFs</h2>
+                <p class="subtitle">All database objects powering the pipeline</p>
+                <table class="data-table">
+                    <thead>
+                        <tr>
+                            <th>Object</th>
+                            <th>Type</th>
+                            <th>What It Does</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td><code>LIST_STAGED_FILES()</code></td>
+                            <td><span class="badge badge-success">UDF</span></td>
+                            <td>Reads DIRECTORY(@UPLOAD_STAGE), returns file list</td>
+                        </tr>
+                        <tr>
+                            <td><code>GET_TARGET_SCHEMAS()</code></td>
+                            <td><span class="badge badge-success">UDF</span></td>
+                            <td>Queries INFORMATION_SCHEMA.COLUMNS, returns canonical table schemas</td>
+                        </tr>
+                        <tr>
+                            <td><code>SP_PROFILE_STAGED_FILE(path)</code></td>
+                            <td><span class="badge badge-warning">SP</span></td>
+                            <td>INFER_SCHEMA + sample 20 rows. Builds per-column stats: cardinality, null_rate, samples, types. <strong>Zero tokens.</strong></td>
+                        </tr>
+                        <tr>
+                            <td><code>PROFILE_FILE(path)</code></td>
+                            <td><span class="badge badge-warning">SP</span></td>
+                            <td>Wrapper &mdash; calls SP_PROFILE_STAGED_FILE, formats as human-readable text for agent presentation</td>
+                        </tr>
+                        <tr>
+                            <td><code>PROPOSE_MAPPING(profile_text)</code></td>
+                            <td><span class="badge badge-warning">SP</span></td>
+                            <td>First checks MAPPING_CONFIGS cache (SHA256 hash). If miss: calls AI_COMPLETE('claude-4-sonnet') with schema + profile. Returns JSON mapping.</td>
+                        </tr>
+                        <tr>
+                            <td><code>EXECUTE_MAPPING(json, path)</code></td>
+                            <td><span class="badge badge-warning">SP</span></td>
+                            <td>Calls SP_BUILD_AND_EXECUTE_COPY_INTO, saves config to cache on success</td>
+                        </tr>
+                        <tr>
+                            <td><code>SP_BUILD_AND_EXECUTE_COPY_INTO(...)</code></td>
+                            <td><span class="badge badge-warning">SP</span></td>
+                            <td>Builds deterministic COPY INTO from operations enum. Sets DATE_INPUT_FORMAT=AUTO. Executes with FORCE=TRUE, ON_ERROR=CONTINUE.</td>
+                        </tr>
+                    </tbody>
+                </table>
+                <div class="highlight-box accent" style="margin-top: 1.5rem;">
+                    <p style="font-size: 0.8rem; color: var(--text-primary);"><strong>Design principle:</strong> The agent NEVER writes SQL. It calls tools &rarr; tools return structured data &rarr; agent presents to user. AI_COMPLETE is called inside PROPOSE_MAPPING only, and only on cache miss.</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- Slide 6: Workflow — Discovery & Profiling -->
+        <section class="slide" id="workflow-discovery">
+            <div class="slide-content anim-fade">
+                <div class="slide-number">6 / 15</div>
+                <h2>Workflow: Discovery &amp; Profiling</h2>
+                <p class="subtitle">Steps 1&ndash;3: File discovery, profiling, and mapping proposal</p>
+                <div class="flow-steps">
+                    <div class="flow-step">
+                        <div class="flow-step-number">1</div>
+                        <div class="flow-step-content">
+                            <h4>File Discovery</h4>
+                            <p>Agent calls <code>list_staged_files()</code>. UDF reads DIRECTORY(@UPLOAD_STAGE) and returns available CSVs. User picks which file to map.</p>
+                        </div>
+                    </div>
+                    <div class="flow-step">
+                        <div class="flow-step-number">2</div>
+                        <div class="flow-step-content">
+                            <h4>Profiling (Zero Tokens)</h4>
+                            <p>Agent calls <code>profile_file(filename)</code>. SP uses INFER_SCHEMA (no LLM). Returns: column count, row count, per-column metadata &mdash; 5 sample values, cardinality, null rate, inferred type. Pure SQL execution.</p>
+                        </div>
+                    </div>
+                    <div class="flow-step">
+                        <div class="flow-step-number">3</div>
+                        <div class="flow-step-content">
+                            <h4>Cache Check + Mapping Proposal</h4>
+                            <p><code>PROPOSE_MAPPING</code> computes SHA256(sorted lowercase column names). Queries MAPPING_CONFIGS. <strong>If hit:</strong> returns stored mapping instantly (0 tokens). <strong>If miss:</strong> calls AI_COMPLETE with target schemas from INFORMATION_SCHEMA + profile. Returns JSON with target_table, mappings, ignored columns, rationale.</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="code-block">
+-- Example profile output the agent sees:
+-- 9 columns, 166 rows
+-- Vendor (TEXT): 16 distinct, 0% null, samples: ["Staples", "Amazon Web Services", ...]
+-- Amt (TEXT): 20 distinct, 2% null, samples: ["$142.67", "~2400", "$534"]
+-- When (TEXT): 83 distinct, 0% null, samples: ["2025-01-15", "Jan 21, 2025", "02/14/2025"]</div>
+            </div>
+        </section>
+
+        <!-- Slide 7: Workflow — Approval & Execution -->
+        <section class="slide" id="workflow-execution">
+            <div class="slide-content anim-fade">
+                <div class="slide-number">7 / 15</div>
+                <h2>Workflow: Approval &amp; Execution</h2>
+                <p class="subtitle">Steps 4&ndash;5: Human gate and deterministic load</p>
+                <div class="flow-steps">
+                    <div class="flow-step">
+                        <div class="flow-step-number">4</div>
+                        <div class="flow-step-content">
+                            <h4>Human Approval &mdash; NEVER Skipped</h4>
+                            <p>Agent presents proposed mapping as a table: Source &rarr; Target &rarr; Operation. User reviews, can modify, then explicitly confirms. Enforced in agent's system prompt &mdash; cannot proceed without approval.</p>
+                        </div>
+                    </div>
+                    <div class="flow-step">
+                        <div class="flow-step-number">5</div>
+                        <div class="flow-step-content">
+                            <h4>Execution (Zero Tokens)</h4>
+                            <p>SP builds COPY INTO deterministically from operation enum. Sets <code>DATE_INPUT_FORMAT = 'AUTO'</code> (handles all date formats). <code>FORCE=TRUE</code> (allows reload). <code>ON_ERROR=CONTINUE</code> (skips bad rows). Reports: rows_parsed, rows_loaded, rows_rejected, first_error.</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="code-block">
+-- Example mapping JSON the agent presents for approval:
+{
+  "target_table": "PURCHASE_EXPENSES",
+  "mappings": [
+    {"source": "Vendor", "dest": "EXPENSE_CATEGORY", "operation": "TRIM"},
+    {"source": "Amt",  "dest": "AMOUNT", "operation": "NUMERIC_STRIP_UNITS"},
+    {"source": "When", "dest": "TRANSACTION_DATE", "operation": "TO_DATE"}
+  ],
+  "ignored": ["Misc", "Approved?"]
+}
+
+-- After approval, SP generates and executes:
+COPY INTO ACME_FINANCE.INGESTION.PURCHASE_EXPENSES (EXPENSE_CATEGORY, AMOUNT, ...)
+FROM (SELECT NULLIF(TRIM($1),''), TRY_TO_NUMBER(REGEXP_REPLACE(...)), ...
+      FROM @UPLOAD_STAGE/sample_file.csv)
+FILE_FORMAT = (TYPE=CSV SKIP_HEADER=1 FIELD_OPTIONALLY_ENCLOSED_BY='"')
+ON_ERROR = CONTINUE  FORCE = TRUE;</div>
+                <div class="highlight-box success" style="margin-top: 1.5rem;">
+                    <p style="font-size: 0.85rem; color: var(--text-primary);"><strong>On success:</strong> mapping config saved to MAPPING_CONFIGS automatically. Same format next month = instant cache hit, zero questions.</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- Slide 8: Operations Enum -->
+        <section class="slide" id="operations">
+            <div class="slide-content anim-fade">
+                <div class="slide-number">8 / 15</div>
+                <h2>Operations Enum</h2>
+                <p class="subtitle">Transform primitives &mdash; LLM picks the operation, SP generates exact SQL</p>
+                <table class="data-table">
+                    <thead>
+                        <tr>
+                            <th>Operation</th>
+                            <th>Generated SQL</th>
+                            <th>Example Input &rarr; Output</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td><code>TRIM</code></td>
+                            <td><code>NULLIF(TRIM($N), '')</code></td>
+                            <td>"&nbsp;&nbsp;hello&nbsp;&nbsp;" &rarr; "hello"</td>
+                        </tr>
+                        <tr>
+                            <td><code>NUMERIC_STRIP_UNITS</code></td>
+                            <td><code>TRY_TO_NUMBER(REGEXP_REPLACE(REPLACE($N,'~',''),'[^0-9.]',''))</code></td>
+                            <td>"$304" &rarr; 304, "~152" &rarr; 152</td>
+                        </tr>
+                        <tr>
+                            <td><code>RESOLVE_ENTITY</code></td>
+                            <td><code>CASE WHEN $N LIKE '%km%' THEN 'km' ELSE 'USD' END</code></td>
+                            <td>"$304" &rarr; "USD"</td>
+                        </tr>
+                        <tr>
+                            <td><code>TO_DATE</code></td>
+                            <td><code>TRY_TO_DATE(TRIM($N))</code></td>
+                            <td>"Sep 21, 2025" &rarr; 2025-09-21</td>
+                        </tr>
+                        <tr>
+                            <td><code>TO_DATE_START</code></td>
+                            <td><code>TRY_TO_DATE(SPLIT_PART(REGEXP_REPLACE($N,...), ' to ', 1))</code></td>
+                            <td>"05/09/2025 to 05/13/2025" &rarr; 2025-05-09</td>
+                        </tr>
+                        <tr>
+                            <td><code>TO_DATE_END</code></td>
+                            <td><code>COALESCE(TRY_TO_DATE(SPLIT_PART(..., 2)), TRY_TO_DATE(SPLIT_PART(..., 1)))</code></td>
+                            <td>"05/09/2025 to 05/13/2025" &rarr; 2025-05-13</td>
+                        </tr>
+                        <tr>
+                            <td><code>RESOLVE_ENTITY</code></td>
+                            <td><code>CASE WHEN $N LIKE '%Software%' THEN 'Software' ELSE 'Office Supplies' END</code></td>
+                            <td>"Office Depot" &rarr; "Office Supplies"</td>
+                        </tr>
+                        <tr>
+                            <td><code>TO_NUMBER</code></td>
+                            <td><code>TRY_TO_NUMBER($N)</code></td>
+                            <td>"42" &rarr; 42</td>
+                        </tr>
+                        <tr>
+                            <td><code>DIRECT</code></td>
+                            <td><code>$N</code></td>
+                            <td>Pass-through, no transform</td>
+                        </tr>
+                    </tbody>
+                </table>
+                <div class="highlight-box accent" style="margin-top: 1.5rem;">
+                    <p style="font-size: 0.8rem; color: var(--text-primary);"><strong>One source &rarr; multiple targets:</strong> A single column like "trip period" can map to BOTH <code>TRANSACTION_DATE</code> (TO_DATE_START) and <code>DUE_DATE</code> (TO_DATE_END) with different operations. Adding new operations = one CASE branch in the SP.</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- Slide 9: Benchmark Results -->
+        <section class="slide" id="tokens">
+            <div class="slide-content anim-fade">
+                <div class="slide-number">9 / 15</div>
+                <h2>Benchmark Results</h2>
+                <p class="subtitle">Measured across 6 sample files — cold (LLM) vs warm (cached)</p>
+                <table class="data-table">
+                    <thead>
+                        <tr>
+                            <th>File</th>
+                            <th>Cold (s)</th>
+                            <th>Warm (s)</th>
+                            <th>Speedup</th>
+                            <th>Tokens (cold)</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>mileage_01_clean</td>
+                            <td>26.3</td>
+                            <td>3.9</td>
+                            <td style="color: var(--success); font-weight: 600;">6.7x</td>
+                            <td>~950</td>
+                        </tr>
+                        <tr>
+                            <td>expenses_chaotic</td>
+                            <td>59.9</td>
+                            <td>5.8</td>
+                            <td style="color: var(--success); font-weight: 600;">10.3x</td>
+                            <td>~1,850</td>
+                        </tr>
+                        <tr>
+                            <td>mileage_02_messy</td>
+                            <td>56.6</td>
+                            <td>4.3</td>
+                            <td style="color: var(--success); font-weight: 600;">13.3x</td>
+                            <td>~1,850</td>
+                        </tr>
+                        <tr>
+                            <td>mileage_03_chaotic</td>
+                            <td>59.2</td>
+                            <td>4.8</td>
+                            <td style="color: var(--success); font-weight: 600;">12.3x</td>
+                            <td>~1,850</td>
+                        </tr>
+                        <tr>
+                            <td>expenses_02_messy</td>
+                            <td>58.5</td>
+                            <td>4.3</td>
+                            <td style="color: var(--success); font-weight: 600;">13.6x</td>
+                            <td>~1,850</td>
+                        </tr>
+                        <tr>
+                            <td>invoices_03_chaotic*</td>
+                            <td>4.0</td>
+                            <td>4.5</td>
+                            <td style="color: var(--accent);">cache hit</td>
+                            <td>0</td>
+                        </tr>
+                        <tr style="border-top: 2px solid var(--border); font-weight: 600;">
+                            <td>TOTALS</td>
+                            <td>264.5s</td>
+                            <td>27.7s</td>
+                            <td style="color: var(--success); font-weight: 600;">9.6x</td>
+                            <td>~8,350 → 0</td>
+                        </tr>
+                    </tbody>
+                </table>
+                <p style="font-size: 0.7rem; color: var(--text-muted); margin-top: 0.5rem;">*Same column signature as expenses_chaotic — automatic cross-file cache reuse. Token estimates from measured prompt/response char lengths.</p>
+
+                <h3 style="margin-top: 1.5rem; margin-bottom: 1rem;">Per-Step Timing Breakdown</h3>
+                <div class="card-grid">
+                    <div class="card">
+                        <h3>Profiling</h3>
+                        <p style="font-size: 1.5rem; color: var(--text-primary); font-weight: 700;">~3s</p>
+                        <p>Pure SQL (INFER_SCHEMA). No LLM. Same cost always.</p>
+                    </div>
+                    <div class="card">
+                        <h3>Mapping Proposal</h3>
+                        <p style="font-size: 1.5rem; font-weight: 700;"><span style="color: var(--danger);">25s</span> → <span style="color: var(--success);">1.6s</span></p>
+                        <p>LLM call (cold) vs cache lookup (warm). ~950 tokens saved.</p>
+                    </div>
+                    <div class="card">
+                        <h3>Entity Resolution</h3>
+                        <p style="font-size: 1.5rem; font-weight: 700;"><span style="color: var(--danger);">29s</span> → <span style="color: var(--success);">0.2s</span></p>
+                        <p>LLM per distinct-value set (cold) vs cache (warm). ~900 tokens/col saved.</p>
+                    </div>
+                </div>
+
+                <div class="highlight-box success" style="margin-top: 1.5rem;">
+                    <p style="font-size: 0.85rem; color: var(--text-primary);">Repeat uploads: <strong>100% token elimination</strong> and <strong>9.6x speedup</strong>. Cross-file reuse means files with the same column signature share cache automatically, regardless of filename or data content.</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- Slide 10: Mapping Cache Deep Dive -->
+        <section class="slide" id="cache">
+            <div class="slide-content anim-fade">
+                <div class="slide-number">10 / 15</div>
+                <h2>Mapping Cache Deep Dive</h2>
+                <p class="subtitle">SHA256 hash &rarr; instant reuse across filenames and months</p>
+                <div class="flow-steps">
+                    <div class="flow-step">
+                        <div class="flow-step-number">1</div>
+                        <div class="flow-step-content">
+                            <h4>Hash Computation</h4>
+                            <p><code>sorted(lowercase(column_names)).join('|')</code> &rarr; <code>SHA256</code>. Same columns in different order = same hash. Different filename = same hash. Only the column signature matters.</p>
+                        </div>
+                    </div>
+                    <div class="flow-step">
+                        <div class="flow-step-number">2</div>
+                        <div class="flow-step-content">
+                            <h4>Storage</h4>
+                            <p>MAPPING_CONFIGS table: <code>SOURCE_COLUMN_HASH</code>, <code>COLUMN_MAP</code> (JSON), <code>TARGET_TABLE</code>, <code>TIMES_USED</code> counter, <code>CREATED_AT</code> timestamp.</p>
+                        </div>
+                    </div>
+                    <div class="flow-step">
+                        <div class="flow-step-number">3</div>
+                        <div class="flow-step-content">
+                            <h4>Lookup</h4>
+                            <p><code>WHERE SOURCE_COLUMN_HASH = :hash ORDER BY CREATED_AT DESC LIMIT 1</code>. On hit: returns stored mapping, increments TIMES_USED, zero LLM call.</p>
+                        </div>
+                    </div>
+                    <div class="flow-step">
+                        <div class="flow-step-number">4</div>
+                        <div class="flow-step-content">
+                            <h4>Save on Success</h4>
+                            <p>New configs saved automatically by EXECUTE_MAPPING after successful COPY INTO. Only approved + successfully executed mappings are persisted.</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="highlight-box accent" style="margin-top: 1.5rem;">
+                    <h3 style="color: var(--accent); font-size: 0.9rem;">Benchmarked: Cross-file reuse</h3>
+                    <p style="font-size: 0.8rem; color: var(--text-muted); margin-top: 0.5rem;">In testing, <code>sample_invoices_03_chaotic.csv</code> automatically reused the cache from <code>expenses_chaotic.csv</code> because they share the same column signature — despite having different filenames and data. Customer uploads "fleet_jan_2026.csv" (cache miss → ~950 tokens). Next month: "fleet_feb_2026.csv" with same columns → <strong>instant cache hit, 0 tokens, 0 user questions.</strong></p>
+                </div>
+            </div>
+        </section>
+
+        <!-- Slide 11: Date Handling Deep Dive -->
+        <section class="slide" id="dates">
+            <div class="slide-content anim-fade">
+                <div class="slide-number">11 / 15</div>
+                <h2>Date Handling Deep Dive</h2>
+                <p class="subtitle">The hardest problem solved &mdash; mixed formats in a single column</p>
+                <div class="card-grid">
+                    <div class="card">
+                        <h3>The Problem</h3>
+                        <p>COPY INTO doesn't reliably support TRY_TO_DATE with explicit format strings when a single column contains mixed date formats (MM/DD/YYYY, YYYY-MM-DD, Mon DD YYYY all in the same file).</p>
+                    </div>
+                    <div class="card">
+                        <h3>The Solution</h3>
+                        <p><code>ALTER SESSION SET DATE_INPUT_FORMAT = 'AUTO'</code> before COPY INTO. Snowflake auto-detects format per row. Set at session level inside SP before every execution.</p>
+                    </div>
+                </div>
+
+                <h3 style="margin-top: 2rem;">Formats Handled Automatically</h3>
+                <table class="data-table">
+                    <thead>
+                        <tr>
+                            <th>Input Format</th>
+                            <th>Example</th>
+                            <th>Parsed As</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr><td>MM/DD/YYYY</td><td>01/15/2025</td><td>2025-01-15</td></tr>
+                        <tr><td>YYYY-MM-DD</td><td>2025-01-15</td><td>2025-01-15</td></tr>
+                        <tr><td>DD/MM/YYYY</td><td>15/01/2025</td><td>2025-01-15</td></tr>
+                        <tr><td>Mon DD, YYYY</td><td>Jan 15, 2025</td><td>2025-01-15</td></tr>
+                        <tr><td>DD-Mon-YY</td><td>15-Jan-25</td><td>2025-01-15</td></tr>
+                    </tbody>
+                </table>
+
+                <h3 style="margin-top: 1.5rem;">Date Ranges</h3>
+                <div class="code-block">
+-- Input: "05/09/2025 to 05/13/2025" or "Jan 1 – Mar 31, 2025"
+-- Step 1: REGEXP_REPLACE normalizes separators (–, -, to) → ' to '
+-- Step 2: SPLIT_PART extracts start (position 1) and end (position 2)
+-- Step 3: TRY_TO_DATE with AUTO format parses each half
+-- Fallback: TO_DATE_END uses COALESCE to fall back to start date if end is empty</div>
+
+                <div class="highlight-box warning" style="margin-top: 1.5rem;">
+                    <p style="font-size: 0.8rem; color: var(--text-primary);"><strong>Known limitation:</strong> DD/MM/YYYY vs MM/DD/YYYY is ambiguous for dates like 01/02/2025. AUTO uses Snowflake's US-format bias. <code>ON_ERROR=CONTINUE</code> as safety net for truly unparseable values.</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- Slide 12: Requirements Solved -->
+        <section class="slide" id="solved">
+            <div class="slide-content anim-fade">
+                <div class="slide-number">12 / 15</div>
+                <h2>POC Requirements &mdash; Solved</h2>
+                <p class="subtitle">Mapping transcript requirements to implementation</p>
+                <table class="data-table">
+                    <thead>
+                        <tr>
+                            <th>Requirement</th>
+                            <th>How It's Addressed</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td><strong>100K records without per-row LLM</strong></td>
+                            <td>LLM runs once per file format (~950 tokens). COPY INTO handles all rows deterministically. 100K rows load in seconds.</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Shared memory / config reuse</strong></td>
+                            <td>MAPPING_CONFIGS caches by SHA256 of column names. Same format next month = instant, zero questions.</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Deterministic transformation</strong></td>
+                            <td>SP generates COPY INTO from operation enum (TRY_TO_NUMBER, REGEXP_REPLACE, TRY_TO_DATE). No LLM variability in execution path.</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Template matching (which of N?)</strong></td>
+                            <td>AI_COMPLETE with GET_TARGET_SCHEMAS() proposes which table matches. Schema injected from INFORMATION_SCHEMA &mdash; adding templates auto-extends.</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Human-in-the-loop approval</strong></td>
+                            <td>Step 4 is enforced in agent system prompt. User sees mapping table, can modify, must explicitly confirm.</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Don't repeat questions monthly</strong></td>
+                            <td>Once approved, mapping persists. Same columns next month = cache hit = "Using your previously approved mapping" = execute immediately.</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Speed/cost at scale</strong></td>
+                            <td>Benchmarked: 9.6x speedup on cached path. Profile: 0 tokens. Cache miss: ~950 tokens + ~900/entity column. Cached wall-clock: &lt;5s.</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Distinct-value entity resolution</strong></td>
+                            <td>SP_RESOLVE_COLUMN_VALUES extracts distinct values (~25 vehicles), resolves via LLM against reference tables, caches in VALUE_RESOLUTION_CACHE. Applied as CASE WHEN in COPY INTO. Benchmarked: 29s cold &rarr; 0.2s cached. LLM calls proportional to distinct values, not rows.</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </section>
+
+        <!-- Slide 13: Gaps & Future -->
+        <section class="slide" id="gaps">
+            <div class="slide-content anim-fade">
+                <div class="slide-number">13 / 15</div>
+                <h2>POC Requirements &mdash; Gaps &amp; Future</h2>
+                <p class="subtitle">What's partially solved and what's next</p>
+
+                <h3>Partially Solved</h3>
+                <table class="data-table">
+                    <thead>
+                        <tr>
+                            <th>Requirement</th>
+                            <th>Current State</th>
+                            <th>Gap</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td><strong>EF cascading logic</strong></td>
+                            <td>Reference tables populated from templates. Entity resolution maps to canonical values.</td>
+                            <td>Cascading validation (GL account &rarr; valid cost centers &rarr; valid departments) not enforced during load.</td>
+                        </tr>
+
+                    </tbody>
+                </table>
+
+                <h3 style="margin-top: 2rem;">Not Yet Addressed</h3>
+                <table class="data-table">
+                    <thead>
+                        <tr>
+                            <th>Item</th>
+                            <th>Notes</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td><strong>Multi-tenancy</strong></td>
+                            <td>Add TENANT_ID to MAPPING_CONFIGS, filter by session variable</td>
+                        </tr>
+                        <tr>
+                            <td><strong>multiple canonical templates</strong></td>
+                            <td>Only 3 in scope. Adding more is mechanical but may need new operations.</td>
+                        </tr>
+                        <tr>
+                            <td><strong>PDF ingestion</strong></td>
+                            <td>PDF &rarr; CSV is upstream. Once in CSV, this pipeline handles it.</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Evaluation harness</strong></td>
+                            <td>No regression testing. Use Cortex Agent Evaluations for assertion suite.</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </section>
+
+        <!-- Slide 14: Next Steps -->
+        <section class="slide" id="next">
+            <div class="slide-content anim-fade">
+                <div class="slide-number">14 / 15</div>
+                <h2>Next Steps</h2>
+                <p class="subtitle">POC to production path</p>
+                <div class="card-grid">
+                    <div class="card">
+                        <h3>EF Cascading Validation</h3>
+                        <p>Post-load validation query: GL account exists &rarr; fuel valid for GL account &rarr; vehicle type valid for fuel. Cascading referential integrity check with violation reporting.</p>
+                    </div>
+                    <div class="card">
+                        <h3>Multi-Tenant Config</h3>
+                        <p>Add TENANT_ID to MAPPING_CONFIGS. Filter cache lookups by tenant from session variable. Same workflow, tenant-scoped persistence.</p>
+                    </div>
+                    <div class="card">
+                        <h3>Evaluation Harness</h3>
+                        <p>N test files with known-correct outputs. Run after model/prompt changes. Use Cortex Agent Evaluations for assertions on template match + column mapping + operation selection.</p>
+                    </div>
+                    <div class="card">
+                        <h3>Multiple Templates</h3>
+                        <p>Mechanical extension: DDL + reference data per template. GET_TARGET_SCHEMAS() auto-discovers. PROPOSE_MAPPING auto-includes. No agent changes needed.</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Slide 15: Demo Flow -->
+        <section class="slide" id="demo">
+            <div class="slide-content anim-fade">
+                <div class="slide-number">15 / 15</div>
+                <h2>Demo Flow</h2>
+                <p class="subtitle">What to show in a live walkthrough</p>
+                <div class="flow-steps">
+                    <div class="flow-step">
+                        <div class="flow-step-number">1</div>
+                        <div class="flow-step-content">
+                            <h4>Open Snowflake Intelligence</h4>
+                            <p>Navigate to Snowflake Intelligence in Snowsight. Select <strong>Schema Mapper Agent</strong>.</p>
+                        </div>
+                    </div>
+                    <div class="flow-step">
+                        <div class="flow-step-number">2</div>
+                        <div class="flow-step-content">
+                            <h4>Initiate Mapping</h4>
+                            <p>Say: <em>"Map sample_mileage_02_messyheaders.csv"</em>. Agent calls list_staged_files, confirms file exists.</p>
+                        </div>
+                    </div>
+                    <div class="flow-step">
+                        <div class="flow-step-number">3</div>
+                        <div class="flow-step-content">
+                            <h4>Watch: Profile</h4>
+                            <p>Agent calls profile_file. Shows column metadata, sample values, cardinality. Pure SQL &mdash; no loading spinner for LLM.</p>
+                        </div>
+                    </div>
+                    <div class="flow-step">
+                        <div class="flow-step-number">4</div>
+                        <div class="flow-step-content">
+                            <h4>Watch: Propose</h4>
+                            <p>Agent calls propose_mapping. If first run: AI_COMPLETE fires (~25s). If repeat: cache hit (&lt;2s). Agent presents mapping table with operations and unmapped columns.</p>
+                        </div>
+                    </div>
+                    <div class="flow-step">
+                        <div class="flow-step-number">5</div>
+                        <div class="flow-step-content">
+                            <h4>Watch: Entity Resolution Preview</h4>
+                            <p>For RESOLVE_ENTITY columns (e.g., vehicle names), agent calls preview_resolution. Shows table: "Marriott - 2 nights" &rarr; "Lodging", "FedEx Ground" &rarr; "Shipping & Postage". User approves or corrects.</p>
+                        </div>
+                    </div>
+                    <div class="flow-step">
+                        <div class="flow-step-number">6</div>
+                        <div class="flow-step-content">
+                            <h4>Approve &amp; Execute</h4>
+                            <p>Say <em>"Yes, approve it"</em>. Agent calls execute_mapping. See: <strong>"Loaded 167 rows into MILEAGE_CLAIMS (0 rejected)"</strong>. Shows sample of loaded data.</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="highlight-box accent" style="margin-top: 1.5rem;">
+                    <p style="font-size: 0.85rem; color: var(--text-primary);"><strong>Bonus demo:</strong> Run the same file again immediately. Watch the cache hit &mdash; no AI_COMPLETE call, instant mapping, &lt;5s total wall-clock.</p>
+                </div>
+            </div>
+        </section>
+
+
+    </main>
+
+    <!-- JavaScript -->
+    <script>
+        // Progress bar scroll tracking
+        function updateProgress() {
+            const scrollTop = window.scrollY;
+            const docHeight = document.documentElement.scrollHeight - window.innerHeight;
+            const progress = (scrollTop / docHeight) * 100;
+            document.getElementById('progressBar').style.width = progress + '%';
+        }
+
+        // IntersectionObserver for .anim-fade
+        const fadeObserver = new IntersectionObserver((entries) => {
+            entries.forEach(entry => {
+                if (entry.isIntersecting) {
+                    entry.target.classList.add('visible');
+                }
+            });
+        }, {
+            threshold: 0.15,
+            rootMargin: '0px 0px -50px 0px'
+        });
+
+        document.querySelectorAll('.anim-fade').forEach(el => {
+            fadeObserver.observe(el);
+        });
+
+        // Active nav link tracking
+        const sections = document.querySelectorAll('.slide');
+        const navLinks = document.querySelectorAll('.nav-links a');
+
+        function updateActiveNav() {
+            let current = '';
+            sections.forEach(section => {
+                const sectionTop = section.offsetTop;
+                const sectionHeight = section.clientHeight;
+                if (window.scrollY >= sectionTop - sectionHeight / 3) {
+                    current = section.getAttribute('id');
+                }
+            });
+
+            navLinks.forEach(link => {
+                link.classList.remove('active');
+                if (link.getAttribute('href') === '#' + current) {
+                    link.classList.add('active');
+                }
+            });
+        }
+
+        // Throttle scroll events
+        let ticking = false;
+        window.addEventListener('scroll', () => {
+            if (!ticking) {
+                window.requestAnimationFrame(() => {
+                    updateProgress();
+                    updateActiveNav();
+                    ticking = false;
+                });
+                ticking = true;
+            }
+        });
+
+        // Initial state
+        updateProgress();
+        updateActiveNav();
+    </script>
+</body>
+</html>

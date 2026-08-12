@@ -1,0 +1,24 @@
+From,Ref,Dt,Due Dt,Amt,$,Team,Acct,Terms,Re,Approved,PO#,Notes
+AWS,INV-2025-0001,2025-01-05,2025-02-04,18750,USD,Eng,5220,net30,cloud jan,Y,PO-445,
+Microsoft,INV-2025-0002,"Jan 10, 2025",Feb 9 2025,$4200,,IT,5220,Net 30,licenses,,PO-112,annual
+Salesforce,INV-2025-0003,01/15/2025,03/16/2025,12600,USD,Sales,5220,60,CRM,auto,,Q1
+,INV-2025-0004,20/01/2025,19/02/2025,~1835,USD,Logistics,6200,30 days,shipping,Y,PO-223,jan total
+CBRE,,02/01/2025,03/03/2025,45000,,Facilities,5510,net 30,rent feb,auto,PO-001,HQ
+Deloitte LLP,INV-2025-0006,"Feb 5, 2025",,28500,USD,Finance,5420,net60,audit,Y,,Q4 engagement
+AT&T,INV-2025-0007,02/10/2025,03/12/2025,$3456.78,,IT,5700,30,telecom,auto,,feb
+Workday,INV-2025-0008,15-Feb-25,16-Apr-25,8900,USD,HR,5220,net60,HCM,auto,PO-334,
+Datadog,INV-2025-0009,2025-02-20,2025-03-22,6750,,Engineering,5220,net30,monitoring,auto,,
+WeWork,INV-2025-0010,"Mar 1, 2025","Mar 31, 2025",$12500,USD,Sales,5510,30,coworking,Y,,
+Adobe,INV-2025-0011,03/05/2025,04/04/2025,2340,,Mktg,5220,net 30,creative cloud,auto,,
+UPS,INV-2025-0012,2025-03-10,2025-04-09,~2156,,Warehouse,6200,30 days,mar shipping,Y,PO-556,
+Okta,INV-2025-0013,15/03/2025,14/04/2025,$4500,USD,IT,5220,net30,identity,auto,,Q2
+Baker McKenzie,INV-2025-0014,"Mar 20, 2025",,"$15,750",USD,Legal,5410,60,patents,Y,,
+Gartner,INV-2025-0015,2025-04-01,2025-05-01,22000,,Exec,5420,net30,research sub,auto,,annual
+Snowflake Inc,INV-2025-0016,04/05/2025,05/05/2025,9800,USD,Eng,5220,30,data platform,auto,PO-667,apr
+Marriott,INV-2025-0017,10-Apr-25,10-May-25,~8946,,Sales,5140,net 30,corporate lodging,Y,,Q1 travel
+Verizon Business,INV-2025-0018,04/15/2025,05/15/2025,$2890.45,USD,IT,5710,30,mobile fleet,auto,,apr
+HubSpot,INV-2025-0019,"Apr 20, 2025","Jun 19, 2025",5400,,Marketing,5220,net60,automation,auto,,
+ServiceNow,INV-2025-0020,2025-05-01,2025-06-30,11200,USD,IT,5220,60 days,ITSM,auto,PO-778,
+,INV-2025-0021,05/05/2025,,3400,,Engineering,5220,30,misc tools,,,pending approval
+AWS,INV-2025-0022,2025-05-05,2025-06-04,$19200,USD,Eng,5220,net30,cloud may,auto,PO-445,
+Dell,INV-2025-0023,"May 10, 2025","Jun 9, 2025",~12500,,IT,5210,net30,laptop refresh,Y,PO-889,15 units

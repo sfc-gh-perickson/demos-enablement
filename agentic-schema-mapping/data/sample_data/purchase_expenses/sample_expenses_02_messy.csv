@@ -1,0 +1,21 @@
+who,what/where,cost,$currency,when,team,how paid,ref #,notes
+S. Chen,Staples - office stuff,$142.67,USD,Jan 10 2025,Sales,Visa corp,RCT-90001,for client deck
+M. Bell,gas station (Shell),89.45,USD,2025-01-15,Field Ops,corp visa,,site visit fuel
+P. Patel,AWS hosting,2400,USD,01/20/2025,Engineering,Amex,RCT-90003,monthly
+J. O'Brien,Hilton - 1 night,387.92,,02/01/2025,Sales,corp visa,RCT-90004,client dinner trip
+H. Kim,LinkedIn premium posting,$599,USD,"Feb 5, 2025",HR,corporate amex,RCT-90005,
+D. Hernandez,Home Depot supplies,234.18,USD,12-Feb-25,Maint,Visa,RCT-90006,HVAC filters
+E. Voss,Delta flight,412.5,,2025-02-18,Cust. Success,amex,,QBR travel
+C. Mendez,Ruth's Chris dinner,285.3,USD,Feb 25 2025,Exec,Amex,RCT-90008,board dinner
+O. Chen,FedEx shipping,67.89,,03/03/2025,Sales & BD,visa,RCT-90009,priority contracts
+N. Park,Dell laptop,$1899.99,USD,2025-03-10,IT,PO,RCT-90010,replacement
+A. Rahman,Marriott 2 nights,456.78,,15/03/2025,Inspections,corp visa,,plant audit trip
+L. Schultz,United Airlines,534,USD,2025-03-22,Logistics,AMEX,RCT-90012,dist center visit
+S. Russo,Canva annual sub,119.99,,03/28/2025,Marketing,visa,RCT-90013,design tool
+B. Friedman,Grainger safety equip,$678.45,USD,04/02/2025,Field Ops,purchase order,RCT-90014,
+R. Stein,LexisNexis,450,USD,"Apr 8, 2025",Legal,corp amex,,research sub
+O. MacAllister,Lowes landscaping,312.56,,2025-04-15,Prop Mgmt,visa,RCT-90016,
+T. Washington,Uber ride,$47.82,USD,04/20/2025,Sales,personal card,RCT-90017,airport transfer
+D. Walsh,Ferguson HVAC maint,1245,,28-Apr-25,Facilities,PO,RCT-90018,quarterly
+Y. Tanaka,Fisher Scientific,3200,USD,2025-05-05,R&D,purchase order,RCT-90019,lab supplies
+K. Ng,Southwest flight,289,,05/12/2025,Customer Success,amex,RCT-90020,site visit

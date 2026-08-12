@@ -25,6 +25,7 @@ An internal enablement repository for Snowflake sales engineers and account exec
   - [Cortex Agent Cost Observability](#cortex-agent-cost-observability)
   - [Agent Data Flywheel](#agent-data-flywheel)
   - [Agent Observability & Analysis](#agent-observability--analysis)
+  - [Agentic Schema Mapping](#agentic-schema-mapping)
 - [Repository Structure](#repository-structure)
 - [Getting Started](#getting-started)
 - [Presentation Format](#presentation-format)
@@ -33,7 +34,7 @@ An internal enablement repository for Snowflake sales engineers and account exec
 
 ## Overview
 
-This repository contains seventeen enablement modules covering key Cortex AI and Snowflake ML topics:
+This repository contains eighteen enablement modules covering key Cortex AI and Snowflake ML topics:
 
 | Module | Audience | Format | Slides |
 |--------|----------|--------|--------|
@@ -54,6 +55,7 @@ This repository contains seventeen enablement modules covering key Cortex AI and
 | Cortex Agent Cost Observability | SEs, FinOps Admins | Presentation + Hands-on Lab | [View](https://sfc-gh-perickson.github.io/demos-enablement/cortex-agent-cost-observability/presentations/cortex-agent-cost-observability.html) |
 | Agent Data Flywheel | SEs, AEs, Solution Architects | Presentation | [View](https://sfc-gh-perickson.github.io/demos-enablement/agent-data-flywheel/presentations/ai-agent-data-flywheel.html) |
 | Agent Observability & Analysis | SEs, ML Engineers, Platform Teams | Presentation + Hands-on Lab | [View](https://sfc-gh-perickson.github.io/demos-enablement/agent_observability_analysis/presentations/agent-observability-analysis.html) |
+| Agentic Schema Mapping | SEs, Data Engineers, Customers | Demo | — |
 
 Each module includes an HTML slide deck and companion speaker notes. The evaluations, many-model-training, feature-store, cortex-ai-observability, cortex-agent-multi-tenancy, and label-studio-spcs modules also provide complete hands-on labs with SQL setup and notebooks.
 
@@ -548,6 +550,39 @@ The notebook walks through creating a demo agent, simulating production traffic 
 
 ---
 
+### Agentic Schema Mapping
+
+**Location:** `agentic-schema-mapping/`
+
+An all-in-Snowflake pipeline that maps messy CSV data into canonical financial table schemas. A Cortex Agent orchestrates the workflow via Snowflake Intelligence, using custom tools (stored procedures/UDFs) for profiling, AI-powered mapping proposals, entity resolution, and deterministic COPY INTO execution.
+
+**Topics covered:**
+- Cortex Agent with 6 custom tools (generic type backed by UDFs/procedures)
+- AI-powered column mapping with caching (SHA256 hash of column signatures)
+- Entity resolution via LLM with value-level caching
+- Deterministic SQL builder (no LLM writes SQL — COPY INTO is constructed from an operations enum)
+- Semantic view for querying loaded data via Cortex Analyst
+
+**Contents:**
+
+| File | Description |
+|------|-------------|
+| `setup.sql` | DDL for database, schemas, stage, canonical tables, config tables, reference tables |
+| `seed_reference_data.sql` | Reference data (departments, GL accounts, vendors, expense categories, etc.) |
+| `deploy.sql` | All UDFs, stored procedures, and the Cortex Agent |
+| `semantic_view.yaml` | Semantic view definition for Cortex Analyst |
+| `data/` | Sample data at 3 quality tiers (clean, messy, chaotic) |
+
+#### Deployment
+
+1. Run `setup.sql` to create the `ACME_FINANCE` database and all objects
+2. Run `seed_reference_data.sql` to populate reference tables
+3. Run `deploy.sql` to deploy UDFs, procedures, and the agent
+4. Upload CSVs to `@ACME_FINANCE.INGESTION.UPLOAD_STAGE`
+5. Open Snowflake Intelligence, select **Schema Mapper Agent**, and say "Map my expense file"
+
+---
+
 ## Repository Structure
 
 ```
@@ -560,6 +595,12 @@ enablement/
 │   └── presentations/
 │       ├── server-side-agent-routing.html
 │       └── server-side-agent-routing-speaker-notes.md
+├── agentic-schema-mapping/
+│   ├── setup.sql
+│   ├── seed_reference_data.sql
+│   ├── deploy.sql
+│   ├── semantic_view.yaml
+│   └── data/
 ├── agent-data-flywheel/
 │   └── presentations/
 │       ├── ai-agent-data-flywheel.html
@@ -690,6 +731,7 @@ enablement/
    - **Cortex Agent Document Context:** Run `cortex-agent-document-context/lab/setup.sql`, then optionally `python lab/backend.py` for the React demo
    - **Cortex Agent Cost Observability:** Run `cortex-agent-cost-observability/lab/setup.sql` before starting the notebook
    - **Agent Observability & Analysis:** Follow notebook Section 1 in `agent_observability_analysis/observability-to-evals.ipynb` (self-contained setup)
+   - **Agentic Schema Mapping:** Run `setup.sql`, `seed_reference_data.sql`, then `deploy.sql` in the `agentic-schema-mapping/` directory
 
 ---
 

@@ -1,0 +1,186 @@
+name: EXPENSE_DATA
+description: >
+  Unified expense data model for financial reporting.
+  Covers mileage claims, purchase expenses, and vendor invoices
+  across all departments and cost centers.
+
+tables:
+  # ─────────────────────────────────────────────────────────────────
+  # Mileage Claims
+  # ─────────────────────────────────────────────────────────────────
+  - name: MILEAGE_CLAIMS
+    base_table:
+      database: ACME_FINANCE
+      schema: INGESTION
+      table: MILEAGE_CLAIMS
+    dimensions:
+      - name: DEPARTMENT
+        expr: DEPARTMENT
+        data_type: VARCHAR
+        description: Department submitting the claim
+      - name: EMPLOYEE_NAME
+        expr: EMPLOYEE_NAME
+        data_type: VARCHAR
+        description: Employee who submitted the mileage claim
+      - name: GL_ACCOUNT
+        expr: GL_ACCOUNT
+        data_type: VARCHAR
+        description: General ledger account code
+      - name: COST_CENTER
+        expr: COST_CENTER
+        data_type: VARCHAR
+        description: Cost center charged
+      - name: VEHICLE_CATEGORY
+        expr: VEHICLE_CATEGORY
+        data_type: VARCHAR
+        description: Vehicle classification for reimbursement rate
+      - name: DISTANCE_UNIT
+        expr: DISTANCE_UNIT
+        data_type: VARCHAR
+        description: Unit of measure for distance (km, mi)
+      - name: CURRENCY
+        expr: CURRENCY
+        data_type: VARCHAR
+        description: Currency for reimbursement
+      - name: PURPOSE
+        expr: PURPOSE
+        data_type: VARCHAR
+        description: Business purpose of the trip
+      - name: EMPLOYEE_ID
+        expr: EMPLOYEE_ID
+        data_type: VARCHAR
+        description: Employee identifier
+    time_dimensions:
+      - name: ACTIVITY_DATE
+        expr: ACTIVITY_DATE
+        data_type: DATE
+        description: Date the mileage was driven
+    measures:
+      - name: DISTANCE_TRAVELED
+        expr: DISTANCE_TRAVELED
+        data_type: NUMBER
+        aggregation: sum
+        description: Total distance traveled
+      - name: REIMBURSEMENT_RATE
+        expr: REIMBURSEMENT_RATE
+        data_type: NUMBER
+        aggregation: avg
+        description: Per-unit reimbursement rate
+
+  # ─────────────────────────────────────────────────────────────────
+  # Purchase Expenses
+  # ─────────────────────────────────────────────────────────────────
+  - name: PURCHASE_EXPENSES
+    base_table:
+      database: ACME_FINANCE
+      schema: INGESTION
+      table: PURCHASE_EXPENSES
+    dimensions:
+      - name: DEPARTMENT
+        expr: DEPARTMENT
+        data_type: VARCHAR
+        description: Department incurring the expense
+      - name: EMPLOYEE_NAME
+        expr: EMPLOYEE_NAME
+        data_type: VARCHAR
+        description: Employee who made the purchase
+      - name: GL_ACCOUNT
+        expr: GL_ACCOUNT
+        data_type: VARCHAR
+        description: General ledger account code
+      - name: COST_CENTER
+        expr: COST_CENTER
+        data_type: VARCHAR
+        description: Cost center charged
+      - name: VENDOR_NAME
+        expr: VENDOR_NAME
+        data_type: VARCHAR
+        description: Vendor or merchant name
+      - name: EXPENSE_CATEGORY
+        expr: EXPENSE_CATEGORY
+        data_type: VARCHAR
+        description: Expense category classification
+      - name: CURRENCY
+        expr: CURRENCY
+        data_type: VARCHAR
+        description: Transaction currency
+      - name: PAYMENT_METHOD
+        expr: PAYMENT_METHOD
+        data_type: VARCHAR
+        description: Payment method used
+      - name: RECEIPT_NUMBER
+        expr: RECEIPT_NUMBER
+        data_type: VARCHAR
+        description: Receipt or transaction reference number
+      - name: EMPLOYEE_ID
+        expr: EMPLOYEE_ID
+        data_type: VARCHAR
+        description: Employee identifier
+    time_dimensions:
+      - name: TRANSACTION_DATE
+        expr: TRANSACTION_DATE
+        data_type: DATE
+        description: Date of the purchase transaction
+    measures:
+      - name: AMOUNT
+        expr: AMOUNT
+        data_type: NUMBER
+        aggregation: sum
+        description: Total purchase amount
+
+  # ─────────────────────────────────────────────────────────────────
+  # Vendor Invoices
+  # ─────────────────────────────────────────────────────────────────
+  - name: VENDOR_INVOICES
+    base_table:
+      database: ACME_FINANCE
+      schema: INGESTION
+      table: VENDOR_INVOICES
+    dimensions:
+      - name: DEPARTMENT
+        expr: DEPARTMENT
+        data_type: VARCHAR
+        description: Department responsible for the invoice
+      - name: VENDOR_NAME
+        expr: VENDOR_NAME
+        data_type: VARCHAR
+        description: Vendor who issued the invoice
+      - name: GL_ACCOUNT
+        expr: GL_ACCOUNT
+        data_type: VARCHAR
+        description: General ledger account code
+      - name: COST_CENTER
+        expr: COST_CENTER
+        data_type: VARCHAR
+        description: Cost center charged
+      - name: CURRENCY
+        expr: CURRENCY
+        data_type: VARCHAR
+        description: Invoice currency
+      - name: PAYMENT_TERMS
+        expr: PAYMENT_TERMS
+        data_type: VARCHAR
+        description: Payment terms (Net 30, Net 60, etc.)
+      - name: INVOICE_NUMBER
+        expr: INVOICE_NUMBER
+        data_type: VARCHAR
+        description: Vendor invoice reference number
+      - name: VENDOR_ID
+        expr: VENDOR_ID
+        data_type: VARCHAR
+        description: Internal vendor identifier
+    time_dimensions:
+      - name: INVOICE_DATE
+        expr: INVOICE_DATE
+        data_type: DATE
+        description: Date the invoice was issued
+      - name: DUE_DATE
+        expr: DUE_DATE
+        data_type: DATE
+        description: Payment due date
+    measures:
+      - name: AMOUNT
+        expr: AMOUNT
+        data_type: NUMBER
+        aggregation: sum
+        description: Total invoice amount

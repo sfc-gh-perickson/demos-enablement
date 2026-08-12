@@ -1,0 +1,31 @@
+Person,Place/Thing,Amt,Curr,Dt,Grp,Pay Type,Ref,Proj,Approved?,Misc
+Sarah Chen,Staples,$142.67,,01/10/2025,Sales,Visa,,PRJ-201,Y,
+,gas - shell,89.45,USD,2025-01-15,Field Ops,corp card,,,Y,fuel
+Priya Patel,AWS,~2400,,01/20/2025,Eng,Amex,RCT-90003,PRJ-301,,monthly hosting
+,,387.92,USD,"Feb 1, 2025",Sales,visa,RCT-90004,,Y,hilton 1 nite
+H. Kim,LinkedIn,$599,USD,5-Feb-25,HR,,,PRJ-102,auto,job posting
+Diego Hernandez,home depot,234.18,,02/12/2025,Maint,Visa,RCT-90006,,,hvac stuff
+Elena Voss,Delta flight,412.5,USD,2025-02-18,Cust Success,amex,,PRJ-401,,QBR
+C. Mendez,dinner - Ruth's Chris,~285,,Feb 25 2025,Exec,Amex,RCT-90008,,Y,board
+,FedEx,$67.89,,03/03/2025,Sales,visa,RCT-90009,PRJ-201,,priority
+Nathan Park,Dell laptop,1899.99,USD,2025-03-10,IT,PO,RCT-90010,,auto,replacement
+Aisha Rahman,marriott,456.78,,15/03/2025,Inspections,corp visa,,,Y,2 nights
+L. Schultz,united airlines,534,USD,2025-03-22,Logistics,AMEX,RCT-90012,,auto,
+Sofia Russo,Canva,119.99,,03/28/2025,Mktg,visa,RCT-90013,PRJ-501,,annual
+Ben Friedman,Grainger,678.45,USD,04/02/2025,Field Ops,PO,RCT-90014,,auto,safety equip
+,LexisNexis,$450,,"Apr 8, 2025",Legal,corp amex,,,,research
+Owen MacAllister,lowes,312.56,,2025-04-15,Prop Mgmt,visa,RCT-90016,,Y,landscaping
+T. Washington,uber,$47.82,USD,04/20/2025,Sales,personal,,PRJ-201,Y,airport ride
+Devon Walsh,Ferguson HVAC,1245,,28-Apr-25,Facilities,PO,RCT-90018,,auto,quarterly maint
+Y. Tanaka,Fisher Scientific,$3200,USD,2025-05-05,R&D,purchase order,RCT-90019,PRJ-601,,lab stuff
+Kara Ng,southwest,289,,05/12/2025,Customer Success,amex,RCT-90020,,auto,flight
+Sam Whitaker,Digi-Key,456.23,USD,05/19/2025,Eng,Visa,RCT-90021,PRJ-301,,components
+Maria Lopez,Salesforce,3600,,05/26/2025,Sales,Amex,RCT-90022,,,CRM renewal
+,caterpillar rental,$2800,USD,06/02/2025,Construction,PO,RCT-90023,PRJ-701,,2 wk equip
+Jamal Ferguson,Bloomberg,2100,,06/09/2025,Finance,corp amex,RCT-90024,,auto,terminal
+Ines Larsen,snap-on tools,534.67,USD,06/16/2025,Field Ops,visa,RCT-90025,,,diagnostic tools
+Devon Walsh,amazon - office supplies,~89,,2025-06-20,Facilities,visa,,,,printer paper etc
+,Zoom annual,$199.99,USD,"Jun 25, 2025",IT,amex,,PRJ-301,auto,
+Marcus Bell,,445.5,,2025-07-01,Field Ops,PO,RCT-90028,,,parts from grainger
+Priya Patel,github enterprise,$441,USD,07/05/2025,Eng,amex,RCT-90029,PRJ-301,auto,annual
+,hotel - marriott courtyard,189.99,,07/10/2025,Sales,,RCT-90030,PRJ-201,Y,overnight trip

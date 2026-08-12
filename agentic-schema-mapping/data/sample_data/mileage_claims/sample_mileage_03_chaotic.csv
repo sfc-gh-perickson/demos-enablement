@@ -1,0 +1,70 @@
+Emp,Dist,When,Dept,CC,Why,Reimb ($),Approved By,Badge,Project,Notes
+,,01/24/2025,Sales,CC-2000,410.14,,C. Mendez,EMP-1042,PRJ-601,see notes
+Marcus Bell,100,2025-10-27,,CC-5100,62.51,,,EMP-2187,,
+Priya Patel,,"Jun 19, 2025",Engineering,CC-3000,237.28,14.94,auto-approved,EMP-1593,,
+Priya Patel,~152,2025-02-21,Eng,CC-3000,,3.42,,EMP-1593,PRJ-957,n/a
+Sarah Chen,~619,03/20/2025,Sales & BD,CC-2000,,,,EMP-1042,,see notes
+James O'Brien,476,12/14/2025,Sales,,129.79,,C. Mendez,EMP-1042,,
+,771,2025-11-23,Field Ops,,340.92,,,EMP-2187,PRJ-394,
+Hannah Kim,,15/11/2025,HR,CC-1300,24.38,20.4,C. Mendez,EMP-3021,PRJ-697,
+Diego Hernandez,501,20-Oct-25,Maintenance,CC-8000,,,auto-approved,EMP-2456,,
+Elena Voss,404,"Dec 2, 2025",Cust Success,,394.28,,JBL,EMP-1877,PRJ-109,ok
+Carlos Mendez,79,2025-07-10,Executive,,417.41,,MRB,EMP-4001,PRJ-781,
+Carlos Mendez,571,"Aug 15, 2025",,CC-1100,,,MRB,EMP-4001,,
+Olivia Chen,~688,04/12/2025,Sales,CC-2000,174.16,,,EMP-1042,,n/a
+Nathan Park,154,"Jan 18, 2025",IT,CC-3300,,,C. Mendez,EMP-2893,,
+Aisha Rahman,1620,"Sep 9, 2025",Inspections,CC-5000,62.6,,JBL,EMP-2104,PRJ-452,
+Liam Schultz,1137,02/02/2025,Logistics,,28.59,,,EMP-3445,PRJ-206,??
+Sofia Russo,428,"Jan 22, 2025",Marketing,,228.79,15.96,MRB,EMP-1666,PRJ-316,see notes
+,162mi,"Nov 21, 2025",Sales,CC-2000,,,C. Mendez,,,
+Owen MacAllister,175,05/14/2025,Property Mgmt,,,38.88,24.36,,EMP-2678,PRJ-822,ok
+Tyrell Washington,591,31/01/2025,,CC-2000,131.05,,,EMP-1298,,
+Devon Walsh,809,01/18/2025,Facilities,CC-8000,,,ops-mgr,EMP-3112,,
+Yuki Tanaka,89 KM,04/16/2025,,CC-9000,,18.86,,EMP-1455,,
+Kara Ng,155,17-Oct-25,Customer Success,,,,C. Mendez,EMP-1877,,
+Sam Whitaker,~62,2025-05-18,,CC-3000,,,auto-approved,EMP-1593,PRJ-913,
+Maria Lopez,54,"Jun 1, 2025",Sales,CC-2000,296.82,,MRB,EMP-1042,,n/a
+Camila Rivera,,21-May-25,Construction,CC-6000,179.26,11.3,C. Mendez,EMP-2901,PRJ-284,
+Jamal Ferguson,1221mi,,,CC-1200,365.65,10.57,,,PRJ-546,
+Ines Larsen,828,10/16/2025,Field Operations,CC-5100,477.27,,,EMP-2187,,
+Ben Friedman,408,2025-03-05,,,,25.75,,,PRJ-839,ok
+Rachel Stein,208mi,29-Apr-25,,CC-1400,348.67,3.98,,EMP-4102,PRJ-812,
+Owen MacAllister,~2366,2025-10-12,Prop Mgmt,,344.41,2.66,,EMP-2678,PRJ-939,
+Devon Walsh,,2025-10-14,Facilities,CC-8000,,,auto-approved,EMP-3112,PRJ-208,n/a
+Tyrell Washington,370,11/24/2025,Sales,CC-2000,165.67,,auto-approved,EMP-1298,,
+Elena Voss,3080,2025-02-18,Customer Success,CC-7000,318.27,,auto-approved,EMP-1877,,
+Sofia Russo,178,2025-04-18,Marketing,,,19.8,,EMP-1666,,see notes
+Maria Lopez,738,2025-09-30,Sales,CC-2000,238,2.56,JBL,EMP-1042,,??
+Marcus Bell,1136,2025-11-21,Field Ops,CC-5100,,,,EMP-2187,,—
+Diego Hernandez,29mi,12/11/2025,Maintenance,CC-8000,,,,,PRJ-327,n/a
+,162,2025-03-24,,CC-2000,,23.44,MRB,EMP-1042,PRJ-294,??
+Carlos Mendez,24,"Sep 29, 2025",Executive,,,,ops-mgr,EMP-4001,,
+Carlos Mendez,803mi,,Executive,,187.02,11.79,MRB,EMP-4001,PRJ-507,
+Hannah Kim,201,29/08/2025,HR,CC-1300,416.62,,C. Mendez,EMP-3021,PRJ-118,—
+Liam Schultz,,25/05/2025,Logistics,CC-5200,194.2,,C. Mendez,EMP-3445,,
+Nathan Park,89,30/04/2025,IT,CC-3300,69.53,10,auto-approved,EMP-2893,PRJ-839,
+Priya Patel,47,9-Nov-25,Engineering,,,,JBL,EMP-1593,,
+,91,"Apr 3, 2025",Sales,,,,auto-approved,EMP-1042,,??
+Aisha Rahman,1309mi,20/06/2025,,CC-5000,,0.27,C. Mendez,,PRJ-282,—
+Kara Ng,223,2025-05-28,Customer Success,CC-7000,192.12,,C. Mendez,EMP-1877,,
+Sam Whitaker,234,18-Jun-25,Engineering,CC-3000,220.26,,ops-mgr,EMP-1593,PRJ-132,
+Yuki Tanaka,70,06/14/2025,,CC-9000,318.38,,auto-approved,EMP-1455,,
+Camila Rivera,165,2025-10-25,Construction,CC-6000,345.52,,,EMP-2901,,
+Jamal Ferguson,2058mi,2025-05-22,Finance,,,,MRB,EMP-4201,PRJ-827,
+Ines Larsen,869,2025-10-10,Field Operations,CC-5100,296.3,7.49,auto-approved,EMP-2187,PRJ-609,n/a
+Ben Friedman,~179,2025-02-01,Field Ops,CC-5100,,7.73,,EMP-2187,PRJ-763,
+Rachel Stein,204,"Feb 8, 2025",,,,,,EMP-4102,PRJ-163,
+Owen MacAllister,119,03/31/2025,Property Mgmt,CC-8100,,,MRB,EMP-2678,PRJ-633,—
+Diego Hernandez,869,2025-04-08,Maintenance,CC-8000,145.63,11.53,ops-mgr,EMP-2456,,
+Jamal Ferguson,664,12/25/2025,,CC-1200,,,,EMP-4201,,see notes
+Hannah Kim,100,"Nov 12, 2025",HR,CC-1300,,2.08,,EMP-3021,PRJ-655,
+Nathan Park,2402mi,06/13/2025,,CC-3300,320.87,,,,PRJ-908,
+Tyrell Washington,51,09/01/2025,Sales,CC-2000,,,auto-approved,EMP-1298,PRJ-914,
+Marcus Bell,,21-Apr-25,,CC-5100,,,auto-approved,EMP-2187,,ok
+Sam Whitaker,140,2025-09-03,Engineering,CC-3000,,13.17,auto-approved,EMP-1593,,
+,376,"Aug 16, 2025",Sales,CC-2000,,5.19,,EMP-1042,,
+,163,2025-11-21,Field Ops,,160.93,,,EMP-2187,PRJ-686,
+Carlos Mendez,638,2025-05-27,Executive,CC-1100,268.62,,auto-approved,EMP-4001,PRJ-847,—
+Sofia Russo,742,"Sep 11, 2025",Marketing,CC-4000,47.71,6.95,C. Mendez,EMP-1666,PRJ-262,
+Aisha Rahman,520mi,09/19/2025,Inspections,CC-5000,30.23,22.34,C. Mendez,EMP-2104,PRJ-296,see notes
+Liam Schultz,235 KM,8-Feb-25,Logistics,,,,,EMP-3445,PRJ-531,

@@ -1,0 +1,26 @@
+Employee Name,Vendor,Amount,Date,Department,Payment Method,Receipt Number,Description
+Sarah Chen,Staples,142.67,01/10/2025,Sales,Corporate Visa,RCT-90001,Office supplies for client presentation
+Marcus Bell,Shell Gas Station,89.45,01/15/2025,Field Operations,Corporate Visa,RCT-90002,Fuel for site visit vehicle
+Priya Patel,Amazon Web Services,2400.00,01/20/2025,Engineering,Corporate Amex,RCT-90003,Monthly cloud hosting
+James O'Brien,Hilton Hotels,387.92,02/01/2025,Sales,Corporate Visa,RCT-90004,Client dinner accommodation
+Hannah Kim,LinkedIn,599.00,02/05/2025,HR,Corporate Amex,RCT-90005,Job posting premium tier
+Diego Hernandez,Home Depot,234.18,02/12/2025,Maintenance,Corporate Visa,RCT-90006,Replacement HVAC filters
+Elena Voss,Delta Air Lines,412.50,02/18/2025,Customer Success,Corporate Amex,RCT-90007,Flight to customer QBR
+Carlos Mendez,Ruth's Chris Steak House,285.30,02/25/2025,Executive,Corporate Amex,RCT-90008,Board dinner
+Olivia Chen,FedEx,67.89,03/03/2025,Sales,Corporate Visa,RCT-90009,Priority shipping contracts
+Nathan Park,Dell Technologies,1899.99,03/10/2025,IT,Purchase Order,RCT-90010,Replacement laptop
+Aisha Rahman,Marriott International,456.78,03/15/2025,Inspections,Corporate Visa,RCT-90011,2-night stay for plant audit
+Liam Schultz,United Airlines,534.00,03/22/2025,Logistics,Corporate Amex,RCT-90012,Flight to distribution center
+Sofia Russo,Canva Pro,119.99,03/28/2025,Marketing,Corporate Visa,RCT-90013,Annual design subscription
+Ben Friedman,Grainger,678.45,04/02/2025,Field Operations,Purchase Order,RCT-90014,Safety equipment order
+Rachel Stein,LexisNexis,450.00,04/08/2025,Legal,Corporate Amex,RCT-90015,Legal research subscription
+Owen MacAllister,Lowe's,312.56,04/15/2025,Property Management,Corporate Visa,RCT-90016,Landscaping supplies
+Tyrell Washington,Uber,47.82,04/20/2025,Sales,Personal Card (Reimbursement),RCT-90017,Airport to client office
+Devon Walsh,Ferguson HVAC,1245.00,04/28/2025,Facilities,Purchase Order,RCT-90018,Quarterly maintenance contract
+Yuki Tanaka,Fisher Scientific,3200.00,05/05/2025,R&D,Purchase Order,RCT-90019,Lab reagents and supplies
+Kara Ng,Southwest Airlines,289.00,05/12/2025,Customer Success,Corporate Amex,RCT-90020,Customer site visit flight
+Sam Whitaker,Digi-Key Electronics,456.23,05/19/2025,Engineering,Corporate Visa,RCT-90021,Prototype components
+Maria Lopez,Salesforce,3600.00,05/26/2025,Sales,Corporate Amex,RCT-90022,CRM license renewal
+Camila Rivera,Caterpillar Rental,2800.00,06/02/2025,Construction,Purchase Order,RCT-90023,Equipment rental - 2 weeks
+Jamal Ferguson,Bloomberg Terminal,2100.00,06/09/2025,Finance,Corporate Amex,RCT-90024,Monthly terminal access
+Ines Larsen,Snap-on Tools,534.67,06/16/2025,Field Operations,Corporate Visa,RCT-90025,Specialized diagnostic tools

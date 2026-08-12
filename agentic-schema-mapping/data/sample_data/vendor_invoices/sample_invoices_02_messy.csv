@@ -1,0 +1,16 @@
+vendor,inv #,date,due,total,dept,GL,terms,what for
+AWS,INV-2025-0001,2025-01-05,2025-02-04,$18750,Engineering,5220,net 30,cloud hosting Jan
+Microsoft Corp,INV-2025-0002,Jan 10 2025,Feb 9 2025,4200,IT,5220,Net30,365 licenses
+Salesforce Inc.,INV-2025-0003,01/15/2025,03/16/2025,12600,Sales & BD,5220,net60,CRM Q1
+FedEx Ground,INV-2025-0004,20/01/2025,19/02/2025,1834.56,Logistics,6200,Net 30,shipping jan
+CBRE Group,INV-2025-0005,2025-02-01,2025-03-03,45000,Facilities,5510,30 days,HQ rent feb
+Deloitte LLP,INV-2025-0006,"Feb 5, 2025","Apr 6, 2025",28500,Finance & Accounting,5420,60 days,Q4 audit
+AT&T Business,INV-2025-0007,02/10/2025,03/12/2025,$3456.78,Info Tech,5700,net 30,telecom feb
+Workday Inc,INV-2025-0008,15-Feb-25,16-Apr-25,8900,Human Resources,5220,net60,HCM sub
+Datadog Inc,INV-2025-0009,2025-02-20,2025-03-22,6750,Eng,5220,30,monitoring
+WeWork,INV-2025-0010,Mar 1 2025,Mar 31 2025,$12500,Sales,5510,net 30,coworking space
+Adobe,INV-2025-0011,03/05/2025,04/04/2025,2340,Marketing,5220,Net 30,creative cloud
+UPS Freight,INV-2025-0012,2025-03-10,2025-04-09,2156.34,Warehouse/Dist,6200,30 days,mar shipping
+Okta Inc.,INV-2025-0013,15/03/2025,14/04/2025,4500,IT,5220,net30,identity mgmt Q2
+Baker McKenzie LLP,INV-2025-0014,"Mar 20, 2025","May 19, 2025",$15750,Legal,5410,net 60,patent work
+Gartner Inc,INV-2025-0015,2025-04-01,2025-05-01,22000,Executive,5420,30,annual research

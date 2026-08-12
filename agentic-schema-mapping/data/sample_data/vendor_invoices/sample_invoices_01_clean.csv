@@ -1,0 +1,21 @@
+Vendor Name,Invoice Number,Invoice Date,Due Date,Amount,Currency,Department,GL Account,Payment Terms,Description
+Amazon Web Services,INV-2025-0001,01/05/2025,02/04/2025,18750.00,USD,Engineering,5220,Net 30,Cloud infrastructure - January
+Microsoft,INV-2025-0002,01/10/2025,02/09/2025,4200.00,USD,IT,5220,Net 30,Microsoft 365 enterprise licenses
+Salesforce,INV-2025-0003,01/15/2025,03/16/2025,12600.00,USD,Sales,5220,Net 60,CRM platform - Q1
+FedEx,INV-2025-0004,01/20/2025,02/19/2025,1834.56,USD,Logistics,6200,Net 30,January shipping charges
+CBRE,INV-2025-0005,02/01/2025,03/03/2025,45000.00,USD,Facilities,5510,Net 30,February office rent - HQ
+Deloitte,INV-2025-0006,02/05/2025,04/06/2025,28500.00,USD,Finance,5420,Net 60,Q4 audit engagement
+AT&T,INV-2025-0007,02/10/2025,03/12/2025,3456.78,USD,IT,5700,Net 30,Telecom services - February
+Workday,INV-2025-0008,02/15/2025,04/16/2025,8900.00,USD,HR,5220,Net 60,HCM platform subscription
+Datadog,INV-2025-0009,02/20/2025,03/22/2025,6750.00,USD,Engineering,5220,Net 30,Observability platform
+WeWork,INV-2025-0010,03/01/2025,03/31/2025,12500.00,USD,Sales,5510,Net 30,March co-working space
+Adobe Systems,INV-2025-0011,03/05/2025,04/04/2025,2340.00,USD,Marketing,5220,Net 30,Creative Cloud enterprise
+UPS,INV-2025-0012,03/10/2025,04/09/2025,2156.34,USD,Warehouse,6200,Net 30,March shipping and handling
+Okta,INV-2025-0013,03/15/2025,04/14/2025,4500.00,USD,IT,5220,Net 30,Identity management - Q2
+Baker McKenzie,INV-2025-0014,03/20/2025,05/19/2025,15750.00,USD,Legal,5410,Net 60,Patent filing services
+Gartner,INV-2025-0015,04/01/2025,05/01/2025,22000.00,USD,Executive,5420,Net 30,Research subscription - annual
+Snowflake,INV-2025-0016,04/05/2025,05/05/2025,9800.00,USD,Engineering,5220,Net 30,Data platform - April
+Marriott International,INV-2025-0017,04/10/2025,05/10/2025,8945.67,USD,Sales,5140,Net 30,Q1 corporate travel - lodging
+Verizon,INV-2025-0018,04/15/2025,05/15/2025,2890.45,USD,IT,5710,Net 30,Mobile fleet - April
+HubSpot,INV-2025-0019,04/20/2025,06/19/2025,5400.00,USD,Marketing,5220,Net 60,Marketing automation platform
+ServiceNow,INV-2025-0020,05/01/2025,06/30/2025,11200.00,USD,IT,5220,Net 60,ITSM platform subscription

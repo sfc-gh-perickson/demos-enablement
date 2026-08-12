@@ -1,0 +1,49 @@
+Employee,Miles Driven,Date,Department,Purpose,Employee ID
+Sarah Chen,42.5,01/15/2025,Sales,Client meeting - Acme Corp,EMP-1042
+Marcus Bell,118.3,01/22/2025,Field Operations,Site inspection - Riverside facility,EMP-2187
+Priya Patel,67.0,02/03/2025,Engineering,Equipment pickup from warehouse,EMP-1593
+James O'Brien,235.8,02/11/2025,Sales,Multi-client roadshow,EMP-1042
+Hannah Kim,15.2,02/18/2025,HR,University career fair,EMP-3021
+Diego Hernandez,89.4,03/01/2025,Maintenance,Quarterly building inspections,EMP-2456
+Elena Voss,156.7,03/08/2025,Customer Success,On-site customer training,EMP-1877
+Carlos Mendez,44.1,03/15/2025,Executive,Board meeting at downtown office,EMP-4001
+Olivia Chen,203.5,03/22/2025,Sales,Regional conference attendance,EMP-1042
+Nathan Park,31.8,04/02/2025,IT,Data center maintenance visit,EMP-2893
+Aisha Rahman,77.6,04/10/2025,Inspections,Safety audit - North plant,EMP-2104
+Liam Schultz,142.9,04/18/2025,Logistics,Carrier coordination meetings,EMP-3445
+Sofia Russo,55.3,04/25/2025,Marketing,Event venue walkthrough,EMP-1666
+Ben Friedman,188.2,05/02/2025,Field Operations,Emergency repair coordination,EMP-2187
+Rachel Stein,26.4,05/10/2025,Legal,Court filing at county courthouse,EMP-4102
+Owen MacAllister,94.7,05/17/2025,Property Management,Tenant move-in coordination,EMP-2678
+Tyrell Washington,312.6,05/24/2025,Sales,Quarterly territory coverage,EMP-1298
+Devon Walsh,48.9,06/01/2025,Facilities,Vendor site evaluation,EMP-3112
+Yuki Tanaka,71.2,06/08/2025,R&D,Lab equipment delivery oversight,EMP-1455
+Kara Ng,163.4,06/15/2025,Customer Success,Implementation kickoff - 3 sites,EMP-1877
+Sam Whitaker,38.6,06/22/2025,Engineering,Component sourcing trip,EMP-1593
+Maria Lopez,227.1,06/30/2025,Sales,End-of-quarter client visits,EMP-1042
+Camila Rivera,82.5,07/07/2025,Construction,New office build site check,EMP-2901
+Jamal Ferguson,19.8,07/14/2025,Finance,Bank branch meeting,EMP-4201
+Ines Larsen,145.3,07/21/2025,Field Operations,Regional safety walkthrough,EMP-2187
+Devon Walsh,56.7,07/28/2025,Facilities,HVAC contractor evaluation,EMP-3112
+Marcus Bell,201.4,08/04/2025,Field Operations,Multi-site audit trail,EMP-2187
+Priya Patel,33.9,08/11/2025,Engineering,Prototype test at partner lab,EMP-1593
+Hannah Kim,108.6,08/18/2025,HR,Benefits fair at satellite office,EMP-3021
+Carlos Mendez,74.2,08/25/2025,Executive,Investor meeting cross-town,EMP-4001
+Elena Voss,291.8,09/01/2025,Customer Success,Quarterly business reviews - 5 clients,EMP-1877
+Nathan Park,47.3,09/08/2025,IT,Network closet upgrades - 2 floors,EMP-2893
+Sofia Russo,185.9,09/15/2025,Marketing,Trade show setup and teardown,EMP-1666
+Aisha Rahman,62.1,09/22/2025,Inspections,Environmental compliance check,EMP-2104
+Liam Schultz,98.7,09/30/2025,Logistics,Warehouse transfer coordination,EMP-3445
+Owen MacAllister,134.5,10/07/2025,Property Management,Lease renewal site visits,EMP-2678
+Tyrell Washington,256.3,10/14/2025,Sales,New territory development,EMP-1298
+Ben Friedman,41.6,10/21/2025,Field Operations,Equipment calibration at plant,EMP-2187
+Rachel Stein,88.9,10/28/2025,Legal,Deposition at opposing counsel,EMP-4102
+Yuki Tanaka,153.2,11/04/2025,R&D,Supplier qualification visit,EMP-1455
+Kara Ng,29.7,11/11/2025,Customer Success,Executive sponsor dinner,EMP-1877
+Sam Whitaker,176.8,11/18/2025,Engineering,Factory acceptance testing,EMP-1593
+Maria Lopez,63.4,11/25/2025,Sales,Holiday client appreciation visits,EMP-1042
+Jamal Ferguson,112.5,12/02/2025,Finance,Year-end audit prep at branch,EMP-4201
+Camila Rivera,87.3,12/09/2025,Construction,Final punch list walkthrough,EMP-2901
+Ines Larsen,204.6,12/16/2025,Field Operations,Year-end equipment inventory,EMP-2187
+Diego Hernandez,55.8,12/23/2025,Maintenance,Holiday building lockdown check,EMP-2456
+James O'Brien,143.7,12/30/2025,Sales,Pipeline planning with partners,EMP-1042
