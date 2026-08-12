@@ -70,7 +70,7 @@ Upload as many of the sample files as you'd like to test with. The agent discove
 
 ### Open the Agent
 
-1. Navigate to **Snowflake Intelligence** in Snowsight
+1. Navigate to **Snowflake CoWork** in Snowsight
 2. Select **Schema Mapper Agent**
 3. Start chatting
 

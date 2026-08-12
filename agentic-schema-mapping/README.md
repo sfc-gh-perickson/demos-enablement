@@ -1,6 +1,6 @@
 # Agentic Schema Mapping
 
-An all-in-Snowflake pipeline that maps messy CSV data into canonical financial table schemas. A **Cortex Agent** orchestrates the workflow via Snowflake Intelligence chat, using custom tools (stored procedures/UDFs) for profiling, AI-powered mapping proposals, and deterministic COPY INTO execution.
+An all-in-Snowflake pipeline that maps messy CSV data into canonical financial table schemas. A **Cortex Agent** orchestrates the workflow via Snowflake CoWork chat, using custom tools (stored procedures/UDFs) for profiling, AI-powered mapping proposals, and deterministic COPY INTO execution.
 
 ---
 
@@ -8,7 +8,7 @@ An all-in-Snowflake pipeline that maps messy CSV data into canonical financial t
 
 ```
 ┌─────────────────────────────────────────────────────────────────────────────┐
-│  CORTEX AGENT (Snowflake Intelligence)                                      │
+│  CORTEX AGENT (Snowflake CoWork)                                      │
 │  Orchestrates the workflow, presents results, gets user approval             │
 ├─────────────────────────────────────────────────────────────────────────────┤
 │                                                                              │
@@ -120,7 +120,7 @@ Agent: "Loaded 31 rows into PURCHASE_EXPENSES (0 rejected)"
 
 **Object:** `ACME_FINANCE.INGESTION.SCHEMA_MAPPER_AGENT`
 
-Created via `CREATE AGENT ... FROM SPECIFICATION`. Uses Snowflake Intelligence as the chat UI. Has 6 custom tools (type `"generic"`) backed by UDFs and stored procedures.
+Created via `CREATE AGENT ... FROM SPECIFICATION`. Uses Snowflake CoWork as the chat UI. Has 6 custom tools (type `"generic"`) backed by UDFs and stored procedures.
 
 | Tool | Type | Identifier | Purpose |
 |------|------|-----------|---------|
@@ -209,7 +209,7 @@ PUT 'file:///path/to/expense_data.csv' @ACME_FINANCE.INGESTION.UPLOAD_STAGE;
 ALTER STAGE ACME_FINANCE.INGESTION.UPLOAD_STAGE REFRESH;
 ```
 
-Then open **Snowflake Intelligence** in Snowsight, select **Schema Mapper Agent**, and say:
+Then open **Snowflake CoWork** in Snowsight, select **Schema Mapper Agent**, and say:
 > "Map expense_data.csv"
 
 ### Re-deployment
@@ -269,7 +269,7 @@ First mapping of a new format: **~950 tokens** + **~900/column** needing entity 
 
 ## Known Limitations
 
-- **File upload:** Snowflake Intelligence attachments don't auto-stage files. Users must `PUT` files to `@UPLOAD_STAGE` first (via Snowsight, SnowSQL, or integrated upload flow).
+- **File upload:** Snowflake CoWork attachments don't auto-stage files. Users must `PUT` files to `@UPLOAD_STAGE` first (via Snowsight, SnowSQL, or integrated upload flow).
 - **Date ambiguity:** DD/MM/YYYY vs MM/DD/YYYY is ambiguous for dates like `01/02/2025`. `DATE_INPUT_FORMAT = 'AUTO'` uses Snowflake's heuristic (US-format bias).
 - **Entity resolution limited to 30 distinct values:** `SP_RESOLVE_COLUMN_VALUES` sends up to 30 distinct values to the LLM at a time.
 - **3 templates in scope:** Only mileage, purchases, and invoices. Additional financial data types need DDL + reference data.

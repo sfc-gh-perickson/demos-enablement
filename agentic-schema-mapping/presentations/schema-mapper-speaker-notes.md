@@ -10,7 +10,7 @@ Organizations receive financial data (expense reports, mileage claims, vendor in
 
 **Talking Points:**
 
-- This is a fully working solution — live in a Snowflake account, usable via Snowflake Intelligence today.
+- This is a fully working solution — live in a Snowflake account, usable via Snowflake CoWork today.
 - Key stats: 0 tokens per row (LLM only proposes column mapping once), ~950 tokens for a brand new format + ~900/entity resolution column, <5s cached reload, 6 agent tools (including entity resolution preview).
 - "All-in-Snowflake" means: no external services, no APIs, no ETL tools. Agent, procedures, AI_COMPLETE, COPY INTO — everything runs inside the same Snowflake account.
 - Demo-able right now if they want to see it live.
@@ -174,7 +174,7 @@ Organizations receive financial data (expense reports, mileage claims, vendor in
 
 **Talking Points:**
 
-- Open Snowflake Intelligence → select Schema Mapper Agent → say "Map sample_mileage_02_messy.csv".
+- Open Snowflake CoWork → select Schema Mapper Agent → say "Map sample_mileage_02_messy.csv".
 - Watch the agent: calls list_staged_files (confirms file exists) → calls profile_file (shows column metadata) → calls propose_mapping (AI_COMPLETE or cache hit) → presents mapping table with unmapped columns → calls preview_resolution for entity columns → shows resolution table → wait for approval.
 - Say "Yes, approve it". Watch execute_mapping fire. See "Loaded 20 rows into MILEAGE_CLAIMS (0 rejected)". Agent shows sample of loaded data.
 - BONUS: immediately run the same file again. Watch the cache hit — no AI_COMPLETE call, instant mapping proposal, <5s total.
@@ -187,7 +187,7 @@ Organizations receive financial data (expense reports, mileage claims, vendor in
 ### Model Selection
 
 - **Claude-4-sonnet** is required for reliable JSON output from AI_COMPLETE. Tested with other models — they hallucinated column names that didn't exist in the source file and inconsistently followed the JSON schema.
-- The agent itself runs on whatever model Snowflake Intelligence uses for agents.
+- The agent itself runs on whatever model Snowflake CoWork uses for agents.
 
 ### Agent Configuration Gotchas
 
