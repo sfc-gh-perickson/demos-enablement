@@ -56,7 +56,8 @@ CREATE OR REPLACE SEMANTIC VIEW APP.FRAUD_SEMANTIC_VIEW
     priorities.inv_status AS INVESTIGATION_STATUS COMMENT = 'PENDING, AGENT_REVIEWED, ESCALATED, MONITORING, or CLEARED',
     reports.action AS RECOMMENDED_ACTION COMMENT = 'ESCALATE MONITOR BLOCK CLEAR',
     reports.tid AS THREAD_ID COMMENT = 'Conversation thread ID for follow-up',
-    transactions.chan AS CHANNEL COMMENT = 'POS ONLINE or MOBILE',
+    transactions.chan AS CHANNEL COMMENT = 'POS ONLINE MOBILE or ATM',
+    transactions.txn_type AS TRANSACTION_TYPE COMMENT = 'PURCHASE REFUND TRANSFER or WITHDRAWAL',
     transactions.cust AS CUSTOMER_ID COMMENT = 'Customer who transacted',
     customers.cust_risk AS RISK_TIER COMMENT = 'Risk classification',
     customers.cust_status AS ACCOUNT_STATUS COMMENT = 'ACTIVE or SUSPENDED'
