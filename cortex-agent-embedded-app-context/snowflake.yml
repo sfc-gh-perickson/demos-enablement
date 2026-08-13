@@ -1,0 +1,13 @@
+definition_version: 2
+entities:
+  context_scoped_agent_demo:
+    type: streamlit
+    identifier:
+      name: CONTEXT_SCOPED_AGENT_DEMO
+      database: CORTEX_AGENT_DEMO
+      schema: ANALYTICS
+    query_warehouse: COMPUTE_WH
+    main_file: app.py
+    artifacts:
+      - app.py
+      - agent_client.py

@@ -21,6 +21,7 @@ An internal enablement repository for Snowflake sales engineers and account exec
   - [Dynamic Time-Period Metrics](#dynamic-time-period-metrics)
   - [Model Registry](#model-registry)
   - [Scoping Agentic Implementations](#scoping-agentic-implementations)
+  - [Cortex Agent Embedded App Context](#cortex-agent-embedded-app-context)
   - [Cortex Agent Document Context](#cortex-agent-document-context)
   - [Cortex Agent Cost Observability](#cortex-agent-cost-observability)
   - [Agent Data Flywheel](#agent-data-flywheel)
@@ -34,7 +35,7 @@ An internal enablement repository for Snowflake sales engineers and account exec
 
 ## Overview
 
-This repository contains eighteen enablement modules covering key Cortex AI and Snowflake ML topics:
+This repository contains nineteen enablement modules covering key Cortex AI and Snowflake ML topics:
 
 | Module | Audience | Format | Slides |
 |--------|----------|--------|--------|
@@ -51,6 +52,7 @@ This repository contains eighteen enablement modules covering key Cortex AI and 
 | Dynamic Time-Period Metrics | SEs, Analytics Engineers, Data Engineers | Presentation + Hands-on Lab | [View](https://sfc-gh-perickson.github.io/demos-enablement/dynamic-time-period-metrics/presentations/dynamic-time-period-metrics.html) |
 | Model Registry | SEs, Data Scientists, ML Engineers | Presentation + Hands-on Lab | [View](https://sfc-gh-perickson.github.io/demos-enablement/model-registry/presentations/model-registry-overview.html) |
 | Scoping Agentic Implementations | Customers, SEs, Solution Architects | Presentation + Workshop | [View](https://sfc-gh-perickson.github.io/demos-enablement/scoping-agentic-implementations/presentations/scoping-agentic-implementations.html) |
+| Cortex Agent Embedded App Context | SEs, Solution Architects | Presentation + Demo App | [View](https://sfc-gh-perickson.github.io/demos-enablement/cortex-agent-embedded-app-context/presentations/cortex-agent-embedded-app-context.html) |
 | Cortex Agent Document Context | SEs, Platform Engineers | Presentation + Hands-on Lab + React Demo | [View](https://sfc-gh-perickson.github.io/demos-enablement/cortex-agent-document-context/presentations/cortex-agent-document-context.html) |
 | Cortex Agent Cost Observability | SEs, FinOps Admins | Presentation + Hands-on Lab | [View](https://sfc-gh-perickson.github.io/demos-enablement/cortex-agent-cost-observability/presentations/cortex-agent-cost-observability.html) |
 | Agent Data Flywheel | SEs, AEs, Solution Architects | Presentation | [View](https://sfc-gh-perickson.github.io/demos-enablement/agent-data-flywheel/presentations/ai-agent-data-flywheel.html) |
@@ -425,6 +427,37 @@ The workshop guides participants through persona mapping, question taxonomy crea
 
 ---
 
+### Cortex Agent Embedded App Context
+
+**Location:** `cortex-agent-embedded-app-context/`
+
+Demonstrates how to scope Cortex Agent responses to the user's current application context by injecting page state into a system message when calling a named agent object. The agent sees what the user sees and tailors its answers accordingly.
+
+**Topics covered:**
+- Named agent objects (CREATE AGENT with pre-configured tools)
+- Context injection via system messages in the messages array
+- Persona-based response scoping
+- Streamlit-in-Snowflake deployment with `_snowflake.send_snow_api_request()`
+
+**Contents:**
+
+| File | Description |
+|------|-------------|
+| [`presentations/cortex-agent-embedded-app-context.html`](https://sfc-gh-perickson.github.io/demos-enablement/cortex-agent-embedded-app-context/presentations/cortex-agent-embedded-app-context.html) | Slide deck |
+| `setup.sql` | SQL setup (tables, semantic view, agent object) |
+| `snowflake.yml` | SiS deployment manifest |
+| `app.py` | Streamlit app with 3 dashboard pages + persona selector |
+| `agent_client.py` | REST API client (SiS + local PAT) |
+| `demo_notebook.ipynb` | Step-by-step walkthrough notebook |
+
+#### Prerequisites
+
+1. A Snowflake account with Cortex Agents enabled
+2. Run `cortex-agent-embedded-app-context/setup.sql` to create the `CORTEX_AGENT_DEMO` database
+3. Run locally with `streamlit run app.py` or deploy with `snow streamlit deploy --replace`
+
+---
+
 ### Cortex Agent Document Context
 
 **Location:** `cortex-agent-document-context/`
@@ -623,6 +656,14 @@ enablement/
 │   │   └── cortex-agent-cost-observability-lab.ipynb
 │   └── presentations/
 │       └── cortex-agent-cost-observability.html
+├── cortex-agent-embedded-app-context/
+│   ├── setup.sql
+│   ├── snowflake.yml
+│   ├── app.py
+│   ├── agent_client.py
+│   ├── demo_notebook.ipynb
+│   └── presentations/
+│       └── cortex-agent-embedded-app-context.html
 ├── cortex-agent-document-context/
 │   ├── lab/
 │   │   ├── setup.sql
@@ -735,6 +776,7 @@ enablement/
    - **Dynamic Time-Period Metrics:** Run `dynamic-time-period-metrics/lab/setup.sql` before starting the notebook
    - **Model Registry:** Run `python model-registry/train_model.py` then open `model-registry/register_model.ipynb`
    - **Scoping Agentic Implementations:** Run `scoping-agentic-implementations/lab/setup.sql` before starting the notebook
+   - **Cortex Agent Embedded App Context:** Run `cortex-agent-embedded-app-context/setup.sql`, then `streamlit run app.py` or `snow streamlit deploy --replace`
    - **Cortex Agent Document Context:** Run `cortex-agent-document-context/lab/setup.sql`, then optionally `python lab/backend.py` for the React demo
    - **Cortex Agent Cost Observability:** Run `cortex-agent-cost-observability/lab/setup.sql` before starting the notebook
    - **Agent Observability & Analysis:** Follow notebook Section 1 in `agent_observability_analysis/observability-to-evals.ipynb` (self-contained setup)

@@ -1,0 +1,585 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Cortex Agent Embedded App Context</title>
+  <style>
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+
+:root {
+  --bg: #0F1B2D;
+  --sidebar-bg: #1B2A4A;
+  --primary: #29B5E8;
+  --accent: #7C3AED;
+  --text: #E2E8F0;
+  --text-muted: #94A3B8;
+  --card-bg: #162236;
+  --border: #2D4A6F;
+  --green: #10B981;
+  --orange: #F59E0B;
+  --red: #EF4444;
+}
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+body {
+  font-family: 'Inter', sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  line-height: 1.6;
+  overflow-x: hidden;
+}
+
+.progress-bar {
+  position: fixed;
+  top: 0;
+  left: 0;
+  height: 3px;
+  background: linear-gradient(90deg, var(--primary), var(--accent));
+  z-index: 1000;
+  transition: width 0.1s;
+}
+
+.sidebar {
+  position: fixed;
+  left: 0;
+  top: 0;
+  width: 260px;
+  height: 100vh;
+  background: var(--sidebar-bg);
+  padding: 2rem 1.5rem;
+  overflow-y: auto;
+  border-right: 1px solid var(--border);
+  z-index: 100;
+}
+
+.sidebar h2 {
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--primary);
+  margin-bottom: 1.5rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.sidebar a {
+  display: block;
+  color: var(--text-muted);
+  text-decoration: none;
+  padding: 0.5rem 0.75rem;
+  border-radius: 6px;
+  font-size: 0.85rem;
+  margin-bottom: 0.25rem;
+  transition: all 0.2s;
+}
+
+.sidebar a:hover,
+.sidebar a.active {
+  color: var(--text);
+  background: rgba(41, 181, 232, 0.1);
+}
+
+.sidebar a.active {
+  border-left: 3px solid var(--primary);
+  padding-left: calc(0.75rem - 3px);
+}
+
+.main {
+  margin-left: 260px;
+  padding: 0;
+}
+
+.slide {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  padding: 4rem 3rem;
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+.slide h1 {
+  font-size: 2.5rem;
+  font-weight: 700;
+  margin-bottom: 1rem;
+  background: linear-gradient(135deg, var(--primary), var(--accent));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.slide h2 {
+  font-size: 1.75rem;
+  font-weight: 600;
+  color: var(--text);
+  margin-bottom: 1.5rem;
+}
+
+.slide h3 {
+  font-size: 1.25rem;
+  font-weight: 500;
+  color: var(--text-muted);
+  margin-bottom: 1rem;
+}
+
+.slide p {
+  font-size: 1.1rem;
+  color: var(--text-muted);
+  max-width: 700px;
+  text-align: center;
+}
+
+.stat-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 1.5rem;
+  width: 100%;
+  margin: 2rem 0;
+}
+
+.stat-card {
+  background: var(--card-bg);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 1.5rem;
+  text-align: center;
+}
+
+.stat-card .value {
+  font-size: 2rem;
+  font-weight: 700;
+  color: var(--primary);
+}
+
+.stat-card .label {
+  font-size: 0.85rem;
+  color: var(--text-muted);
+  margin-top: 0.5rem;
+}
+
+.card-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 1.5rem;
+  width: 100%;
+  margin: 2rem 0;
+}
+
+.card {
+  background: var(--card-bg);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 1.5rem;
+}
+
+.card h4 {
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--text);
+  margin-bottom: 0.75rem;
+}
+
+.card p {
+  font-size: 0.9rem;
+  color: var(--text-muted);
+  text-align: left;
+}
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 2rem 0;
+  font-size: 0.9rem;
+}
+
+th {
+  background: var(--card-bg);
+  color: var(--primary);
+  font-weight: 600;
+  padding: 0.75rem 1rem;
+  text-align: left;
+  border-bottom: 2px solid var(--border);
+}
+
+td {
+  padding: 0.75rem 1rem;
+  border-bottom: 1px solid var(--border);
+  color: var(--text);
+}
+
+tr:hover td {
+  background: rgba(41, 181, 232, 0.05);
+}
+
+.highlight-box {
+  background: rgba(41, 181, 232, 0.1);
+  border: 1px solid var(--primary);
+  border-radius: 12px;
+  padding: 1.5rem;
+  margin: 1.5rem 0;
+  width: 100%;
+}
+
+.context-box {
+  background: rgba(124, 58, 237, 0.1);
+  border: 1px solid var(--accent);
+  border-radius: 12px;
+  padding: 1.5rem;
+  margin: 1.5rem 0;
+  width: 100%;
+}
+
+.code-block {
+  background: #0D1520;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 1.25rem;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.82rem;
+  overflow-x: auto;
+  white-space: pre;
+  color: var(--text-muted);
+  width: 100%;
+  margin: 1.5rem 0;
+  line-height: 1.7;
+}
+
+.code-block .keyword { color: var(--accent); }
+.code-block .string { color: var(--green); }
+.code-block .comment { color: #4A6A8A; }
+
+.slide ul {
+  list-style: none;
+  width: 100%;
+  max-width: 700px;
+}
+
+.slide ul li {
+  padding: 0.75rem 0;
+  padding-left: 1.5rem;
+  position: relative;
+  color: var(--text);
+  font-size: 1.05rem;
+}
+
+.slide ul li::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--primary);
+}
+
+.flow-diagram {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  margin: 2rem 0;
+  flex-wrap: wrap;
+  justify-content: center;
+}
+
+.flow-box {
+  background: var(--card-bg);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 1rem 1.5rem;
+  text-align: center;
+  min-width: 160px;
+}
+
+.flow-box .flow-title {
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  margin-bottom: 0.5rem;
+  letter-spacing: 0.05em;
+}
+
+.flow-box .flow-content {
+  font-size: 0.95rem;
+  color: var(--text);
+  font-weight: 500;
+}
+
+.flow-arrow {
+  font-size: 1.5rem;
+  color: var(--primary);
+}
+
+.badge-green { background: rgba(16, 185, 129, 0.15); color: var(--green); padding: 0.25rem 0.75rem; border-radius: 99px; font-size: 0.8rem; font-weight: 500; display: inline-block; }
+.badge-blue { background: rgba(41, 181, 232, 0.15); color: var(--primary); padding: 0.25rem 0.75rem; border-radius: 99px; font-size: 0.8rem; font-weight: 500; display: inline-block; }
+.badge-purple { background: rgba(124, 58, 237, 0.15); color: var(--accent); padding: 0.25rem 0.75rem; border-radius: 99px; font-size: 0.8rem; font-weight: 500; display: inline-block; }
+
+.anim-fade {
+  opacity: 0;
+  transform: translateY(20px);
+  transition: opacity 0.6s ease, transform 0.6s ease;
+}
+
+.anim-fade.visible {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+@media (max-width: 900px) {
+  .sidebar { display: none; }
+  .main { margin-left: 0; }
+  .stat-grid { grid-template-columns: repeat(2, 1fr); }
+  .slide { padding: 2rem 1.5rem; }
+}
+  </style>
+</head>
+<body>
+  <div class="progress-bar"></div>
+
+  <nav class="sidebar">
+    <h2>Embedded App Context</h2>
+    <a href="#hero">Overview</a>
+    <a href="#problem">The Problem</a>
+    <a href="#pattern">The Pattern</a>
+    <a href="#architecture">Architecture</a>
+    <a href="#agent-object">Agent Object</a>
+    <a href="#injection">Context Injection</a>
+    <a href="#demo">Demo Walkthrough</a>
+    <a href="#deployment">Deployment</a>
+    <a href="#closing">Next Steps</a>
+  </nav>
+
+  <main class="main">
+
+    <section class="slide" id="hero">
+      <h1>Context-Scoped Cortex Agents</h1>
+      <p>Same agent. Same data. Different context. Tailored responses.</p>
+      <div class="stat-grid" style="margin-top: 2.5rem;">
+        <div class="stat-card anim-fade"><div class="value">1</div><div class="label">Agent Object</div></div>
+        <div class="stat-card anim-fade"><div class="value">1</div><div class="label">Semantic View</div></div>
+        <div class="stat-card anim-fade"><div class="value">3</div><div class="label">Scoped Contexts</div></div>
+      </div>
+    </section>
+
+    <section class="slide" id="problem">
+      <h2>The Problem</h2>
+      <p style="margin-bottom: 2rem;">A generic agent gives generic answers. Users want responses relevant to what they're looking at right now.</p>
+      <div class="card-grid anim-fade">
+        <div class="card">
+          <h4>Without Context</h4>
+          <p>User asks "What should I focus on?" and gets a broad summary of all available data with no prioritization.</p>
+        </div>
+        <div class="card">
+          <h4>With Context</h4>
+          <p>The agent knows the user is viewing rising churn on the Executive Dashboard, and immediately focuses on churn drivers and remediation.</p>
+        </div>
+      </div>
+      <div class="highlight-box anim-fade" style="margin-top: 2rem;">
+        <strong>Key insight:</strong> The same question produces different, more relevant answers when the agent knows what the user is currently viewing.
+      </div>
+    </section>
+
+    <section class="slide" id="pattern">
+      <h2>The Pattern</h2>
+      <div class="flow-diagram anim-fade">
+        <div class="flow-box">
+          <div class="flow-title">App Layer</div>
+          <div class="flow-content">Page state, role, visible metrics</div>
+        </div>
+        <div class="flow-arrow">&rarr;</div>
+        <div class="flow-box">
+          <div class="flow-title">Messages</div>
+          <div class="flow-content">System message with context</div>
+        </div>
+        <div class="flow-arrow">&rarr;</div>
+        <div class="flow-box">
+          <div class="flow-title">Named Agent</div>
+          <div class="flow-content">Tools + model pre-configured</div>
+        </div>
+        <div class="flow-arrow">&rarr;</div>
+        <div class="flow-box">
+          <div class="flow-title">Response</div>
+          <div class="flow-content">Tailored to context</div>
+        </div>
+      </div>
+      <div class="context-box anim-fade" style="margin-top: 2rem;">
+        <strong>What changes per request:</strong> Only the system message content (page context).<br><br>
+        <strong>What stays fixed:</strong> Agent object (tools, tool_resources, model, base instructions).
+      </div>
+    </section>
+
+    <section class="slide" id="architecture">
+      <h2>Solution Architecture</h2>
+      <div class="anim-fade" style="width: 100%; overflow-x: auto;">
+        <table>
+          <thead><tr><th>Component</th><th>Object</th><th>Purpose</th></tr></thead>
+          <tbody>
+            <tr><td>Data</td><td>3 tables (MONTHLY_METRICS, PIPELINE_STAGES, CUSTOMER_SEGMENTS)</td><td>Mock SaaS analytics data</td></tr>
+            <tr><td>Semantic Layer</td><td>ANALYTICS_ASSISTANT (Semantic View)</td><td>Unified view with facts, dimensions, metrics, relationships</td></tr>
+            <tr><td>Agent</td><td>ANALYTICS_AGENT (Cortex Agent)</td><td>Pre-configured with Analyst tool + semantic view</td></tr>
+            <tr><td>App</td><td>CONTEXT_SCOPED_AGENT_DEMO (Streamlit)</td><td>3-page demo injecting different contexts</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <section class="slide" id="agent-object">
+      <h2>Agent Object (CREATE AGENT)</h2>
+      <p style="margin-bottom: 1.5rem;">All configuration lives in the agent object. No tools or instructions in the runtime request.</p>
+      <div class="code-block anim-fade"><span class="keyword">CREATE AGENT</span> CORTEX_AGENT_DEMO.ANALYTICS.ANALYTICS_AGENT
+  <span class="keyword">FROM SPECIFICATION</span>
+  $$
+  <span class="string">models:</span>
+    orchestration: claude-sonnet-4-5
+
+  <span class="string">instructions:</span>
+    response: >
+      You are an AI assistant embedded in a SaaS analytics platform.
+      Be concise and actionable. Cite specific numbers.
+
+  <span class="string">tools:</span>
+    - tool_spec:
+        type: "cortex_analyst_text_to_sql"
+        name: "analyst_tool"
+
+  <span class="string">tool_resources:</span>
+    analyst_tool:
+      semantic_view: "CORTEX_AGENT_DEMO.ANALYTICS.ANALYTICS_ASSISTANT"
+      execution_environment:
+        type: "warehouse"
+        warehouse: "COMPUTE_WH"
+  $$;</div>
+    </section>
+
+    <section class="slide" id="injection">
+      <h2>Context Injection via Messages</h2>
+      <p style="margin-bottom: 1.5rem;">Dynamic page state goes into a system message. The user's question stays clean.</p>
+      <div class="code-block anim-fade"><span class="comment"># The only thing that changes per request</span>
+payload = {
+    <span class="string">"messages"</span>: [
+        {
+            <span class="string">"role"</span>: <span class="string">"system"</span>,
+            <span class="string">"content"</span>: [{<span class="string">"type"</span>: <span class="string">"text"</span>, <span class="string">"text"</span>: context}],
+        },
+        {
+            <span class="string">"role"</span>: <span class="string">"user"</span>,
+            <span class="string">"content"</span>: [{<span class="string">"type"</span>: <span class="string">"text"</span>, <span class="string">"text"</span>: question}],
+        },
+    ],
+    <span class="string">"stream"</span>: <span class="keyword">False</span>,
+}
+
+<span class="comment"># POST /api/v2/databases/.../agents/ANALYTICS_AGENT:run</span></div>
+    </section>
+
+    <section class="slide" id="demo">
+      <h2>Demo: Same Question, Three Contexts</h2>
+      <p style="margin-bottom: 1rem;">User asks: <strong>"What should I focus on?"</strong></p>
+      <div class="anim-fade" style="width: 100%; overflow-x: auto;">
+        <table>
+          <thead><tr><th>Page</th><th>Context Injected</th><th>Agent Focus</th></tr></thead>
+          <tbody>
+            <tr>
+              <td><span class="badge-blue">Executive Dashboard</span></td>
+              <td>MRR $2.44M, Churn 3.8% (rising 6mo), NRR 101.2%, VP of Growth role</td>
+              <td>Churn trend analysis, strategic recommendations for retention</td>
+            </tr>
+            <tr>
+              <td><span class="badge-purple">Pipeline &amp; Funnel</span></td>
+              <td>Enterprise segment, 320&rarr;28 funnel, 66.7% close rate, Head of Sales role</td>
+              <td>Conversion drop-offs, deal velocity improvements</td>
+            </tr>
+            <tr>
+              <td><span class="badge-green">Customer Segments</span></td>
+              <td>Enterprise US West, 96.2% retention, 12.4% expansion, CSM role</td>
+              <td>Expansion playbook, health signals, segment-specific risks</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <section class="slide" id="deployment">
+      <h2>Deployment</h2>
+      <div class="card-grid anim-fade">
+        <div class="card">
+          <h4>1. Run setup.sql</h4>
+          <p>Creates database, tables, semantic view, agent object, and grants. One script, full environment.</p>
+        </div>
+        <div class="card">
+          <h4>2. Deploy Streamlit</h4>
+          <p><code>snow streamlit deploy --replace</code> pushes app.py and agent_client.py to Streamlit-in-Snowflake.</p>
+        </div>
+        <div class="card">
+          <h4>3. Auth handled by SiS</h4>
+          <p>Uses <code>_snowflake.send_snow_api_request()</code> internally. No PATs or tokens at runtime.</p>
+        </div>
+      </div>
+      <div class="highlight-box anim-fade" style="margin-top: 1.5rem;">
+        <strong>Project files:</strong> setup.sql, snowflake.yml, app.py, agent_client.py, demo_notebook.ipynb
+      </div>
+    </section>
+
+    <section class="slide" id="closing">
+      <h2>Next Steps</h2>
+      <div class="card-grid anim-fade">
+        <div class="card">
+          <h4>Adapt to Your Use Case</h4>
+          <p>Replace mock data with real tables. Point the semantic view at your schema. The context injection pattern stays the same.</p>
+        </div>
+        <div class="card">
+          <h4>Add More Tools</h4>
+          <p>Cortex Search for docs, custom UDFs for actions, data_to_chart for visualizations. All configured in the agent object.</p>
+        </div>
+        <div class="card">
+          <h4>Use Threads</h4>
+          <p>Add thread_id + parent_message_id for multi-turn conversations with server-side history management.</p>
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <script>
+const progressBar = document.querySelector('.progress-bar');
+window.addEventListener('scroll', () => {
+  const scrollTop = window.scrollY;
+  const docHeight = document.documentElement.scrollHeight - window.innerHeight;
+  progressBar.style.width = (scrollTop / docHeight * 100) + '%';
+});
+
+const observer = new IntersectionObserver((entries) => {
+  entries.forEach(entry => {
+    if (entry.isIntersecting) {
+      entry.target.classList.add('visible');
+    }
+  });
+}, { threshold: 0.1 });
+
+document.querySelectorAll('.anim-fade').forEach(el => observer.observe(el));
+
+const sections = document.querySelectorAll('.slide');
+const navLinks = document.querySelectorAll('.sidebar a');
+
+window.addEventListener('scroll', () => {
+  let current = '';
+  sections.forEach(section => {
+    const sectionTop = section.offsetTop - 200;
+    if (window.scrollY >= sectionTop) {
+      current = section.getAttribute('id');
+    }
+  });
+  navLinks.forEach(link => {
+    link.classList.remove('active');
+    if (link.getAttribute('href') === '#' + current) {
+      link.classList.add('active');
+    }
+  });
+});
+  </script>
+</body>
+</html>
