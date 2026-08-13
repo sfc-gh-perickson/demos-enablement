@@ -27,6 +27,7 @@ An internal enablement repository for Snowflake sales engineers and account exec
   - [Agent Data Flywheel](#agent-data-flywheel)
   - [Agent Observability & Analysis](#agent-observability--analysis)
   - [Agentic Schema Mapping](#agentic-schema-mapping)
+  - [Proactive Fraud Detection Agent](#proactive-fraud-detection-agent)
 - [Repository Structure](#repository-structure)
 - [Getting Started](#getting-started)
 - [Presentation Format](#presentation-format)
@@ -35,7 +36,7 @@ An internal enablement repository for Snowflake sales engineers and account exec
 
 ## Overview
 
-This repository contains nineteen enablement modules covering key Cortex AI and Snowflake ML topics:
+This repository contains twenty enablement modules covering key Cortex AI and Snowflake ML topics:
 
 | Module | Audience | Format | Slides |
 |--------|----------|--------|--------|
@@ -58,6 +59,7 @@ This repository contains nineteen enablement modules covering key Cortex AI and 
 | Agent Data Flywheel | SEs, AEs, Solution Architects | Presentation | [View](https://sfc-gh-perickson.github.io/demos-enablement/agent-data-flywheel/presentations/ai-agent-data-flywheel.html) |
 | Agent Observability & Analysis | SEs, ML Engineers, Platform Teams | Presentation + Hands-on Lab | [View](https://sfc-gh-perickson.github.io/demos-enablement/agent_observability_analysis/presentations/agent-observability-analysis.html) |
 | Agentic Schema Mapping | SEs, Data Engineers, Customers | Presentation + Demo | [View](https://sfc-gh-perickson.github.io/demos-enablement/agentic-schema-mapping/presentations/schema-mapper-demo.html) |
+| Proactive Fraud Detection Agent | SEs, Data Scientists, Customers | Presentation + End-to-End Demo App | [View](https://sfc-gh-perickson.github.io/demos-enablement/proactive-fraud-agent/presentations/proactive-fraud-detection-agent.html) |
 
 Each module includes an HTML slide deck and companion speaker notes. The evaluations, many-model-training, feature-store, cortex-ai-observability, cortex-agent-multi-tenancy, and label-studio-spcs modules also provide complete hands-on labs with SQL setup and notebooks.
 
@@ -620,6 +622,45 @@ An all-in-Snowflake pipeline that maps messy CSV data into canonical financial t
 
 ---
 
+### Proactive Fraud Detection Agent
+
+**Location:** `proactive-fraud-agent/`
+
+End-to-end proactive fraud detection pipeline combining ML model training, SHAP explainability, Cortex Agent investigation, and a Next.js investigation portal deployed on SPCS. Demonstrates how a Cortex Agent can autonomously investigate flagged customers and produce structured reports that human analysts review through a custom dashboard.
+
+**Topics covered:**
+- Synthetic fraud data generation (5 patterns: velocity, structuring, geo-anomaly, return abuse, new merchant)
+- Dynamic tables for real-time feature engineering (1h/24h/7d aggregates)
+- Feature Store integration with managed feature views
+- Gradient Boosting model training with per-customer SHAP explanations
+- Cortex Agent with Cortex Analyst tool for autonomous investigation
+- Threaded conversation continuity (thread_id + parent_message_id)
+- Next.js investigation portal on SPCS with OAuth authentication
+- Loss-weighted prioritization (probability x credit limit + transaction volume)
+
+**Contents:**
+
+| File | Description |
+|------|-------------|
+| [`presentations/proactive-fraud-detection-agent.html`](https://sfc-gh-perickson.github.io/demos-enablement/proactive-fraud-agent/presentations/proactive-fraud-detection-agent.html) | Slide deck |
+| `presentations/proactive-fraud-detection-agent-speaker-notes.md` | Speaker notes |
+| `setup/01_foundations.sql` | Database, schemas, synthetic data (500K txns, 10K customers) |
+| `setup/02_feature_pipeline.sql` | Dynamic tables for feature engineering |
+| `setup/03_feature_store.py` | Feature Store entity + managed feature view |
+| `setup/04_train_xgboost.py` | Model training + SHAP explanation generation |
+| `setup/05_score_priorities.sql` | Scoring and priority table creation |
+| `setup/06_agent_investigate.sql` | Cortex Agent, semantic view, investigation procedure |
+| `app/` | Next.js investigation portal (SPCS deployment) |
+
+#### Prerequisites
+
+1. A Snowflake account with Cortex AI, Feature Store, and SPCS enabled
+2. Python 3.11+ with `snowflake-ml-python`, `shap`, `scikit-learn`
+3. Node.js 18+ and Snow CLI configured
+4. Run setup scripts 01-06 in order, then deploy the app with `snow app deploy`
+
+---
+
 ## Repository Structure
 
 ```
@@ -641,6 +682,24 @@ enablement/
 │   └── presentations/
 │       ├── schema-mapper-demo.html
 │       └── schema-mapper-speaker-notes.md
+├── proactive-fraud-agent/
+│   ├── setup/
+│   │   ├── 01_foundations.sql
+│   │   ├── 02_feature_pipeline.sql
+│   │   ├── 03_feature_store.py
+│   │   ├── 04_train_xgboost.py
+│   │   ├── 05_score_priorities.sql
+│   │   ├── 06_agent_investigate.sql
+│   │   └── 07_run_agent.sql
+│   ├── app/
+│   │   ├── src/
+│   │   ├── Dockerfile
+│   │   ├── snowflake.yml
+│   │   ├── app.yml
+│   │   └── package.json
+│   └── presentations/
+│       ├── proactive-fraud-detection-agent.html
+│       └── proactive-fraud-detection-agent-speaker-notes.md
 ├── agent-data-flywheel/
 │   └── presentations/
 │       ├── ai-agent-data-flywheel.html
@@ -781,6 +840,7 @@ enablement/
    - **Cortex Agent Cost Observability:** Run `cortex-agent-cost-observability/lab/setup.sql` before starting the notebook
    - **Agent Observability & Analysis:** Follow notebook Section 1 in `agent_observability_analysis/observability-to-evals.ipynb` (self-contained setup)
    - **Agentic Schema Mapping:** Run `setup.sql`, `seed_reference_data.sql`, then `deploy.sql` in the `agentic-schema-mapping/` directory
+   - **Proactive Fraud Detection Agent:** Run scripts `01`-`06` in `proactive-fraud-agent/setup/`, then `cd app && npm install && snow app deploy`
 
 ---
 
