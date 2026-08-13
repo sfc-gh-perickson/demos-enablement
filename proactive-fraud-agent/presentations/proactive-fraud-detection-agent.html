@@ -1,0 +1,395 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Proactive Fraud Detection Agent — Snowflake Native</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+    :root {
+      --bg: #0F1B2D;
+      --sidebar-bg: #1B2A4A;
+      --primary: #29B5E8;
+      --accent: #7C3AED;
+      --text: #E2E8F0;
+      --text-muted: #94A3B8;
+      --card-bg: #162236;
+      --border: #2D4A6F;
+      --green: #10B981;
+      --orange: #F59E0B;
+      --red: #EF4444;
+    }
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { font-family: 'Inter', sans-serif; background: var(--bg); color: var(--text); line-height: 1.6; overflow-x: hidden; }
+    .progress-bar { position: fixed; top: 0; left: 0; height: 3px; background: linear-gradient(90deg, var(--primary), var(--accent)); z-index: 1000; transition: width 0.1s; }
+    .sidebar { position: fixed; left: 0; top: 0; width: 260px; height: 100vh; background: var(--sidebar-bg); padding: 2rem 1.5rem; overflow-y: auto; border-right: 1px solid var(--border); z-index: 100; }
+    .sidebar h2 { font-size: 0.85rem; font-weight: 600; color: var(--primary); margin-bottom: 1.5rem; text-transform: uppercase; letter-spacing: 0.05em; }
+    .sidebar a { display: block; color: var(--text-muted); text-decoration: none; padding: 0.5rem 0.75rem; border-radius: 6px; font-size: 0.85rem; margin-bottom: 0.25rem; transition: all 0.2s; }
+    .sidebar a:hover, .sidebar a.active { color: var(--text); background: rgba(41, 181, 232, 0.1); }
+    .sidebar a.active { border-left: 3px solid var(--primary); padding-left: calc(0.75rem - 3px); }
+    .main { margin-left: 260px; padding: 0; }
+    .slide { min-height: 100vh; display: flex; flex-direction: column; justify-content: center; align-items: center; padding: 4rem 3rem; max-width: 1200px; margin: 0 auto; }
+    .slide h1 { font-size: 2.5rem; font-weight: 700; margin-bottom: 1rem; background: linear-gradient(135deg, var(--primary), var(--accent)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; }
+    .slide h2 { font-size: 1.75rem; font-weight: 600; color: var(--text); margin-bottom: 1.5rem; }
+    .slide h3 { font-size: 1.25rem; font-weight: 500; color: var(--text-muted); margin-bottom: 1rem; }
+    .slide p { font-size: 1.1rem; color: var(--text-muted); max-width: 700px; text-align: center; }
+    .stat-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 1.5rem; width: 100%; margin: 2rem 0; }
+    .stat-card { background: var(--card-bg); border: 1px solid var(--border); border-radius: 12px; padding: 1.5rem; text-align: center; }
+    .stat-card .value { font-size: 2rem; font-weight: 700; color: var(--primary); }
+    .stat-card .label { font-size: 0.85rem; color: var(--text-muted); margin-top: 0.5rem; }
+    .card-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 1.5rem; width: 100%; margin: 2rem 0; }
+    .card { background: var(--card-bg); border: 1px solid var(--border); border-radius: 12px; padding: 1.5rem; }
+    .card h4 { font-size: 1rem; font-weight: 600; color: var(--text); margin-bottom: 0.75rem; }
+    .card p { font-size: 0.9rem; color: var(--text-muted); text-align: left; }
+    table { width: 100%; border-collapse: collapse; margin: 2rem 0; font-size: 0.9rem; }
+    th { background: var(--card-bg); color: var(--primary); font-weight: 600; padding: 0.75rem 1rem; text-align: left; border-bottom: 2px solid var(--border); }
+    td { padding: 0.75rem 1rem; border-bottom: 1px solid var(--border); color: var(--text); }
+    tr:hover td { background: rgba(41, 181, 232, 0.05); }
+    .highlight-box { background: rgba(41, 181, 232, 0.1); border: 1px solid var(--primary); border-radius: 12px; padding: 1.5rem; margin: 1.5rem 0; width: 100%; }
+    .context-box { background: rgba(124, 58, 237, 0.1); border: 1px solid var(--accent); border-radius: 12px; padding: 1.5rem; margin: 1.5rem 0; width: 100%; }
+    .warning-box { background: rgba(245, 158, 11, 0.1); border: 1px solid var(--orange); border-radius: 12px; padding: 1.5rem; margin: 1.5rem 0; width: 100%; }
+    .badge-green { background: rgba(16, 185, 129, 0.15); color: var(--green); padding: 0.25rem 0.75rem; border-radius: 99px; font-size: 0.8rem; font-weight: 500; }
+    .badge-blue { background: rgba(41, 181, 232, 0.15); color: var(--primary); padding: 0.25rem 0.75rem; border-radius: 99px; font-size: 0.8rem; font-weight: 500; }
+    .badge-purple { background: rgba(124, 58, 237, 0.15); color: var(--accent); padding: 0.25rem 0.75rem; border-radius: 99px; font-size: 0.8rem; font-weight: 500; }
+    .badge-orange { background: rgba(245, 158, 11, 0.15); color: var(--orange); padding: 0.25rem 0.75rem; border-radius: 99px; font-size: 0.8rem; font-weight: 500; }
+    .badge-red { background: rgba(239, 68, 68, 0.15); color: var(--red); padding: 0.25rem 0.75rem; border-radius: 99px; font-size: 0.8rem; font-weight: 500; }
+    .slide ul { list-style: none; width: 100%; max-width: 700px; }
+    .slide ul li { padding: 0.75rem 0; padding-left: 1.5rem; position: relative; color: var(--text); font-size: 1.05rem; }
+    .slide ul li::before { content: ''; position: absolute; left: 0; top: 50%; transform: translateY(-50%); width: 8px; height: 8px; border-radius: 50%; background: var(--primary); }
+    .anim-fade { opacity: 0; transform: translateY(20px); transition: opacity 0.6s ease, transform 0.6s ease; }
+    .anim-fade.visible { opacity: 1; transform: translateY(0); }
+    .flow-diagram { width: 100%; margin: 2rem 0; padding: 2rem; background: var(--card-bg); border: 1px solid var(--border); border-radius: 12px; }
+    .flow-row { display: flex; align-items: center; justify-content: center; gap: 0.5rem; margin-bottom: 1rem; flex-wrap: wrap; }
+    .flow-node { background: var(--sidebar-bg); border: 1px solid var(--border); border-radius: 8px; padding: 0.75rem 1.25rem; font-size: 0.85rem; font-weight: 500; color: var(--text); text-align: center; min-width: 140px; }
+    .flow-node.active { border-color: var(--primary); background: rgba(41, 181, 232, 0.1); }
+    .flow-node.ml { border-color: var(--accent); background: rgba(124, 58, 237, 0.1); }
+    .flow-node.agent { border-color: var(--green); background: rgba(16, 185, 129, 0.1); }
+    .flow-arrow { color: var(--primary); font-size: 1.25rem; }
+    .flow-arrow-down { color: var(--primary); font-size: 1.25rem; text-align: center; margin: 0.5rem 0; }
+    .comparison-row { display: flex; gap: 2rem; width: 100%; margin: 2rem 0; }
+    .comparison-col { flex: 1; background: var(--card-bg); border: 1px solid var(--border); border-radius: 12px; padding: 1.5rem; }
+    .comparison-col h4 { font-size: 1rem; font-weight: 600; margin-bottom: 1rem; }
+    .comparison-col.old h4 { color: var(--red); }
+    .comparison-col.new h4 { color: var(--green); }
+    .comparison-col ul { list-style: none; padding: 0; }
+    .comparison-col ul li { padding: 0.4rem 0; font-size: 0.9rem; color: var(--text-muted); padding-left: 1.25rem; position: relative; }
+    .comparison-col ul li::before { content: ''; position: absolute; left: 0; top: 50%; transform: translateY(-50%); width: 6px; height: 6px; border-radius: 50%; }
+    .comparison-col.old ul li::before { background: var(--red); }
+    .comparison-col.new ul li::before { background: var(--green); }
+    @media (max-width: 900px) { .sidebar { display: none; } .main { margin-left: 0; } .stat-grid { grid-template-columns: repeat(2, 1fr); } .slide { padding: 2rem 1.5rem; } .comparison-row { flex-direction: column; } }
+  </style>
+</head>
+<body>
+  <div class="progress-bar"></div>
+
+  <nav class="sidebar">
+    <h2>Proactive Fraud Agent</h2>
+    <a href="#hero">Overview</a>
+    <a href="#problem">The Problem</a>
+    <a href="#architecture">Architecture</a>
+    <a href="#pipeline">Pipeline Stages</a>
+    <a href="#feature-store">Feature Store</a>
+    <a href="#ml-model">XGBoost + SHAP</a>
+    <a href="#agent">Cortex Agent</a>
+    <a href="#portal">Investigation Portal</a>
+    <a href="#thread-continuity">Thread Continuity</a>
+    <a href="#before-after">Before vs After</a>
+    <a href="#demo-flow">Demo Flow</a>
+    <a href="#next-steps">Next Steps</a>
+  </nav>
+
+  <main class="main">
+
+    <!-- HERO -->
+    <section class="slide" id="hero">
+      <h1>Proactive Fraud Detection Agent</h1>
+      <p>A Snowflake-native pipeline that detects, explains, and investigates fraud autonomously — before anyone goes looking.</p>
+      <div class="stat-grid" style="margin-top: 2.5rem;">
+        <div class="stat-card anim-fade"><div class="value">500K</div><div class="label">Transactions Scored</div></div>
+        <div class="stat-card anim-fade"><div class="value">SHAP</div><div class="label">Explainable ML</div></div>
+        <div class="stat-card anim-fade"><div class="value">5 min</div><div class="label">Detection Latency</div></div>
+        <div class="stat-card anim-fade"><div class="value">Thread</div><div class="label">Conversation Pickup</div></div>
+      </div>
+    </section>
+
+    <!-- PROBLEM -->
+    <section class="slide" id="problem">
+      <h2>The Problem: Reactive Investigation</h2>
+      <div class="comparison-row anim-fade">
+        <div class="comparison-col old">
+          <h4>Today's Workflow</h4>
+          <ul>
+            <li>Data flows in across products</li>
+            <li>Exceptions generated by rules engine</li>
+            <li>Work items assigned to investigators</li>
+            <li>Analyst pulls up a dashboard or case</li>
+            <li>AI analyzes only AFTER human looks</li>
+          </ul>
+        </div>
+        <div class="comparison-col new">
+          <h4>Proactive Workflow</h4>
+          <ul>
+            <li>Data flows in and is featurized in real-time</li>
+            <li>ML model scores and explains every customer</li>
+            <li>Agent investigates top priorities autonomously</li>
+            <li>Reports surface with full conversation context</li>
+            <li>Analyst picks up mid-investigation, not from zero</li>
+          </ul>
+        </div>
+      </div>
+      <div class="highlight-box anim-fade">
+        <strong>Key Shift:</strong> The agent sits in Steps 1-3 of the pipeline (ingestion, intelligence, scoring) — not Step 4 (post-investigation). It finds patterns before a human goes looking.
+      </div>
+    </section>
+
+    <!-- ARCHITECTURE -->
+    <section class="slide" id="architecture">
+      <h2>End-to-End Architecture</h2>
+      <div class="flow-diagram anim-fade">
+        <div class="flow-row">
+          <div class="flow-node">Raw Transactions</div>
+          <div class="flow-arrow">&rarr;</div>
+          <div class="flow-node active">Dynamic Tables</div>
+          <div class="flow-arrow">&rarr;</div>
+          <div class="flow-node active">Feature Store</div>
+        </div>
+        <div class="flow-arrow-down">&darr;</div>
+        <div class="flow-row">
+          <div class="flow-node ml">XGBoost + SHAP</div>
+          <div class="flow-arrow">&rarr;</div>
+          <div class="flow-node ml">Priorities Table</div>
+          <div class="flow-arrow">&rarr;</div>
+          <div class="flow-node agent">Cortex Agent</div>
+        </div>
+        <div class="flow-arrow-down">&darr;</div>
+        <div class="flow-row">
+          <div class="flow-node agent">Investigation Reports</div>
+          <div class="flow-arrow">&rarr;</div>
+          <div class="flow-node" style="border-color: var(--orange); background: rgba(245, 158, 11, 0.1);">React Portal (SAR)</div>
+        </div>
+      </div>
+      <p style="margin-top: 1rem;"><span class="badge-blue">All Snowflake-native</span> &nbsp; No external infrastructure required</p>
+    </section>
+
+    <!-- PIPELINE STAGES -->
+    <section class="slide" id="pipeline">
+      <h2>Pipeline Stages</h2>
+      <div class="card-grid">
+        <div class="card anim-fade">
+          <h4><span class="badge-blue">Stage 1</span> &nbsp; Foundations</h4>
+          <p>500K synthetic transactions with 5 injected fraud patterns: velocity spikes, structuring, geographic anomalies, return abuse, and new merchant fraud.</p>
+        </div>
+        <div class="card anim-fade">
+          <h4><span class="badge-blue">Stage 2</span> &nbsp; Feature Pipeline</h4>
+          <p>Dynamic Tables compute per-customer aggregates across 1h/24h/7d windows. Incremental refresh with 5-minute target lag.</p>
+        </div>
+        <div class="card anim-fade">
+          <h4><span class="badge-purple">Stage 3</span> &nbsp; Feature Store</h4>
+          <p>Snowflake ML Feature Store SDK registers a CUSTOMER entity and FRAUD_FEATURES view with managed refresh.</p>
+        </div>
+        <div class="card anim-fade">
+          <h4><span class="badge-purple">Stage 4</span> &nbsp; ML Inference</h4>
+          <p>XGBoost classifier trained on labeled fraud patterns. SHAP TreeExplainer computes per-customer feature attributions.</p>
+        </div>
+        <div class="card anim-fade">
+          <h4><span class="badge-green">Stage 5</span> &nbsp; Prioritization</h4>
+          <p>Top 100 customers scored above threshold, ranked by fraud probability, with SHAP explanations attached.</p>
+        </div>
+        <div class="card anim-fade">
+          <h4><span class="badge-green">Stage 6</span> &nbsp; Agent Investigation</h4>
+          <p>Cortex Agent autonomously investigates each priority. Writes structured reports with thread_id for conversation continuity.</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- FEATURE STORE -->
+    <section class="slide" id="feature-store">
+      <h2>Feature Store: Single Source of Truth</h2>
+      <div class="anim-fade" style="width: 100%; overflow-x: auto;">
+        <table>
+          <thead>
+            <tr><th>Feature Category</th><th>Features</th><th>Source</th></tr>
+          </thead>
+          <tbody>
+            <tr><td><span class="badge-blue">Velocity</span></td><td>txn_count_1h, txn_count_24h, txn_count_7d</td><td>CUSTOMER_FEATURE_BASE DT</td></tr>
+            <tr><td><span class="badge-blue">Amount</span></td><td>total_amount_24h, avg_amount_7d, max_amount_7d, amount_stddev_7d</td><td>CUSTOMER_FEATURE_BASE DT</td></tr>
+            <tr><td><span class="badge-purple">Behavioral</span></td><td>unique_merchants_7d, geo_spread_24h, pct_international, pct_high_risk_merchant</td><td>TRANSACTIONS_ENRICHED DT</td></tr>
+            <tr><td><span class="badge-purple">Temporal</span></td><td>pct_night_txns, pct_weekend</td><td>CUSTOMER_FEATURE_BASE DT</td></tr>
+            <tr><td><span class="badge-orange">Derived</span></td><td>max_to_avg_ratio, velocity_change_ratio, avg_distance_from_home</td><td>Computed in DT</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="context-box anim-fade">
+        <strong>Why Feature Store?</strong> Managed refresh ensures training and inference use the same features. Entity registration enables point-in-time-correct joins for backfilling training data.
+      </div>
+    </section>
+
+    <!-- ML MODEL -->
+    <section class="slide" id="ml-model">
+      <h2>XGBoost + SHAP: Explainable Scoring</h2>
+      <div class="card-grid">
+        <div class="card anim-fade">
+          <h4>Model Training</h4>
+          <p>XGBClassifier from snowflake.ml.modeling trained on Feature Store output. Labels derived from injected fraud patterns (velocity, structuring, geo anomaly).</p>
+        </div>
+        <div class="card anim-fade">
+          <h4>SHAP Explainability</h4>
+          <p>TreeExplainer computes per-customer SHAP values. Stored as JSON array: [{feature, shap_value, direction}]. Powers the waterfall chart in the portal.</p>
+        </div>
+        <div class="card anim-fade">
+          <h4>Model Registry</h4>
+          <p>Logged as FRAUD_DETECTOR V1 in Snowflake Model Registry. predict_proba method available for batch inference via SQL.</p>
+        </div>
+      </div>
+      <div class="highlight-box anim-fade">
+        <strong>SHAP Output Example:</strong><br>
+        <code style="color: var(--primary); font-size: 0.85rem;">
+          [{"feature": "velocity_24h", "shap_value": 0.42, "direction": "increases_risk"},<br>
+          &nbsp;{"feature": "geo_spread_24h", "shap_value": 0.31, "direction": "increases_risk"},<br>
+          &nbsp;{"feature": "avg_amount_7d", "shap_value": -0.08, "direction": "decreases_risk"}]
+        </code>
+      </div>
+    </section>
+
+    <!-- AGENT -->
+    <section class="slide" id="agent">
+      <h2>Cortex Agent: Autonomous Investigation</h2>
+      <div class="flow-diagram anim-fade">
+        <div class="flow-row">
+          <div class="flow-node ml">PRIORITIES Table</div>
+          <div class="flow-arrow">&rarr;</div>
+          <div class="flow-node agent">RUN_INVESTIGATION_BATCH()</div>
+        </div>
+        <div class="flow-arrow-down">&darr;</div>
+        <div class="flow-row">
+          <div class="flow-node agent">DATA_AGENT_RUN<br><small style="color:var(--text-muted)">create_thread=TRUE</small></div>
+        </div>
+        <div class="flow-arrow-down">&darr;</div>
+        <div class="flow-row">
+          <div class="flow-node" style="border-color: var(--orange); background: rgba(245, 158, 11, 0.1);">INVESTIGATION_REPORTS<br><small style="color:var(--text-muted)">report + thread_id + action</small></div>
+        </div>
+      </div>
+      <ul class="anim-fade" style="margin-top: 1.5rem;">
+        <li>Agent has Cortex Analyst tool (semantic view over priorities, reports, transactions)</li>
+        <li>Produces structured report with recommended action: ESCALATE / MONITOR / BLOCK / CLEAR</li>
+        <li>Thread ID persisted for conversation pickup by human analysts</li>
+        <li>Runs on a 5-minute scheduled task (processes batch of 10)</li>
+      </ul>
+    </section>
+
+    <!-- PORTAL -->
+    <section class="slide" id="portal">
+      <h2>Investigation Portal (SAR / Next.js)</h2>
+      <div class="card-grid">
+        <div class="card anim-fade">
+          <h4>Dashboard View</h4>
+          <p>Priority table with fraud probability bars, SHAP factor chips, status badges (PENDING / INVESTIGATED / ESCALATED). Click any row to investigate.</p>
+        </div>
+        <div class="card anim-fade">
+          <h4>SHAP Waterfall Chart</h4>
+          <p>Visual breakdown of why the model flagged this customer. Each feature shows direction and magnitude of contribution to the fraud score.</p>
+        </div>
+        <div class="card anim-fade">
+          <h4>Agent Report</h4>
+          <p>Full investigation narrative rendered as rich text. Includes pattern analysis, severity assessment, and specific transaction concerns.</p>
+        </div>
+        <div class="card anim-fade">
+          <h4>Chat Continuation</h4>
+          <p>Live chat panel using thread_id from the reports table. Analysts continue the agent's investigation with full prior context preserved.</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- THREAD CONTINUITY -->
+    <section class="slide" id="thread-continuity">
+      <h2>Thread Continuity: The Key Differentiator</h2>
+      <div class="highlight-box anim-fade">
+        <strong>How it works:</strong><br><br>
+        1. Agent investigates a priority via <code>DATA_AGENT_RUN(..., TRUE)</code> — creates a thread<br><br>
+        2. Response includes <code>thread_id</code> in metadata — stored in INVESTIGATION_REPORTS<br><br>
+        3. React portal reads thread_id and passes it to subsequent <code>DATA_AGENT_RUN</code> calls<br><br>
+        4. Analyst picks up exactly where the agent left off — full conversation history preserved
+      </div>
+      <div class="context-box anim-fade" style="margin-top: 1.5rem;">
+        <strong>User Experience:</strong> An analyst opens the portal, sees "Customer CUST_004200 flagged for VELOCITY pattern (0.94 probability)." They click in, read the agent's report, then ask: "Show me the specific transactions between 2-3am that triggered this." The agent already knows the context.
+      </div>
+    </section>
+
+    <!-- BEFORE VS AFTER -->
+    <section class="slide" id="before-after">
+      <h2>Before vs After</h2>
+      <div class="anim-fade" style="width: 100%; overflow-x: auto;">
+        <table>
+          <thead>
+            <tr><th>Dimension</th><th>Traditional (Step 4)</th><th>Proactive (Steps 1-3)</th></tr>
+          </thead>
+          <tbody>
+            <tr><td>Detection</td><td>Rules-based exceptions</td><td><span class="badge-green">ML with SHAP explainability</span></td></tr>
+            <tr><td>Investigation</td><td>Human pulls up case manually</td><td><span class="badge-green">Agent investigates autonomously</span></td></tr>
+            <tr><td>Explainability</td><td>Rule name only</td><td><span class="badge-green">Per-customer SHAP attributions</span></td></tr>
+            <tr><td>Context</td><td>Starts from scratch each time</td><td><span class="badge-green">Thread continuity (conversation pickup)</span></td></tr>
+            <tr><td>Latency</td><td>Hours to days</td><td><span class="badge-green">5-minute pipeline</span></td></tr>
+            <tr><td>Infrastructure</td><td>External ML + app stack</td><td><span class="badge-green">100% Snowflake-native</span></td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- DEMO FLOW -->
+    <section class="slide" id="demo-flow">
+      <h2>Demo Flow (15 minutes)</h2>
+      <ul class="anim-fade">
+        <li><strong>Setup (2 min):</strong> Run SQL scripts 01-06. Show database, dynamic tables refreshing, feature store registered.</li>
+        <li><strong>ML (3 min):</strong> Run 04_train_xgboost.py. Show model metrics, SHAP summary plot, model logged to registry.</li>
+        <li><strong>Scoring (2 min):</strong> Run 05_score_priorities.sql. Query the PRIORITIES table — "Here are the top 100 risks."</li>
+        <li><strong>Agent (3 min):</strong> Call RUN_INVESTIGATION_BATCH(5). Show reports appearing in real-time with thread_ids.</li>
+        <li><strong>Portal (5 min):</strong> Open the React app. Walk through the SHAP chart, read the report, then ask a follow-up question in chat — showing the agent already has context.</li>
+      </ul>
+    </section>
+
+    <!-- NEXT STEPS -->
+    <section class="slide" id="next-steps">
+      <h2>Next Steps</h2>
+      <div class="card-grid">
+        <div class="card anim-fade">
+          <h4>Deploy to Customer Account</h4>
+          <p>Swap synthetic data for real transaction feeds. Adjust feature definitions and fraud labels to match their risk dictionary.</p>
+        </div>
+        <div class="card anim-fade">
+          <h4>Connect Real Data Sources</h4>
+          <p>Wire Snowpipe Streaming for real-time transaction ingestion. Connect to their POS, ecomm, and returns systems.</p>
+        </div>
+        <div class="card anim-fade">
+          <h4>Tune the Model</h4>
+          <p>Retrain on their labeled incidents. Adjust threshold based on acceptable false-positive rate. Add custom features for their domain.</p>
+        </div>
+        <div class="card anim-fade">
+          <h4>Scale the Agent</h4>
+          <p>Add notification integration (email/Slack on CRITICAL). Expand agent tools with customer contact history and case management APIs.</p>
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <script>
+    const progressBar = document.querySelector('.progress-bar');
+    window.addEventListener('scroll', () => {
+      const scrollTop = window.scrollY;
+      const docHeight = document.documentElement.scrollHeight - window.innerHeight;
+      progressBar.style.width = (scrollTop / docHeight * 100) + '%';
+    });
+    const observer = new IntersectionObserver((entries) => {
+      entries.forEach(entry => { if (entry.isIntersecting) entry.target.classList.add('visible'); });
+    }, { threshold: 0.1 });
+    document.querySelectorAll('.anim-fade').forEach(el => observer.observe(el));
+    const sections = document.querySelectorAll('.slide');
+    const navLinks = document.querySelectorAll('.sidebar a');
+    window.addEventListener('scroll', () => {
+      let current = '';
+      sections.forEach(section => { if (window.scrollY >= section.offsetTop - 200) current = section.getAttribute('id'); });
+      navLinks.forEach(link => { link.classList.remove('active'); if (link.getAttribute('href') === '#' + current) link.classList.add('active'); });
+    });
+  </script>
+</body>
+</html>

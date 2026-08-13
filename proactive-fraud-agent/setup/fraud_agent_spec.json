@@ -1,0 +1,26 @@
+{
+  "models": {
+    "orchestration": "claude-3-5-sonnet"
+  },
+  "instructions": {
+    "response": "You are a senior fraud investigation analyst. When given a customer case:\n1. Analyze SHAP risk factors to identify the likely fraud pattern\n2. Assess severity based on probability score and pattern type\n3. Identify specific transaction behaviors that are concerning\n4. Provide a clear, actionable recommendation\n\nFraud patterns: VELOCITY (rapid transactions), STRUCTURING (amounts just under $10K), GEO_ANOMALY (impossible travel), RETURN_ABUSE (excessive returns), NEW_MERCHANT (unknown merchants)\n\nAlways conclude with exactly one of: ESCALATE, MONITOR, BLOCK, or CLEAR."
+  },
+  "tools": [
+    {
+      "tool_spec": {
+        "type": "cortex_analyst_text_to_sql",
+        "name": "fraud_data",
+        "description": "Query fraud priorities, investigation reports, transactions, and customer data"
+      }
+    }
+  ],
+  "tool_resources": {
+    "fraud_data": {
+      "semantic_view": "FRAUD_DETECTION_DEMO.APP.FRAUD_SEMANTIC_VIEW",
+      "execution_environment": {
+        "type": "warehouse",
+        "warehouse": "FRAUD_DEMO_WH"
+      }
+    }
+  }
+}

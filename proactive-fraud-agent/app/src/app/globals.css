@@ -1,0 +1,23 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --sf-bg: #0D1B2A;
+  --sf-nav: #091520;
+  --sf-card: #132238;
+  --sf-card-deep: #0F1C2E;
+  --sf-hover: #1A3050;
+  --sf-border: #1E3A5F;
+  --sf-accent: #29B5E8;
+  --sf-accent-hover: #1E9FD0;
+  --sf-accent-muted: rgba(41, 181, 232, 0.15);
+  --sf-text: #E8F0F8;
+  --sf-text-muted: #8BA3BD;
+  --sf-text-dim: #5A7A96;
+}
+
+body {
+  background: var(--sf-bg);
+  color: var(--sf-text);
+}

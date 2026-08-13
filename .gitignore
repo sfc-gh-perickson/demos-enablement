@@ -2,3 +2,5 @@
 .snowflake/
 .cortex/
 __pycache__/
+node_modules/
+.next/

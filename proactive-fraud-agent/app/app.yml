@@ -1,0 +1,11 @@
+name: fraud-investigation-portal
+version: "1.0"
+compute_pool: FRAUD_APP_POOL
+query_warehouse: FRAUD_DEMO_WH
+ingress:
+  - port: 3000
+    public: true
+env:
+  SNOWFLAKE_DATABASE: FRAUD_DETECTION_DEMO
+  SNOWFLAKE_SCHEMA: APP
+  SNOWFLAKE_WAREHOUSE: FRAUD_DEMO_WH

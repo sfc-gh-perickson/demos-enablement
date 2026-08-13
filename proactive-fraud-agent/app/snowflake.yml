@@ -1,0 +1,44 @@
+definition_version: "2"
+
+entities:
+  fraud_app_pool:
+    type: compute-pool
+    identifier: FRAUD_APP_POOL
+    min_nodes: 1
+    max_nodes: 1
+    instance_family: CPU_X64_XS
+    auto_resume: true
+    auto_suspend_secs: 300
+
+  fraud_app_repo:
+    type: image-repository
+    identifier:
+      name: FRAUD_APP_REPO
+      database: FRAUD_DETECTION_DEMO
+      schema: APP
+
+  fraud_portal:
+    type: service
+    identifier:
+      name: FRAUD_INVESTIGATION_PORTAL
+      database: FRAUD_DETECTION_DEMO
+      schema: APP
+    compute_pool: FRAUD_APP_POOL
+    spec:
+      containers:
+        - name: app
+          image: /FRAUD_DETECTION_DEMO/APP/FRAUD_APP_REPO/fraud-portal:latest
+          env:
+            SNOWFLAKE_DATABASE: FRAUD_DETECTION_DEMO
+            SNOWFLAKE_SCHEMA: APP
+            SNOWFLAKE_WAREHOUSE: FRAUD_DEMO_WH
+          ports:
+            - port: 3000
+              protocol: TCP
+      endpoints:
+        - name: app
+          port: 3000
+          public: true
+    query_warehouse: FRAUD_DEMO_WH
+    min_instances: 1
+    max_instances: 1
