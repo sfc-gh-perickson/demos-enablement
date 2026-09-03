@@ -64,7 +64,7 @@ CALL APP.RUN_INVESTIGATION_BATCH(10);
 ```bash
 cd app
 npm install
-snow app deploy
+npm run dev
 ```
 
 ## Key Objects
