@@ -1,0 +1,15 @@
+version: 2
+
+sources:
+  - name: raw
+    description: "Raw retail data from seeds"
+    schema: "{{ target.schema }}"
+    tables:
+      - name: customers
+        description: "Raw customer data"
+      - name: products
+        description: "Product catalog"
+      - name: orders
+        description: "Customer orders"
+      - name: order_items
+        description: "Order line items"

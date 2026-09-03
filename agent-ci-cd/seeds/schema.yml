@@ -1,0 +1,31 @@
+version: 2
+
+seeds:
+  - name: customers
+    description: "Raw customer data"
+    columns:
+      - name: customer_id
+        tests:
+          - unique
+          - not_null
+  - name: products
+    description: "Product catalog"
+    columns:
+      - name: product_id
+        tests:
+          - unique
+          - not_null
+  - name: orders
+    description: "Customer orders"
+    columns:
+      - name: order_id
+        tests:
+          - unique
+          - not_null
+  - name: order_items
+    description: "Line items for orders"
+    columns:
+      - name: order_item_id
+        tests:
+          - unique
+          - not_null

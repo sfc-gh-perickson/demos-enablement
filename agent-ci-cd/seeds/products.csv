@@ -1,0 +1,21 @@
+product_id,product_name,category,subcategory,unit_price,created_at
+1,Wireless Bluetooth Headphones,Electronics,Audio,79.99,2022-01-15
+2,Cotton Crew Neck T-Shirt,Clothing,Tops,24.99,2022-02-10
+3,Stainless Steel Water Bottle,Sports,Accessories,34.99,2022-03-05
+4,LED Desk Lamp,Home & Garden,Lighting,45.99,2022-03-20
+5,Running Shoes Pro,Sports,Footwear,129.99,2022-04-12
+6,Organic Coffee Beans 1lb,Home & Garden,Kitchen,18.99,2022-05-01
+7,Laptop Stand Adjustable,Electronics,Accessories,59.99,2022-06-15
+8,Yoga Mat Premium,Sports,Fitness,39.99,2022-07-22
+9,Mystery Novel Collection,Books,Fiction,14.99,2022-08-10
+10,Wireless Mouse,Electronics,Peripherals,29.99,2022-09-05
+11,Winter Parka Jacket,Clothing,Outerwear,189.99,2022-10-18
+12,Smart Watch Series 5,Electronics,Wearables,299.99,2022-11-01
+13,Garden Tool Set,Home & Garden,Outdoor,54.99,2023-01-12
+14,Programming Handbook,Books,Technical,49.99,2023-02-20
+15,Denim Jeans Slim Fit,Clothing,Bottoms,64.99,2023-03-15
+16,Portable Bluetooth Speaker,Electronics,Audio,89.99,2023-04-08
+17,Indoor Plant Pot Set,Home & Garden,Decor,32.99,2023-05-22
+18,Basketball Official Size,Sports,Equipment,27.99,2023-06-30
+19,Science Fiction Anthology,Books,Fiction,12.99,2023-08-14
+20,4K Webcam HD,Electronics,Peripherals,149.99,2023-09-25

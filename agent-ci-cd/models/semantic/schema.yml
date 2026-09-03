@@ -1,0 +1,7 @@
+version: 2
+
+models:
+  - name: retail_analytics
+    description: "Semantic view for retail analytics - connects customers, products, and orders for natural language querying via Cortex Agent"
+    config:
+      materialized: semantic_view

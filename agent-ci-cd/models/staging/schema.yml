@@ -1,0 +1,45 @@
+version: 2
+
+models:
+  - name: stg_customers
+    description: "Staged customer data with full name"
+    columns:
+      - name: customer_id
+        tests:
+          - unique
+          - not_null
+      - name: email
+        tests:
+          - unique
+          - not_null
+
+  - name: stg_orders
+    description: "Staged order data"
+    columns:
+      - name: order_id
+        tests:
+          - unique
+          - not_null
+      - name: customer_id
+        tests:
+          - not_null
+      - name: order_status
+        tests:
+          - accepted_values:
+              values: ['completed', 'shipped', 'processing', 'cancelled']
+
+  - name: stg_products
+    description: "Staged product catalog"
+    columns:
+      - name: product_id
+        tests:
+          - unique
+          - not_null
+
+  - name: stg_order_items
+    description: "Staged order line items with calculated line total"
+    columns:
+      - name: order_item_id
+        tests:
+          - unique
+          - not_null

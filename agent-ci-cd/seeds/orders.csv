@@ -1,0 +1,51 @@
+order_id,customer_id,order_date,status,shipping_address_city,shipping_address_state
+1,3,2023-01-05,completed,San Francisco,CA
+2,1,2023-01-18,completed,Austin,TX
+3,7,2023-02-02,completed,Nashville,TN
+4,5,2023-02-14,completed,Chicago,IL
+5,12,2023-02-28,completed,Atlanta,GA
+6,2,2023-03-10,completed,Portland,OR
+7,9,2023-03-22,completed,Boston,MA
+8,4,2023-04-05,completed,Denver,CO
+9,14,2023-04-19,completed,Dallas,TX
+10,6,2023-05-01,completed,Seattle,WA
+11,10,2023-05-15,completed,Phoenix,AZ
+12,8,2023-06-02,completed,Miami,FL
+13,17,2023-06-18,completed,Columbus,OH
+14,3,2023-07-04,completed,San Francisco,CA
+15,11,2023-07-20,completed,Minneapolis,MN
+16,1,2023-08-03,completed,Austin,TX
+17,15,2023-08-19,completed,Philadelphia,PA
+18,13,2023-09-01,completed,San Diego,CA
+19,5,2023-09-15,shipped,Chicago,IL
+20,21,2023-09-29,completed,Sacramento,CA
+21,7,2023-10-12,completed,Nashville,TN
+22,16,2023-10-26,completed,Charlotte,NC
+23,2,2023-11-08,completed,Portland,OR
+24,19,2023-11-22,shipped,Salt Lake City,UT
+25,23,2023-12-05,completed,Indianapolis,IN
+26,4,2023-12-18,completed,Denver,CO
+27,20,2024-01-10,completed,Raleigh,NC
+28,12,2024-01-24,completed,Atlanta,GA
+29,6,2024-02-07,shipped,Seattle,WA
+30,22,2024-02-21,completed,Las Vegas,NV
+31,9,2024-03-06,completed,Boston,MA
+32,18,2024-03-20,processing,Detroit,MI
+33,14,2024-04-03,completed,Dallas,TX
+34,8,2024-04-17,completed,Miami,FL
+35,25,2024-05-01,processing,Kansas City,MO
+36,11,2024-05-15,completed,Minneapolis,MN
+37,3,2024-06-01,shipped,San Francisco,CA
+38,24,2024-06-15,processing,Tampa,FL
+39,1,2024-07-01,completed,Austin,TX
+40,16,2024-07-15,shipped,Charlotte,NC
+41,5,2024-08-01,processing,Chicago,IL
+42,21,2024-08-15,completed,Sacramento,CA
+43,7,2024-09-01,cancelled,Nashville,TN
+44,13,2024-09-15,shipped,San Diego,CA
+45,19,2024-10-01,processing,Salt Lake City,UT
+46,2,2024-10-15,completed,Portland,OR
+47,10,2024-11-01,shipped,Phoenix,AZ
+48,15,2024-11-15,cancelled,Philadelphia,PA
+49,22,2024-12-01,processing,Las Vegas,NV
+50,4,2024-12-15,shipped,Denver,CO

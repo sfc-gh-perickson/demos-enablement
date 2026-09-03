@@ -1,0 +1,26 @@
+customer_id,first_name,last_name,email,city,state,country,created_at
+1,James,Wilson,james.wilson@email.com,Austin,TX,US,2022-03-15
+2,Sarah,Chen,sarah.chen@email.com,Seattle,WA,US,2022-04-22
+3,Michael,Johnson,michael.johnson@email.com,Denver,CO,US,2022-06-10
+4,Emily,Davis,emily.davis@email.com,Portland,OR,US,2022-07-18
+5,Robert,Martinez,robert.martinez@email.com,Chicago,IL,US,2022-08-05
+6,Jessica,Thompson,jessica.thompson@email.com,Nashville,TN,US,2022-09-12
+7,David,Anderson,david.anderson@email.com,San Francisco,CA,US,2022-10-30
+8,Amanda,Garcia,amanda.garcia@email.com,Miami,FL,US,2022-11-14
+9,Christopher,Lee,christopher.lee@email.com,Boston,MA,US,2023-01-08
+10,Lauren,Robinson,lauren.robinson@email.com,Phoenix,AZ,US,2023-02-20
+11,Daniel,Harris,daniel.harris@email.com,Atlanta,GA,US,2023-03-17
+12,Rachel,Clark,rachel.clark@email.com,Minneapolis,MN,US,2023-04-25
+13,Andrew,Lewis,andrew.lewis@email.com,San Diego,CA,US,2023-05-11
+14,Megan,Walker,megan.walker@email.com,Dallas,TX,US,2023-06-29
+15,Joshua,Hall,joshua.hall@email.com,Philadelphia,PA,US,2023-07-15
+16,Stephanie,Allen,stephanie.allen@email.com,Charlotte,NC,US,2023-08-22
+17,Kevin,Young,kevin.young@email.com,Detroit,MI,US,2023-09-10
+18,Nicole,King,nicole.king@email.com,Salt Lake City,UT,US,2023-10-05
+19,Brian,Wright,brian.wright@email.com,Las Vegas,NV,US,2023-11-18
+20,Ashley,Scott,ashley.scott@email.com,Raleigh,NC,US,2024-01-07
+21,Matthew,Green,matthew.green@email.com,Columbus,OH,US,2024-02-14
+22,Jennifer,Adams,jennifer.adams@email.com,Indianapolis,IN,US,2024-03-03
+23,Ryan,Nelson,ryan.nelson@email.com,Tampa,FL,US,2024-04-11
+24,Samantha,Hill,samantha.hill@email.com,Kansas City,MO,US,2024-05-19
+25,Tyler,Moore,tyler.moore@email.com,San Antonio,TX,US,2024-06-01

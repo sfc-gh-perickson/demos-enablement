@@ -1,0 +1,51 @@
+version: 2
+
+models:
+  - name: dim_customers
+    description: "Customer dimension with order summary stats"
+    columns:
+      - name: customer_id
+        description: "Primary key"
+        tests:
+          - unique
+          - not_null
+      - name: customer_name
+        description: "Full name of customer"
+      - name: lifetime_orders
+        description: "Total number of orders placed"
+
+  - name: dim_products
+    description: "Product dimension with sales stats"
+    columns:
+      - name: product_id
+        description: "Primary key"
+        tests:
+          - unique
+          - not_null
+      - name: category
+        description: "Product category"
+      - name: total_revenue
+        description: "Total revenue from this product"
+
+  - name: fct_orders
+    description: "Order fact table with line item aggregates"
+    columns:
+      - name: order_id
+        description: "Primary key"
+        tests:
+          - unique
+          - not_null
+      - name: customer_id
+        description: "FK to dim_customers"
+        tests:
+          - not_null
+          - relationships:
+              to: ref('dim_customers')
+              field: customer_id
+      - name: order_total
+        description: "Total order amount after discounts"
+      - name: order_status
+        description: "Current order status"
+        tests:
+          - accepted_values:
+              values: ['completed', 'shipped', 'processing', 'cancelled']

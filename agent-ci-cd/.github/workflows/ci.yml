@@ -1,0 +1,164 @@
+name: CI - Validate Agent Changes
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'models/**'
+      - 'seeds/**'
+      - 'macros/**'
+      - 'deploy/**'
+      - 'evaluation/**'
+      - 'dbt_project.yml'
+      - 'packages.yml'
+
+env:
+  SNOWFLAKE_ACCOUNT: ${{ secrets.SNOWFLAKE_ACCOUNT }}
+  SNOWFLAKE_USER: ${{ secrets.SNOWFLAKE_USER }}
+  SNOWFLAKE_PASSWORD: ${{ secrets.SNOWFLAKE_PASSWORD }}
+  SNOWFLAKE_ROLE: ${{ secrets.SNOWFLAKE_ROLE }}
+  SNOWFLAKE_WAREHOUSE: ${{ secrets.SNOWFLAKE_WAREHOUSE }}
+
+jobs:
+  dbt-build:
+    name: dbt Build & Test (Dev)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+
+      - name: Install dependencies
+        run: |
+          pip install dbt-snowflake>=1.7.0 snowflake-connector-python>=3.0.0
+
+      - name: Install dbt packages
+        run: dbt deps --profiles-dir .
+
+      - name: Seed data
+        run: dbt seed --target dev --profiles-dir .
+
+      - name: Run models
+        run: dbt run --target dev --profiles-dir .
+
+      - name: Run tests
+        run: dbt test --target dev --profiles-dir .
+
+  semantic-view-validation:
+    name: Validate Semantic View
+    runs-on: ubuntu-latest
+    needs: dbt-build
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+
+      - name: Install dependencies
+        run: pip install snowflake-connector-python>=3.0.0
+
+      - name: Validate semantic view exists and is queryable
+        run: |
+          python -c "
+          import os
+          import snowflake.connector
+
+          conn = snowflake.connector.connect(
+              account=os.environ['SNOWFLAKE_ACCOUNT'],
+              user=os.environ['SNOWFLAKE_USER'],
+              password=os.environ['SNOWFLAKE_PASSWORD'],
+              role=os.environ.get('SNOWFLAKE_ROLE', 'SYSADMIN'),
+              warehouse=os.environ.get('SNOWFLAKE_WAREHOUSE', 'COMPUTE_WH'),
+              database='AGENT_CICD_DEV'
+          )
+          cursor = conn.cursor()
+
+          # Check semantic view exists
+          cursor.execute('DESCRIBE SEMANTIC VIEW SEMANTIC.RETAIL_ANALYTICS')
+          rows = cursor.fetchall()
+          assert len(rows) > 0, 'Semantic view has no definitions'
+          print(f'Semantic view validated: {len(rows)} properties found')
+
+          # Check it has expected components
+          property_types = set(row[0] for row in rows)
+          expected = {'TABLE', 'DIMENSION', 'FACT', 'METRIC', 'RELATIONSHIP'}
+          missing = expected - property_types
+          assert not missing, f'Missing semantic view components: {missing}'
+          print(f'All expected components present: {expected}')
+
+          conn.close()
+          print('Semantic view validation PASSED')
+          "
+
+  agent-evaluation:
+    name: Agent Evaluation
+    runs-on: ubuntu-latest
+    needs: semantic-view-validation
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+
+      - name: Install dependencies
+        run: pip install snowflake-connector-python>=3.0.0
+
+      - name: Deploy agent to dev
+        run: |
+          python -c "
+          import os
+          import snowflake.connector
+
+          conn = snowflake.connector.connect(
+              account=os.environ['SNOWFLAKE_ACCOUNT'],
+              user=os.environ['SNOWFLAKE_USER'],
+              password=os.environ['SNOWFLAKE_PASSWORD'],
+              role=os.environ.get('SNOWFLAKE_ROLE', 'SYSADMIN'),
+              warehouse=os.environ.get('SNOWFLAKE_WAREHOUSE', 'COMPUTE_WH'),
+              database='AGENT_CICD_DEV'
+          )
+          cursor = conn.cursor()
+
+          cursor.execute(open('deploy/create_agent.sql').read().replace(
+              '\$agent_database', 'AGENT_CICD_DEV'
+          ).replace('SEMANTIC.RETAIL_ANALYTICS', 'AGENT_CICD_DEV.SEMANTIC.RETAIL_ANALYTICS'))
+          print('Agent deployed to dev')
+          conn.close()
+          "
+
+      - name: Load evaluation dataset
+        run: |
+          python -c "
+          import os
+          import snowflake.connector
+
+          conn = snowflake.connector.connect(
+              account=os.environ['SNOWFLAKE_ACCOUNT'],
+              user=os.environ['SNOWFLAKE_USER'],
+              password=os.environ['SNOWFLAKE_PASSWORD'],
+              role=os.environ.get('SNOWFLAKE_ROLE', 'SYSADMIN'),
+              warehouse=os.environ.get('SNOWFLAKE_WAREHOUSE', 'COMPUTE_WH'),
+              database='AGENT_CICD_DEV'
+          )
+          cursor = conn.cursor()
+          sql = open('evaluation/eval_dataset.sql').read()
+          for stmt in sql.split(';'):
+              stmt = stmt.strip()
+              if stmt:
+                  cursor.execute(stmt)
+          print('Evaluation dataset loaded')
+          conn.close()
+          "
+
+      - name: Run agent evaluation
+        run: python scripts/check_eval_results.py --database AGENT_CICD_DEV

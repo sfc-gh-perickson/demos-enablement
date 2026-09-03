@@ -1,0 +1,97 @@
+name: Deploy to Production
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'models/**'
+      - 'seeds/**'
+      - 'macros/**'
+      - 'deploy/**'
+      - 'dbt_project.yml'
+      - 'packages.yml'
+
+env:
+  SNOWFLAKE_ACCOUNT: ${{ secrets.SNOWFLAKE_ACCOUNT }}
+  SNOWFLAKE_USER: ${{ secrets.SNOWFLAKE_USER }}
+  SNOWFLAKE_PASSWORD: ${{ secrets.SNOWFLAKE_PASSWORD }}
+  SNOWFLAKE_ROLE: ${{ secrets.SNOWFLAKE_ROLE }}
+  SNOWFLAKE_WAREHOUSE: ${{ secrets.SNOWFLAKE_WAREHOUSE }}
+
+jobs:
+  deploy-prod:
+    name: Deploy to Production
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+
+      - name: Install dependencies
+        run: |
+          pip install dbt-snowflake>=1.7.0 snowflake-connector-python>=3.0.0
+
+      - name: Install dbt packages
+        run: dbt deps --profiles-dir .
+
+      - name: Seed data (prod)
+        run: dbt seed --target prod --profiles-dir .
+
+      - name: Run models (prod)
+        run: dbt run --target prod --profiles-dir .
+
+      - name: Run tests (prod)
+        run: dbt test --target prod --profiles-dir .
+
+      - name: Deploy Cortex Agent (prod)
+        run: |
+          python -c "
+          import os
+          import snowflake.connector
+
+          conn = snowflake.connector.connect(
+              account=os.environ['SNOWFLAKE_ACCOUNT'],
+              user=os.environ['SNOWFLAKE_USER'],
+              password=os.environ['SNOWFLAKE_PASSWORD'],
+              role=os.environ.get('SNOWFLAKE_ROLE', 'SYSADMIN'),
+              warehouse=os.environ.get('SNOWFLAKE_WAREHOUSE', 'COMPUTE_WH'),
+              database='AGENT_CICD_PROD'
+          )
+          cursor = conn.cursor()
+
+          cursor.execute('''
+          CREATE OR REPLACE AGENT AGENT_CICD_PROD.SEMANTIC.RETAIL_ASSISTANT
+              MODEL = 'claude-3-5-sonnet'
+              COMMENT = 'Retail analytics Q&A agent powered by semantic view'
+              INSTRUCTIONS = '
+          You are a retail analytics assistant. You help users answer questions about
+          customers, orders, products, and revenue using structured data.
+
+          Guidelines:
+          - Always provide specific numbers when answering quantitative questions
+          - If a question is ambiguous, ask for clarification
+          - Format currency values with dollar sign and two decimal places
+          - When discussing trends, reference specific date ranges
+          - If you cannot answer a question from the available data, say so clearly
+          '
+              TOOLS = (
+                  ANALYST_TOOL(
+                      SEMANTIC_VIEW => 'AGENT_CICD_PROD.SEMANTIC.RETAIL_ANALYTICS',
+                      DESCRIPTION => 'Query retail data including customers, orders, products, revenue, and order metrics.'
+                  )
+              );
+          ''')
+          print('Agent deployed to AGENT_CICD_PROD.SEMANTIC.RETAIL_ASSISTANT')
+          conn.close()
+          "
+
+      - name: Deployment summary
+        run: |
+          echo "## Deployment Complete" >> $GITHUB_STEP_SUMMARY
+          echo "- Database: AGENT_CICD_PROD" >> $GITHUB_STEP_SUMMARY
+          echo "- Agent: SEMANTIC.RETAIL_ASSISTANT" >> $GITHUB_STEP_SUMMARY
+          echo "- Semantic View: SEMANTIC.RETAIL_ANALYTICS" >> $GITHUB_STEP_SUMMARY

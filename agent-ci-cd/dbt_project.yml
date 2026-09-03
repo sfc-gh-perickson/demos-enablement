@@ -1,0 +1,26 @@
+name: 'agent_cicd'
+version: '1.0.0'
+config-version: 2
+profile: 'agent_cicd'
+
+model-paths: ["models"]
+analysis-paths: ["analyses"]
+test-paths: ["tests"]
+seed-paths: ["seeds"]
+macro-paths: ["macros"]
+snapshot-paths: ["snapshots"]
+
+clean-targets:
+  - "target"
+  - "dbt_packages"
+
+models:
+  agent_cicd:
+    staging:
+      +schema: staging
+      +materialized: view
+    marts:
+      +schema: marts
+      +materialized: table
+    semantic:
+      +schema: semantic
