@@ -1,0 +1,20 @@
+1... version: 2
+2... application:
+3...   name: marketing-command-center
+4...   compute_pool: SYSTEM_COMPUTE_POOL_CPU
+5...   ingress:
+6...     - port: 80
+7...       public: true
+8...   container:
+9...     image: /SB_COMMAND_CENTER/PUBLIC/IMAGE_REPO/marketing-command-center:latest
+10...     resources:
+11...       requests:
+12...         cpu: "1"
+13...         memory: "2Gi"
+14...       limits:
+15...         cpu: "2"
+16...         memory: "4Gi"
+17...   env:
+18...     SNOWFLAKE_ACCOUNT: "{{snowflake.account}}"
+19...     SNOWFLAKE_DATABASE: "SB_COMMAND_CENTER"
+20... 

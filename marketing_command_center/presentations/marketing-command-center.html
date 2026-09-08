@@ -1,0 +1,405 @@
+1... <!DOCTYPE html>
+2... <html lang="en">
+3... <head>
+4...   <meta charset="UTF-8">
+5...   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+6...   <title>Summit Brands - Marketing Command Center</title>
+7...   <style>
+8... @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+9... :root{--bg:#0F1B2D;--sidebar-bg:#1B2A4A;--primary:#29B5E8;--accent:#7C3AED;--text:#E2E8F0;--text-muted:#94A3B8;--card-bg:#162236;--border:#2D4A6F;--green:#10B981;--orange:#F59E0B;--red:#EF4444}
+10... *{margin:0;padding:0;box-sizing:border-box}
+11... body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--text);line-height:1.6;overflow-x:hidden}
+12... .progress-bar{position:fixed;top:0;left:0;height:3px;background:linear-gradient(90deg,var(--primary),var(--accent));z-index:1000;transition:width .1s}
+13... .sidebar{position:fixed;left:0;top:0;width:260px;height:100vh;background:var(--sidebar-bg);padding:2rem 1.5rem;overflow-y:auto;border-right:1px solid var(--border);z-index:100}
+14... .sidebar h2{font-size:1rem;font-weight:600;color:var(--primary);margin-bottom:1.5rem;text-transform:uppercase;letter-spacing:.05em}
+15... .sidebar a{display:block;color:var(--text-muted);text-decoration:none;padding:.5rem .75rem;border-radius:6px;font-size:.85rem;margin-bottom:.25rem;transition:all .2s}
+16... .sidebar a:hover,.sidebar a.active{color:var(--text);background:rgba(41,181,232,.1)}
+17... .sidebar a.active{border-left:3px solid var(--primary);padding-left:calc(.75rem - 3px)}
+18... .main{margin-left:260px;padding:0}
+19... .slide{min-height:100vh;display:flex;flex-direction:column;justify-content:center;align-items:center;padding:4rem 3rem;max-width:1200px;margin:0 auto}
+20... .slide h1{font-size:2.5rem;font-weight:700;margin-bottom:1rem;background:linear-gradient(135deg,var(--primary),var(--accent));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
+21... .slide h2{font-size:1.75rem;font-weight:600;color:var(--text);margin-bottom:1.5rem}
+22... .slide h3{font-size:1.25rem;font-weight:500;color:var(--text-muted);margin-bottom:1rem}
+23... .slide p{font-size:1.1rem;color:var(--text-muted);max-width:700px;text-align:center}
+24... .stat-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:1.5rem;width:100%;margin:2rem 0}
+25... .stat-card{background:var(--card-bg);border:1px solid var(--border);border-radius:12px;padding:1.5rem;text-align:center}
+26... .stat-card .value{font-size:2rem;font-weight:700;color:var(--primary)}
+27... .stat-card .label{font-size:.85rem;color:var(--text-muted);margin-top:.5rem}
+28... .card-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:1.5rem;width:100%;margin:2rem 0}
+29... .card{background:var(--card-bg);border:1px solid var(--border);border-radius:12px;padding:1.5rem}
+30... .card h4{font-size:1rem;font-weight:600;color:var(--text);margin-bottom:.75rem}
+31... .card p,.card ul{font-size:.9rem;color:var(--text-muted);text-align:left}
+32... .card ul{list-style:none;padding:0}
+33... .card ul li{padding:.35rem 0;padding-left:1rem;position:relative}
+34... .card ul li::before{content:'';position:absolute;left:0;top:50%;transform:translateY(-50%);width:6px;height:6px;border-radius:50%;background:var(--primary)}
+35... table{width:100%;border-collapse:collapse;margin:2rem 0;font-size:.9rem}
+36... th{background:var(--card-bg);color:var(--primary);font-weight:600;padding:.75rem 1rem;text-align:left;border-bottom:2px solid var(--border)}
+37... td{padding:.75rem 1rem;border-bottom:1px solid var(--border);color:var(--text)}
+38... tr:hover td{background:rgba(41,181,232,.05)}
+39... .bar-chart{width:100%;margin:2rem 0}
+40... .bar-row{display:flex;align-items:center;margin-bottom:.75rem}
+41... .bar-label{width:200px;font-size:.85rem;color:var(--text-muted);flex-shrink:0}
+42... .bar-track{flex:1;height:28px;background:var(--card-bg);border-radius:6px;overflow:hidden}
+43... .bar-fill{height:100%;background:linear-gradient(90deg,var(--primary),var(--accent));border-radius:6px;transition:width .8s ease}
+44... .bar-value{margin-left:.75rem;font-size:.85rem;font-weight:600;color:var(--text);min-width:80px}
+45... .highlight-box{background:rgba(41,181,232,.1);border:1px solid var(--primary);border-radius:12px;padding:1.5rem;margin:1.5rem 0;width:100%}
+46... .context-box{background:rgba(124,58,237,.1);border:1px solid var(--accent);border-radius:12px;padding:1.5rem;margin:1.5rem 0;width:100%}
+47... .badge-green{background:rgba(16,185,129,.15);color:var(--green);padding:.25rem .75rem;border-radius:99px;font-size:.8rem;font-weight:500}
+48... .badge-blue{background:rgba(41,181,232,.15);color:var(--primary);padding:.25rem .75rem;border-radius:99px;font-size:.8rem;font-weight:500}
+49... .badge-purple{background:rgba(124,58,237,.15);color:var(--accent);padding:.25rem .75rem;border-radius:99px;font-size:.8rem;font-weight:500}
+50... .badge-orange{background:rgba(245,158,11,.15);color:var(--orange);padding:.25rem .75rem;border-radius:99px;font-size:.8rem;font-weight:500}
+51... .slide ul{list-style:none;width:100%;max-width:700px}
+52... .slide ul li{padding:.75rem 0;padding-left:1.5rem;position:relative;color:var(--text);font-size:1.05rem}
+53... .slide ul li::before{content:'';position:absolute;left:0;top:50%;transform:translateY(-50%);width:8px;height:8px;border-radius:50%;background:var(--primary)}
+54... .anim-fade{opacity:0;transform:translateY(20px);transition:opacity .6s ease,transform .6s ease}
+55... .anim-fade.visible{opacity:1;transform:translateY(0)}
+56... .flow-row{display:flex;align-items:center;gap:1rem;width:100%;margin:1rem 0;flex-wrap:wrap;justify-content:center}
+57... .flow-box{background:var(--card-bg);border:1px solid var(--border);border-radius:10px;padding:1rem 1.25rem;text-align:center;min-width:140px}
+58... .flow-box .title{font-size:.85rem;font-weight:600;color:var(--text)}
+59... .flow-box .sub{font-size:.75rem;color:var(--text-muted);margin-top:.25rem}
+60... .flow-arrow{color:var(--primary);font-size:1.2rem;font-weight:700}
+61... .page-tag{display:inline-block;font-size:.7rem;font-weight:600;text-transform:uppercase;letter-spacing:.05em;padding:.2rem .6rem;border-radius:4px;margin-top:.5rem}
+62... .page-forecast{background:rgba(41,181,232,.15);color:var(--primary)}
+63... .page-customer{background:rgba(16,185,129,.15);color:var(--green)}
+64... .page-lookalike{background:rgba(124,58,237,.15);color:var(--accent)}
+65... .page-registry{background:rgba(245,158,11,.15);color:var(--orange)}
+66... .page-agent{background:rgba(239,68,68,.15);color:var(--red)}
+67... @media(max-width:900px){.sidebar{display:none}.main{margin-left:0}.stat-grid{grid-template-columns:repeat(2,1fr)}.slide{padding:2rem 1.5rem}}
+68...   </style>
+69... </head>
+70... <body>
+71...   <div class="progress-bar"></div>
+72... 
+73...   <nav class="sidebar">
+74...     <h2>Command Center</h2>
+75...     <a href="#hero">Overview</a>
+76...     <a href="#data-sources">Data Sources</a>
+77...     <a href="#data-flow">Data Flow</a>
+78...     <a href="#forecast">Forecast Dashboard</a>
+79...     <a href="#customers">Customer Intelligence</a>
+80...     <a href="#lookalike">Lookalike Builder</a>
+81...     <a href="#agent">Agent Chat</a>
+82...     <a href="#registry">Model Registry</a>
+83...     <a href="#architecture">Architecture</a>
+84...     <a href="#closing">Next Steps</a>
+85...   </nav>
+86... 
+87...   <main class="main">
+88... 
+89...     <!-- HERO -->
+90...     <section class="slide" id="hero">
+91...       <h3 style="color:var(--text-muted);font-weight:400;margin-bottom:.5rem">Summit Brands</h3>
+92...       <h1>Marketing Command Center</h1>
+93...       <p>A Snowflake-native ML platform powering demand forecasting, customer intelligence, self-serve lookalike modeling, and conversational analytics across 5 retailers and 5 brands.</p>
+94...       <div class="stat-grid" style="margin-top:2.5rem">
+95...         <div class="stat-card anim-fade"><div class="value">500K</div><div class="label">POS Records</div></div>
+96...         <div class="stat-card anim-fade"><div class="value">50K</div><div class="label">Customers Scored</div></div>
+97...         <div class="stat-card anim-fade"><div class="value">25</div><div class="label">XGBoost Models</div></div>
+98...         <div class="stat-card anim-fade"><div class="value">5</div><div class="label">Dashboard Pages</div></div>
+99...       </div>
+100...     </section>
+101... 
+102...     <!-- DATA SOURCES -->
+103...     <section class="slide" id="data-sources">
+104...       <h2>Source Data Catalog</h2>
+105...       <p style="margin-bottom:2rem">Summit Brands' first-party data mapped to Snowflake Feature Store and ML pipelines</p>
+106...       <div class="anim-fade" style="width:100%;overflow-x:auto">
+107...         <table>
+108...           <thead>
+109...             <tr><th>Source Table</th><th>Description</th><th>Grain</th><th>Rows</th><th>Feeds</th></tr>
+110...           </thead>
+111...           <tbody>
+112...             <tr>
+113...               <td style="font-weight:600">POS_RETAIL_DETAILS_F</td>
+114...               <td>POS sell-through from POS Data Provider (Walmart, Target, Ulta, Home Depot, Kohls)</td>
+115...               <td>Retailer + Store + SKU + Week</td>
+116...               <td>1.18B</td>
+117...               <td><span class="page-tag page-forecast">Forecast</span></td>
+118...             </tr>
+119...             <tr>
+120...               <td style="font-weight:600">CUSTOMER_OMNI_V</td>
+121...               <td>Omnichannel customer transactions (DTC, web, in-store)</td>
+122...               <td>Customer + Transaction</td>
+123...               <td>3.6M</td>
+124...               <td><span class="page-tag page-customer">Customer</span> <span class="page-tag page-lookalike">Lookalike</span></td>
+125...             </tr>
+126...             <tr>
+127...               <td style="font-weight:600">WEB_ORDERS_V</td>
+128...               <td>Web/eCommerce order headers with shipping, status, pricing</td>
+129...               <td>Order</td>
+130...               <td>4.0M</td>
+131...               <td><span class="page-tag page-customer">Customer</span></td>
+132...             </tr>
+133...             <tr>
+134...               <td style="font-weight:600">WEB_ORDER_LINES_V</td>
+135...               <td>SKU-level line items with pricing, quantity, product type</td>
+136...               <td>Order + Line</td>
+137...               <td>25.3M</td>
+138...               <td><span class="page-tag page-customer">Customer</span></td>
+139...             </tr>
+140...             <tr>
+141...               <td style="font-weight:600">WEB_ORDER_PAYMENTS_V</td>
+142...               <td>Payment methods and auth/capture/refund amounts</td>
+143...               <td>Payment Record</td>
+144...               <td>7.9M</td>
+145...               <td><span class="page-tag page-customer">Customer</span></td>
+146...             </tr>
+147...           </tbody>
+148...         </table>
+149...       </div>
+150...     </section>
+151... 
+152...     <!-- DATA FLOW -->
+153...     <section class="slide" id="data-flow">
+154...       <h2>Data to Dashboard Pipeline</h2>
+155...       <p style="margin-bottom:2rem">How raw data flows through Feature Store, ML Jobs, and Model Registry into the app</p>
+156... 
+157...       <div class="anim-fade" style="width:100%">
+158...         <div class="flow-row">
+159...           <div class="flow-box"><div class="title">POS_SALES</div><div class="sub">500K rows</div></div>
+160...           <div class="flow-arrow">&#8594;</div>
+161...           <div class="flow-box"><div class="title">POS_WEEKLY_SALES_FV</div><div class="sub">Feature Store</div></div>
+162...           <div class="flow-arrow">&#8594;</div>
+163...           <div class="flow-box"><div class="title">XGBoost MMT</div><div class="sub">25 partitioned models</div></div>
+164...           <div class="flow-arrow">&#8594;</div>
+165...           <div class="flow-box" style="border-color:var(--primary)"><div class="title">DEMAND_FORECASTS</div><div class="sub"><span class="page-tag page-forecast">Forecast Dashboard</span></div></div>
+166...         </div>
+167...         <div class="flow-row" style="margin-top:1.5rem">
+168...           <div class="flow-box"><div class="title">CUSTOMER_TRANSACTIONS</div><div class="sub">213K rows</div></div>
+169...           <div class="flow-arrow">&#8594;</div>
+170...           <div class="flow-box"><div class="title">CUSTOMER_RFM_FV</div><div class="sub">Feature Store</div></div>
+171...           <div class="flow-arrow">&#8594;</div>
+172...           <div class="flow-box"><div class="title">XGBoost Classifier + Regressor</div><div class="sub">Repurchase + LTV</div></div>
+173...           <div class="flow-arrow">&#8594;</div>
+174...           <div class="flow-box" style="border-color:var(--green)"><div class="title">CUSTOMER_SCORES</div><div class="sub"><span class="page-tag page-customer">Customer Intelligence</span></div></div>
+175...         </div>
+176...         <div class="flow-row" style="margin-top:1.5rem">
+177...           <div class="flow-box"><div class="title">WEB_ORDERS</div><div class="sub">100K rows</div></div>
+178...           <div class="flow-arrow">&#8594;</div>
+179...           <div class="flow-box"><div class="title">CUSTOMER_BEHAVIOR_FV</div><div class="sub">Feature Store</div></div>
+180...           <div class="flow-arrow">&#8594;</div>
+181...           <div class="flow-box"><div class="title">Self-Serve XGBoost</div><div class="sub">On-demand training</div></div>
+182...           <div class="flow-arrow">&#8594;</div>
+183...           <div class="flow-box" style="border-color:var(--accent)"><div class="title">LOOKALIKE_{name}</div><div class="sub"><span class="page-tag page-lookalike">Lookalike Builder</span></div></div>
+184...         </div>
+185...       </div>
+186...     </section>
+187... 
+188...     <!-- FORECAST DASHBOARD -->
+189...     <section class="slide" id="forecast">
+190...       <h2>Forecast Dashboard</h2>
+191...       <h3>POS sell-through actuals vs 8-week XGBoost demand forecasts</h3>
+192...       <div class="card-grid" style="grid-template-columns:repeat(2,1fr)">
+193...         <div class="card anim-fade">
+194...           <h4>Source Data</h4>
+195...           <ul>
+196...             <li><strong>POS_RETAIL_DETAILS_F</strong> -- 1.18B rows of weekly POS from POS Data Provider</li>
+197...             <li>Dimensions: Retailer, Brand, Store, Week</li>
+198...             <li>Measures: Units sold, Revenue, Returns, Inventory, Markdowns</li>
+199...           </ul>
+200...         </div>
+201...         <div class="card anim-fade">
+202...           <h4>ML Pipeline</h4>
+203...           <ul>
+204...             <li><strong>POS_WEEKLY_SALES_FV</strong> with lag, rolling avg, and seasonality features</li>
+205...             <li>Many Model Training: 25 XGBoost regressors (5 retailers x 5 brands)</li>
+206...             <li>8-week rolling forecast, refreshed weekly</li>
+207...           </ul>
+208...         </div>
+209...         <div class="card anim-fade">
+210...           <h4>Dashboard Features</h4>
+211...           <ul>
+212...             <li>KPI cards: Last week units/revenue, return rate, markdown rate</li>
+213...             <li>Composed chart: Actual area + forecast dashed line</li>
+214...             <li>All-brands comparison with WoW growth %</li>
+215...           </ul>
+216...         </div>
+217...         <div class="card anim-fade">
+218...           <h4>Key Metric</h4>
+219...           <div style="text-align:center;margin-top:1rem">
+220...             <div style="font-size:2.5rem;font-weight:700;color:var(--primary)">200</div>
+221...             <div style="font-size:.9rem;color:var(--text-muted)">Forecasts (25 partitions x 8 weeks)</div>
+222...           </div>
+223...         </div>
+224...       </div>
+225...     </section>
+226... 
+227...     <!-- CUSTOMER INTELLIGENCE -->
+228...     <section class="slide" id="customers">
+229...       <h2>Customer Intelligence</h2>
+230...       <h3>Propensity scores, LTV predictions, and segment-level analytics</h3>
+231...       <div class="card-grid" style="grid-template-columns:repeat(2,1fr)">
+232...         <div class="card anim-fade">
+233...           <h4>Source Data</h4>
+234...           <ul>
+235...             <li><strong>CUSTOMER_OMNI_V</strong> -- 3.6M omnichannel transactions</li>
+236...             <li><strong>WEB_ORDERS_V</strong> + Lines + Payments</li>
+237...             <li>Customer features: RFM, basket behavior, coupon usage, geography</li>
+238...           </ul>
+239...         </div>
+240...         <div class="card anim-fade">
+241...           <h4>ML Pipeline</h4>
+242...           <ul>
+243...             <li><strong>CUSTOMER_RFM_FV</strong> + <strong>CUSTOMER_BEHAVIOR_FV</strong> from Feature Store</li>
+244...             <li>XGBClassifier: 90-day repurchase propensity</li>
+245...             <li>XGBRegressor: 12-month LTV prediction</li>
+246...             <li>4 segments: Champion, Engaged, Moderate, At Risk</li>
+247...           </ul>
+248...         </div>
+249...         <div class="card anim-fade">
+250...           <h4>Dashboard Features</h4>
+251...           <ul>
+252...             <li>Pie chart: Segment distribution</li>
+253...             <li>Bar chart: Avg LTV by segment</li>
+254...             <li>Sortable table with segment filter</li>
+255...           </ul>
+256...         </div>
+257...         <div class="card anim-fade">
+258...           <h4>Segment Breakdown</h4>
+259...           <div class="bar-chart" style="margin:1rem 0 0">
+260...             <div class="bar-row"><div class="bar-label">At Risk</div><div class="bar-track"><div class="bar-fill" style="width:45%"></div></div><div class="bar-value">19,309</div></div>
+261...             <div class="bar-row"><div class="bar-label">Champion</div><div class="bar-track"><div class="bar-fill" style="width:32%"></div></div><div class="bar-value">13,738</div></div>
+262...             <div class="bar-row"><div class="bar-label">Engaged</div><div class="bar-track"><div class="bar-fill" style="width:11%"></div></div><div class="bar-value">4,855</div></div>
+263...             <div class="bar-row"><div class="bar-label">Moderate</div><div class="bar-track"><div class="bar-fill" style="width:11%"></div></div><div class="bar-value">4,638</div></div>
+264...           </div>
+265...         </div>
+266...       </div>
+267...     </section>
+268... 
+269...     <!-- LOOKALIKE BUILDER -->
+270...     <section class="slide" id="lookalike">
+271...       <h2>Lookalike Builder</h2>
+272...       <h3>Self-serve ML: define a customer profile, train a model, find lookalikes</h3>
+273...       <div class="card-grid" style="grid-template-columns:repeat(3,1fr)">
+274...         <div class="card anim-fade">
+275...           <h4>1. Define Seed Profile</h4>
+276...           <p>Interactive filters replace manual ID pasting:</p>
+277...           <ul style="margin-top:.5rem">
+278...             <li>Segment (Champion, Engaged, etc.)</li>
+279...             <li>Brand affinity (Peak Hydro, ChefLine, ...)</li>
+280...             <li>State, min purchases, min spend</li>
+281...             <li>Live count: "247 customers match"</li>
+282...           </ul>
+283...         </div>
+284...         <div class="card anim-fade">
+285...           <h4>2. Train Model</h4>
+286...           <p>Pulls features from Feature Store, trains XGBClassifier (seed vs non-seed):</p>
+287...           <ul style="margin-top:.5rem">
+288...             <li>3-fold cross-validation AUC</li>
+289...             <li>Feature importance ranking</li>
+290...             <li>Score distribution histogram</li>
+291...             <li>Logged to Model Registry</li>
+292...           </ul>
+293...         </div>
+294...         <div class="card anim-fade">
+295...           <h4>3. View Results</h4>
+296...           <p>Rich results panel with model diagnostics:</p>
+297...           <ul style="margin-top:.5rem">
+298...             <li>AUC, CV fold scores, seed count</li>
+299...             <li>Feature importance chart</li>
+300...             <li>Top 25 lookalikes with full profile</li>
+301...             <li>Confidence bar per customer</li>
+302...           </ul>
+303...         </div>
+304...       </div>
+305...       <div class="highlight-box anim-fade" style="margin-top:1.5rem">
+306...         <strong>Feature Store columns used:</strong> RECENCY_DAYS, ORDER_FREQUENCY, TOTAL_MONETARY, AVG_ORDER_VALUE, BRAND_DIVERSITY, DISCOUNT_SENSITIVITY, PROREWARDS_FLAG, AVG_BASKET_SIZE, AVG_BASKET_ITEMS, COUPON_USAGE_RATE -- all derived from <strong>CUSTOMER_OMNI_V</strong> and <strong>WEB_ORDERS_V</strong>.
+307...       </div>
+308...     </section>
+309... 
+310...     <!-- AGENT CHAT -->
+311...     <section class="slide" id="agent">
+312...       <h2>Cortex Agent Chat</h2>
+313...       <h3>Conversational analytics powered by semantic views and SQL generation</h3>
+314...       <div class="card-grid" style="grid-template-columns:repeat(2,1fr)">
+315...         <div class="card anim-fade">
+316...           <h4>Semantic View</h4>
+317...           <p>MARKETING_COMMAND_CENTER_SV covers 4 tables with dimensions, facts, and metrics:</p>
+318...           <ul style="margin-top:.5rem">
+319...             <li><strong>DEMAND_FORECASTS</strong> -- forecast date, units, brand, retailer</li>
+320...             <li><strong>CUSTOMER_SCORES</strong> -- repurchase, LTV, segment</li>
+321...             <li><strong>POS_SALES</strong> -- revenue, units, returns, inventory</li>
+322...             <li><strong>CUSTOMER_TRANSACTIONS</strong> -- purchases, orders, state</li>
+323...           </ul>
+324...         </div>
+325...         <div class="card anim-fade">
+326...           <h4>Agent Capabilities</h4>
+327...           <ul>
+328...             <li><strong>cortex_analyst_text_to_sql</strong> -- auto-generates SQL from natural language</li>
+329...             <li>Inline table rendering from query results</li>
+330...             <li>Vega-Lite chart generation</li>
+331...             <li>Markdown-formatted answers with collapsible reasoning</li>
+332...             <li>Full-page chat + floating sidekick FAB</li>
+333...           </ul>
+334...         </div>
+335...       </div>
+336...       <div class="context-box anim-fade" style="margin-top:1.5rem">
+337...         <strong>Example questions:</strong> "WoW growth of all brands at Target" / "Which segments have highest LTV?" / "Show me POS sales trends for Peak Hydro over 12 weeks" / "Compare forecast accuracy across retailers"
+338...       </div>
+339...     </section>
+340... 
+341...     <!-- MODEL REGISTRY -->
+342...     <section class="slide" id="registry">
+343...       <h2>Model Registry</h2>
+344...       <h3>Versioned models with metrics, logged via Snowflake ML Registry</h3>
+345...       <div class="anim-fade" style="width:100%;overflow-x:auto">
+346...         <table>
+347...           <thead><tr><th>Model</th><th>Type</th><th>Source Features</th><th>Target</th><th>Logged To</th></tr></thead>
+348...           <tbody>
+349...             <tr><td style="font-weight:600">demand_forecast_xgb</td><td>XGBRegressor (x25 partitions)</td><td>POS_WEEKLY_SALES_FV</td><td>GROSS_AMT_SOLD_UNITS</td><td>SB_COMMAND_CENTER.REGISTRY</td></tr>
+350...             <tr><td style="font-weight:600">customer_repurchase_xgb</td><td>XGBClassifier</td><td>CUSTOMER_RFM_FV + BEHAVIOR_FV</td><td>90-day repurchase</td><td>SB_COMMAND_CENTER.REGISTRY</td></tr>
+351...             <tr><td style="font-weight:600">customer_ltv_xgb</td><td>XGBRegressor</td><td>CUSTOMER_RFM_FV + BEHAVIOR_FV</td><td>12-month LTV</td><td>SB_COMMAND_CENTER.REGISTRY</td></tr>
+352...             <tr><td style="font-weight:600">LOOKALIKE_{name}</td><td>XGBClassifier (on-demand)</td><td>Selected features</td><td>Seed vs non-seed</td><td>SB_COMMAND_CENTER.REGISTRY</td></tr>
+353...           </tbody>
+354...         </table>
+355...       </div>
+356...       <div class="highlight-box anim-fade" style="margin-top:1rem">
+357...         <strong>Snowflake ML features used:</strong> Feature Store (entities, feature views, dynamic tables), ML Jobs (remote training on compute pool), Model Registry (versioning, metrics, sample input), Stored Procedures (lookalike builder)
+358...       </div>
+359...     </section>
+360... 
+361...     <!-- ARCHITECTURE -->
+362...     <section class="slide" id="architecture">
+363...       <h2>Architecture</h2>
+364...       <h3>Everything runs inside Snowflake -- no external infrastructure</h3>
+365...       <div class="stat-grid anim-fade" style="grid-template-columns:repeat(3,1fr)">
+366...         <div class="stat-card"><div class="value" style="font-size:1.3rem">Feature Store</div><div class="label">3 Feature Views + 2 Entities with auto-refresh dynamic tables</div></div>
+367...         <div class="stat-card"><div class="value" style="font-size:1.3rem">ML Jobs</div><div class="label">Remote XGBoost training on ML_CPU_POOL compute pool</div></div>
+368...         <div class="stat-card"><div class="value" style="font-size:1.3rem">Model Registry</div><div class="label">Versioned models with metrics, logged per training run</div></div>
+369...         <div class="stat-card"><div class="value" style="font-size:1.3rem">Semantic View</div><div class="label">4-table schema with metrics, dimensions, and relationships</div></div>
+370...         <div class="stat-card"><div class="value" style="font-size:1.3rem">Cortex Agent</div><div class="label">Text-to-SQL with chart generation via Cortex Analyst</div></div>
+371...         <div class="stat-card"><div class="value" style="font-size:1.3rem">React App</div><div class="label">Vite + Recharts + Vega-Lite, deployed via SPCS or local dev</div></div>
+372...       </div>
+373...     </section>
+374... 
+375...     <!-- CLOSING -->
+376...     <section class="slide" id="closing">
+377...       <h2>Next Steps</h2>
+378...       <div class="card-grid" style="grid-template-columns:repeat(3,1fr)">
+379...         <div class="card anim-fade">
+380...           <h4>Connect Real Data</h4>
+381...           <p>Replace demo synthetic data with Summit Brands' actual POS and customer tables from ANALYTICS.SALES and EDW.OMNI.</p>
+382...         </div>
+383...         <div class="card anim-fade">
+384...           <h4>Expand Models</h4>
+385...           <p>Add churn prediction, product affinity models, and promotional lift forecasting to the Feature Store pipeline.</p>
+386...         </div>
+387...         <div class="card anim-fade">
+388...           <h4>Deploy to Production</h4>
+389...           <p>Ship the React dashboard as a Snowflake App (SPCS), enable RBAC via semantic view grants, and schedule model refresh tasks.</p>
+390...         </div>
+391...       </div>
+392...     </section>
+393... 
+394...   </main>
+395... 
+396...   <script>
+397... const progressBar=document.querySelector('.progress-bar');window.addEventListener('scroll',()=>{const s=window.scrollY,d=document.documentElement.scrollHeight-window.innerHeight;progressBar.style.width=(s/d*100)+'%'});
+398... const observer=new IntersectionObserver(e=>{e.forEach(e=>{if(e.isIntersecting)e.target.classList.add('visible')})},{threshold:.1});
+399... document.querySelectorAll('.anim-fade').forEach(el=>observer.observe(el));
+400... const sections=document.querySelectorAll('.slide'),navLinks=document.querySelectorAll('.sidebar a');
+401... window.addEventListener('scroll',()=>{let c='';sections.forEach(s=>{if(window.scrollY>=s.offsetTop-200)c=s.getAttribute('id')});navLinks.forEach(l=>{l.classList.remove('active');if(l.getAttribute('href')==='#'+c)l.classList.add('active')})});
+402...   </script>
+403... </body>
+404... </html>
+405...
