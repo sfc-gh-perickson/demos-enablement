@@ -1,0 +1,474 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Packing Slip Automation</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+:root{--bg:#0F1B2D;--sidebar-bg:#1B2A4A;--primary:#29B5E8;--accent:#7C3AED;--text:#E2E8F0;--text-muted:#94A3B8;--card-bg:#162236;--border:#2D4A6F;--green:#10B981;--orange:#F59E0B;--red:#EF4444}
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--text);line-height:1.6;overflow-x:hidden}
+.progress-bar{position:fixed;top:0;left:0;height:3px;background:linear-gradient(90deg,var(--primary),var(--accent));z-index:1000;transition:width 0.1s}
+.sidebar{position:fixed;left:0;top:0;width:260px;height:100vh;background:var(--sidebar-bg);padding:2rem 1.5rem;overflow-y:auto;border-right:1px solid var(--border);z-index:100}
+.sidebar h2{font-size:1rem;font-weight:600;color:var(--primary);margin-bottom:1.5rem;text-transform:uppercase;letter-spacing:0.05em}
+.sidebar a{display:block;color:var(--text-muted);text-decoration:none;padding:0.5rem 0.75rem;border-radius:6px;font-size:0.85rem;margin-bottom:0.25rem;transition:all 0.2s}
+.sidebar a:hover,.sidebar a.active{color:var(--text);background:rgba(41,181,232,0.1)}
+.sidebar a.active{border-left:3px solid var(--primary);padding-left:calc(0.75rem - 3px)}
+.main{margin-left:260px;padding:0}
+.slide{min-height:100vh;display:flex;flex-direction:column;justify-content:center;align-items:center;padding:4rem 3rem;max-width:1200px;margin:0 auto}
+.slide h1{font-size:2.5rem;font-weight:700;margin-bottom:1rem;background:linear-gradient(135deg,var(--primary),var(--accent));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
+.slide h2{font-size:1.75rem;font-weight:600;color:var(--text);margin-bottom:1.5rem}
+.slide h3{font-size:1.25rem;font-weight:500;color:var(--text-muted);margin-bottom:1rem}
+.slide p{font-size:1.1rem;color:var(--text-muted);max-width:700px;text-align:center}
+.stat-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:1.5rem;width:100%;margin:2rem 0}
+.stat-card{background:var(--card-bg);border:1px solid var(--border);border-radius:12px;padding:1.5rem;text-align:center}
+.stat-card .value{font-size:2rem;font-weight:700;color:var(--primary)}
+.stat-card .label{font-size:0.85rem;color:var(--text-muted);margin-top:0.5rem}
+.card-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:1.5rem;width:100%;margin:2rem 0}
+.card{background:var(--card-bg);border:1px solid var(--border);border-radius:12px;padding:1.5rem}
+.card h4{font-size:1rem;font-weight:600;color:var(--text);margin-bottom:0.75rem}
+.card p{font-size:0.9rem;color:var(--text-muted);text-align:left}
+table{width:100%;border-collapse:collapse;margin:2rem 0;font-size:0.9rem}
+th{background:var(--card-bg);color:var(--primary);font-weight:600;padding:0.75rem 1rem;text-align:left;border-bottom:2px solid var(--border)}
+td{padding:0.75rem 1rem;border-bottom:1px solid var(--border);color:var(--text)}
+tr:hover td{background:rgba(41,181,232,0.05)}
+.bar-chart{width:100%;margin:2rem 0}
+.bar-row{display:flex;align-items:center;margin-bottom:0.75rem}
+.bar-label{width:200px;font-size:0.85rem;color:var(--text-muted);flex-shrink:0}
+.bar-track{flex:1;height:28px;background:var(--card-bg);border-radius:6px;overflow:hidden;position:relative}
+.bar-fill{height:100%;background:linear-gradient(90deg,var(--primary),var(--accent));border-radius:6px;transition:width 0.8s ease}
+.bar-value{margin-left:0.75rem;font-size:0.85rem;font-weight:600;color:var(--text);min-width:50px}
+.highlight-box{background:rgba(41,181,232,0.1);border:1px solid var(--primary);border-radius:12px;padding:1.5rem;margin:1.5rem 0;width:100%}
+.context-box{background:rgba(124,58,237,0.1);border:1px solid var(--accent);border-radius:12px;padding:1.5rem;margin:1.5rem 0;width:100%}
+.score-high{color:var(--green);font-weight:600}
+.score-mid{color:var(--orange);font-weight:600}
+.score-low{color:var(--red);font-weight:600}
+.slide ul{list-style:none;width:100%;max-width:700px}
+.slide ul li{padding:0.75rem 0;padding-left:1.5rem;position:relative;color:var(--text);font-size:1.05rem}
+.slide ul li::before{content:'';position:absolute;left:0;top:50%;transform:translateY(-50%);width:8px;height:8px;border-radius:50%;background:var(--primary)}
+.anim-fade{opacity:0;transform:translateY(20px);transition:opacity 0.6s ease,transform 0.6s ease}
+.anim-fade.visible{opacity:1;transform:translateY(0)}
+.flow-diagram{display:flex;align-items:center;justify-content:center;flex-wrap:wrap;gap:0.5rem;margin:2rem 0;width:100%}
+.flow-step{background:var(--card-bg);border:1px solid var(--border);border-radius:10px;padding:1rem 1.25rem;text-align:center;min-width:130px}
+.flow-step .step-title{font-weight:600;font-size:0.9rem;color:var(--primary)}
+.flow-step .step-desc{font-size:0.75rem;color:var(--text-muted);margin-top:0.25rem}
+.flow-arrow{color:var(--primary);font-size:1.5rem;font-weight:700}
+@media(max-width:900px){.sidebar{display:none}.main{margin-left:0}.stat-grid{grid-template-columns:repeat(2,1fr)}.slide{padding:2rem 1.5rem}}
+</style>
+</head>
+<body>
+<div class="progress-bar"></div>
+
+<nav class="sidebar">
+<h2>Summit</h2>
+<a href="#hero">Overview</a>
+<a href="#problem">The Challenge</a>
+<a href="#solution">How It Works</a>
+<a href="#results">POC Results</a>
+<a href="#cost">Measured Costs</a>
+<a href="#roi">ROI at Scale</a>
+<a href="#rollout">Roadmap</a>
+<a href="#erp">ERP Integration</a>
+<a href="#review">Review Workflow</a>
+<a href="#next-steps">Next Steps</a>
+</nav>
+
+<main class="main">
+
+<!-- HERO -->
+<section class="slide" id="hero">
+<h1>Packing Slip Automation</h1>
+<p>Getting shipment data from paper into your ERP — accurately, in minutes instead of hours</p>
+<div class="stat-grid" style="margin-top:2rem">
+<div class="stat-card anim-fade"><div class="value">4 hrs</div><div class="label">Manual Entry / Day</div></div>
+<div class="stat-card anim-fade"><div class="value">$0.10</div><div class="label">AI Cost Per Slip</div></div>
+<div class="stat-card anim-fade"><div class="value">75</div><div class="label">Slips Extracted (POC)</div></div>
+<div class="stat-card anim-fade"><div class="value">271</div><div class="label">Line Items Captured</div></div>
+</div>
+</section>
+
+<!-- PROBLEM -->
+<section class="slide" id="problem">
+<h2>The Challenge</h2>
+<p style="margin-bottom:2rem">Every shipment that arrives at Springfield needs its packing slip data entered into the system before receiving can close. Today that's a manual process.</p>
+<div class="card-grid">
+<div class="card anim-fade">
+<h4>300+ slips a day, 27+ suppliers</h4>
+<p>Each supplier sends a different format — packing slips, bills of lading, shipment forms, warehouse acknowledgements. No two look alike. Someone has to read each one and key in PO numbers, part numbers, quantities, and carrier info.</p>
+</div>
+<div class="card anim-fade">
+<h4>4 hours of data entry, every day</h4>
+<p>That's half a shift spent transcribing from paper. On heavy receiving days it pushes past 5 hours, creating a backlog that delays PO reconciliation and inventory updates.</p>
+</div>
+<div class="card anim-fade">
+<h4>Errors propagate downstream</h4>
+<p>A wrong quantity or transposed part number on a packing slip becomes a discrepancy in the ERP, which someone else has to investigate. Manual entry error rates of 1-3% are typical.</p>
+</div>
+<div class="card anim-fade">
+<h4>The data stays on paper too long</h4>
+<p>Until someone finishes keying it in, the shipment data isn't in the system. Downstream processes — receiving confirmation, AP matching, inventory — are all waiting on that manual step.</p>
+</div>
+</div>
+</section>
+
+<!-- SOLUTION -->
+<section class="slide" id="solution">
+<h2>How It Works</h2>
+<h3>Scan &rarr; Split &rarr; Extract &rarr; Review &rarr; ERP</h3>
+<div class="flow-diagram anim-fade">
+<div class="flow-step"><div class="step-title">Scan</div><div class="step-desc">Existing scanner<br>at receiving dock</div></div>
+<div class="flow-arrow">&#8594;</div>
+<div class="flow-step"><div class="step-title">Split</div><div class="step-desc">Separate each slip<br>into its own file</div></div>
+<div class="flow-arrow">&#8594;</div>
+<div class="flow-step"><div class="step-title">Extract</div><div class="step-desc">AI reads every field<br>headers + line items</div></div>
+<div class="flow-arrow">&#8594;</div>
+<div class="flow-step"><div class="step-title">Review</div><div class="step-desc">Staff verify flagged<br>slips, correct if needed</div></div>
+<div class="flow-arrow">&#8594;</div>
+<div class="flow-step"><div class="step-title">ERP</div><div class="step-desc">Clean data flows<br>into receiving system</div></div>
+</div>
+<ul class="anim-fade">
+<li>The scanner and workflow don't change — staff scan the same way they do today</li>
+<li>A local script splits multi-page bundles into one file per packing slip</li>
+<li>Snowflake AI reads the OCR text and extracts PO number, supplier, part numbers, quantities, carrier, and tracking info into structured tables</li>
+<li>High-confidence extractions (68% in our POC) are auto-approved — staff only review the ones the AI flags</li>
+<li>Approved data is ready to push into the ERP as receiving records</li>
+</ul>
+</section>
+
+<!-- RESULTS -->
+<section class="slide" id="results">
+<h2>Proof of Concept</h2>
+<h3>Built and tested on your actual packing slips</h3>
+<div class="stat-grid">
+<div class="stat-card anim-fade"><div class="value">5</div><div class="label">PDFs Processed</div></div>
+<div class="stat-card anim-fade"><div class="value">75</div><div class="label">Slips Extracted</div></div>
+<div class="stat-card anim-fade"><div class="value">271</div><div class="label">Line Items</div></div>
+<div class="stat-card anim-fade"><div class="value">0.90</div><div class="label">Avg Confidence</div></div>
+</div>
+<div style="width:100%;overflow-x:auto" class="anim-fade">
+<table>
+<thead><tr><th>Source PDF</th><th>Pages</th><th>Slips</th><th>Line Items</th><th>Suppliers</th></tr></thead>
+<tbody>
+<tr><td>Jul 17 scan</td><td>1</td><td>1</td><td>6</td><td>Summit South Warehouse</td></tr>
+<tr><td>Jul 20 scan (A)</td><td>1</td><td>1</td><td>13</td><td>Summit South Warehouse</td></tr>
+<tr><td>Jul 20 scan (B)</td><td>22</td><td>21</td><td>96</td><td>Precision Coating, Apex Electronics, Central Supply, ProLine Extrusions, +5</td></tr>
+<tr><td>Jul 22 scan</td><td>37</td><td>36</td><td>101</td><td>Atlas Coatings, Midwest Metal, Continental Coatings, Eagle Transfer, Delta Electronics, +10</td></tr>
+<tr><td>Jul 24 scan</td><td>19</td><td>16</td><td>55</td><td>Nova Systems, Premier Lubricants, CoreLink Partners, ProLine Extrusions, +6</td></tr>
+</tbody>
+</table>
+</div>
+<div class="highlight-box anim-fade">
+Every field that's on the paper — PO number, supplier name, ship date, carrier, tracking number, part numbers, quantities ordered, quantities shipped — is extracted and structured. The 37-page scan alone produced 36 individual slips with 101 line items from 15+ suppliers, all correctly separated and parsed.
+</div>
+</section>
+
+<!-- COST -->
+<section class="slide" id="cost">
+<h2>What It Actually Costs</h2>
+<h3>Measured from Snowflake metering during the POC</h3>
+<div class="stat-grid">
+<div class="stat-card anim-fade"><div class="value">$0.10</div><div class="label">Per Packing Slip</div></div>
+<div class="stat-card anim-fade"><div class="value">$7.50</div><div class="label">75 Slips Total</div></div>
+<div class="stat-card anim-fade"><div class="value">110s</div><div class="label">Batch Time (all 5 PDFs)</div></div>
+<div class="stat-card anim-fade"><div class="value">$30</div><div class="label">Daily Cost (300 slips)</div></div>
+</div>
+<div style="width:100%;overflow-x:auto" class="anim-fade">
+<table>
+<thead><tr><th>AI Function</th><th>Credits</th><th>Cost (@ $2/credit)</th><th>Per Slip</th></tr></thead>
+<tbody>
+<tr><td>AI_PARSE_DOCUMENT — OCR on 79 scanned pages</td><td>~0.7</td><td>$1.40</td><td>$0.02</td></tr>
+<tr><td>AI_COMPLETE — structured extraction of 75 slips</td><td>~3.0</td><td>$6.10</td><td>$0.08</td></tr>
+<tr><td><strong>Total</strong></td><td><strong>~3.7</strong></td><td><strong>$7.50</strong></td><td><strong>$0.10</strong></td></tr>
+</tbody>
+</table>
+</div>
+<div class="context-box anim-fade">
+<strong>Source:</strong> SNOWFLAKE.ACCOUNT_USAGE.METERING_DAILY_HISTORY, measured August 2026. No additional infrastructure costs — no servers, no GPU instances, no API gateway. The AI functions run serverless inside Snowflake.
+</div>
+</section>
+
+<!-- ROI -->
+<section class="slide" id="roi">
+<h2>ROI Calculator</h2>
+<h3>Adjust the assumptions — the math updates live</h3>
+
+<div class="card" style="width:100%;margin-bottom:2rem;padding:2rem" id="roi-calculator">
+<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:1.5rem;margin-bottom:2rem">
+<div>
+<label style="font-size:0.8rem;color:var(--text-muted);display:block;margin-bottom:0.4rem">Number of facilities</label>
+<input type="range" id="r-plants" min="1" max="12" value="12" style="width:100%">
+<div style="text-align:center;font-size:1.1rem;font-weight:600;color:var(--primary)" id="v-plants">12</div>
+</div>
+<div>
+<label style="font-size:0.8rem;color:var(--text-muted);display:block;margin-bottom:0.4rem">Slips per plant per day</label>
+<input type="range" id="r-slips" min="50" max="500" value="300" step="25" style="width:100%">
+<div style="text-align:center;font-size:1.1rem;font-weight:600;color:var(--primary)" id="v-slips">300</div>
+</div>
+<div>
+<label style="font-size:0.8rem;color:var(--text-muted);display:block;margin-bottom:0.4rem">Manual entry hours / day / plant</label>
+<input type="range" id="r-hours" min="1" max="8" value="4" step="0.5" style="width:100%">
+<div style="text-align:center;font-size:1.1rem;font-weight:600;color:var(--primary)" id="v-hours">4</div>
+</div>
+<div>
+<label style="font-size:0.8rem;color:var(--text-muted);display:block;margin-bottom:0.4rem">Blended labor rate ($/hr)</label>
+<input type="range" id="r-labor" min="10" max="60" value="25" step="1" style="width:100%">
+<div style="text-align:center;font-size:1.1rem;font-weight:600;color:var(--primary)" id="v-labor">$25</div>
+</div>
+<div>
+<label style="font-size:0.8rem;color:var(--text-muted);display:block;margin-bottom:0.4rem">AI cost per slip ($)</label>
+<input type="range" id="r-aicost" min="0.01" max="0.30" value="0.10" step="0.01" style="width:100%">
+<div style="text-align:center;font-size:1.1rem;font-weight:600;color:var(--primary)" id="v-aicost">$0.10</div>
+</div>
+<div>
+<label style="font-size:0.8rem;color:var(--text-muted);display:block;margin-bottom:0.4rem">Review time after automation (min/day/plant)</label>
+<input type="range" id="r-review" min="10" max="120" value="30" step="5" style="width:100%">
+<div style="text-align:center;font-size:1.1rem;font-weight:600;color:var(--primary)" id="v-review">30 min</div>
+</div>
+</div>
+
+<div class="stat-grid" style="margin:0;grid-template-columns:repeat(5,1fr)">
+<div class="stat-card"><div class="value" id="o-hourssaved">32,760</div><div class="label">Hours saved / year</div></div>
+<div class="stat-card"><div class="value" style="color:var(--green)" id="o-laborsaved">$819,000</div><div class="label">Labor savings / year</div></div>
+<div class="stat-card"><div class="value" style="color:var(--orange)" id="o-aicost">$280,800</div><div class="label">AI cost / year</div></div>
+<div class="stat-card"><div class="value" style="color:var(--green)" id="o-net">$538,200</div><div class="label">Net annual savings</div></div>
+<div class="stat-card"><div class="value" style="color:var(--green)" id="o-roi">192%</div><div class="label">ROI</div></div>
+</div>
+
+<div class="bar-chart" style="margin-top:1.5rem">
+<div class="bar-row"><div class="bar-label">Manual (today)</div><div class="bar-track"><div class="bar-fill" id="bar-manual" style="width:100%;background:linear-gradient(90deg,var(--red),var(--orange))"></div></div><div class="bar-value" id="bv-manual">144 hrs/day</div></div>
+<div class="bar-row"><div class="bar-label">AI + review (after)</div><div class="bar-track"><div class="bar-fill" id="bar-after" style="width:12%"></div></div><div class="bar-value" id="bv-after">18 hrs/day</div></div>
+</div>
+
+<div style="width:100%;overflow-x:auto;margin-top:1.5rem">
+<table id="roi-table">
+<thead><tr><th></th><th>Springfield (Pilot)</th><th>8 US Plants</th><th id="th-all">All 12 Facilities</th></tr></thead>
+<tbody>
+<tr><td>Slips / day</td><td id="t-s1">300</td><td id="t-s15">4,500</td><td id="t-sall">10,800</td></tr>
+<tr><td>Manual hours / day</td><td class="score-low" id="t-m1">4</td><td class="score-low" id="t-m15">60</td><td class="score-low" id="t-mall">144</td></tr>
+<tr><td>Review hours / day</td><td class="score-high" id="t-r1">0.5</td><td class="score-high" id="t-r15">7.5</td><td class="score-high" id="t-rall">18</td></tr>
+<tr><td>Hours saved / year</td><td id="t-h1">910</td><td id="t-h15">13,650</td><td id="t-hall">32,760</td></tr>
+<tr><td>Labor savings</td><td style="color:var(--green)" id="t-l1">$31,850</td><td style="color:var(--green)" id="t-l15">$477,750</td><td style="color:var(--green)" id="t-lall">$819,000</td></tr>
+<tr><td>AI cost</td><td id="t-a1">$7,800</td><td id="t-a15">$117,000</td><td id="t-aall">$280,800</td></tr>
+<tr><td><strong>Net savings</strong></td><td><strong style="color:var(--green)" id="t-n1">$24,050</strong></td><td><strong style="color:var(--green)" id="t-n15">$360,750</strong></td><td><strong style="color:var(--green)" id="t-nall">$538,200</strong></td></tr>
+</tbody>
+</table>
+</div>
+</div>
+
+<div class="context-box anim-fade" style="font-size:0.85rem">
+<strong>Working days:</strong> 260/year (5 days/week). Labor savings = (manual hours - review hours) &times; labor rate &times; 260. AI cost = slips/day &times; plants &times; cost/slip &times; 260.
+</div>
+</section>
+
+<!-- ROLLOUT -->
+<section class="slide" id="rollout">
+<h2>Implementation Roadmap</h2>
+<h3>Pilot to global rollout</h3>
+<div style="width:100%;overflow-x:auto" class="anim-fade">
+<table>
+<thead><tr><th>Phase</th><th>Scope</th><th>Activities</th></tr></thead>
+<tbody>
+<tr><td><strong>Month 1-2</strong></td><td>Pilot</td><td>Connect PO feed from ERP. Run pipeline on live Springfield volume alongside manual entry. Compare AI extractions to manual results. Tune confidence thresholds. Validate with receiving staff.</td></tr>
+<tr><td><strong>Month 3</strong></td><td>Springfield Production</td><td>Cut over Springfield to pipeline-first workflow. Staff review flagged slips only. Monitor error rates and review time. Refine prompts for any supplier-specific issues.</td></tr>
+<tr><td><strong>Month 4-5</strong></td><td>US Wave 1</td><td>Deploy to 4 additional high-volume US plants. Validate against their supplier mix. Build standardized scan-split-upload playbook for receiving teams.</td></tr>
+<tr><td><strong>Month 6-7</strong></td><td>Full US</td><td>Roll out to remaining US plants. Harden ERP integration as shared service. Evaluate model accuracy across full domestic supplier base.</td></tr>
+<tr><td><strong>Month 8-9</strong></td><td>International</td><td>Deploy to international sites. Test multilingual extraction. Adapt prompts for non-English supplier formats if needed. Operational handoff to IT.</td></tr>
+</tbody>
+</table>
+</div>
+<div class="card-grid">
+<div class="card anim-fade">
+<h4>Zero code changes per plant</h4>
+<p>The AI handles any supplier format. Adding a new plant means uploading their PDFs to the same stage. No model retraining, no template configuration, no per-supplier setup.</p>
+</div>
+<div class="card anim-fade">
+<h4>Shared infrastructure</h4>
+<p>One Snowflake database, one Streamlit app, one stored procedure. Each plant's data is isolated by file naming, but the pipeline and review UI are shared. Operational overhead doesn't scale with plant count.</p>
+</div>
+<div class="card anim-fade">
+<h4>Go/no-go at every gate</h4>
+<p>Each phase validates before the next begins. Month 1-2 proves accuracy. Month 3 proves the workflow. US Wave 1 proves it generalizes. Nothing scales until the previous step succeeds.</p>
+</div>
+</div>
+</section>
+
+<!-- ERP INTEGRATION -->
+<section class="slide" id="erp">
+<h2>Getting Data Into the ERP</h2>
+<h3>Snowflake as the bridge between paper and systems of record</h3>
+<div class="flow-diagram anim-fade">
+<div class="flow-step"><div class="step-title">Packing Slips</div><div class="step-desc">Scanned PDFs</div></div>
+<div class="flow-arrow">&#8594;</div>
+<div class="flow-step" style="border-color:var(--primary)"><div class="step-title">Snowflake</div><div class="step-desc">Extract, validate,<br>reconcile against POs</div></div>
+<div class="flow-arrow">&#8594;</div>
+<div class="flow-step"><div class="step-title">ERP System</div><div class="step-desc">Receiving records,<br>AP matching, inventory</div></div>
+</div>
+<div class="card-grid">
+<div class="card anim-fade">
+<h4>Structured data, ready to load</h4>
+<p>The pipeline outputs clean, normalized tables: one row per packing slip header, one row per line item. PO numbers, part numbers, quantities, supplier info — all in columns that map directly to ERP receiving record fields.</p>
+</div>
+<div class="card anim-fade">
+<h4>PO reconciliation before it hits the ERP</h4>
+<p>The pipeline automatically joins extracted shipments against purchase orders. Quantity mismatches, unknown parts, and missing POs are flagged before the data ever leaves Snowflake. The ERP only gets clean, validated records.</p>
+</div>
+<div class="card anim-fade">
+<h4>Multiple integration paths</h4>
+<p>Push to the ERP via Snowflake connectors, REST API, file export, or direct database integration. The approved packing slip data sits in standard Snowflake tables that any integration tool can read.</p>
+</div>
+<div class="card anim-fade">
+<h4>Audit trail included</h4>
+<p>Every extraction is logged: original PDF, OCR text, AI output, confidence score, reviewer name, corrections made, approval timestamp. Full traceability from scanned document to ERP record.</p>
+</div>
+</div>
+</section>
+
+<!-- REVIEW -->
+<section class="slide" id="review">
+<h2>The Review Workflow</h2>
+<h3>Staff verify what the AI flagged — not every single slip</h3>
+<div class="card-grid">
+<div class="card anim-fade">
+<h4>See the actual document</h4>
+<p>Each slip is its own PDF file. The review app shows the original scanned document on the left and the extracted fields on the right. What you see is what you're reviewing — no page navigation, no guessing.</p>
+</div>
+<div class="card anim-fade">
+<h4>Edit anything inline</h4>
+<p>Every field is editable: PO number, supplier, dates, carrier, tracking number, addresses. Line items can be corrected, added, or deleted. Hit "Save Corrections" and it's done.</p>
+</div>
+<div class="card anim-fade">
+<h4>68% auto-approved in the POC</h4>
+<p>High-confidence extractions skip the queue entirely. Staff only review the slips where the AI is uncertain — low confidence scores, missing fields, or unusual formats. 5% are randomly spot-checked for quality.</p>
+</div>
+<div class="card anim-fade">
+<h4>Operational dashboard</h4>
+<p>Volume metrics, supplier breakdown, confidence distribution, field completeness rates, and error logs. Visibility into how the pipeline is performing without running SQL.</p>
+</div>
+</div>
+</section>
+
+<!-- NEXT STEPS -->
+<section class="slide" id="next-steps">
+<h2>Next Steps</h2>
+<div class="card-grid">
+<div class="card anim-fade">
+<h4>1. Connect PO data from the ERP</h4>
+<p>The POC uses mock purchase orders. Connecting the real PO feed enables live reconciliation — flagging quantity mismatches and unknown parts before they become receiving discrepancies.</p>
+</div>
+<div class="card anim-fade">
+<h4>2. Pilot alongside manual entry</h4>
+<p>Run the pipeline on live daily volume for two weeks alongside the existing process. Compare extraction accuracy, measure review time, and tune the confidence thresholds on real data.</p>
+</div>
+<div class="card anim-fade">
+<h4>3. Define the ERP integration</h4>
+<p>Map the extracted fields to the ERP's receiving record schema. Set up the push — whether that's a Snowflake connector, file export, or API call — so approved slips flow directly into the system of record.</p>
+</div>
+<div class="card anim-fade">
+<h4>4. Roll out to additional facilities</h4>
+<p>The pipeline handles any supplier format without code changes. Adding a new plant is uploading their PDFs to the same stage. The AI, review app, and ERP integration all work the same way.</p>
+</div>
+</div>
+</section>
+
+</main>
+
+<script>
+var progressBar=document.querySelector('.progress-bar');window.addEventListener('scroll',function(){var scrollTop=window.scrollY;var docHeight=document.documentElement.scrollHeight-window.innerHeight;progressBar.style.width=(scrollTop/docHeight*100)+'%'});
+var observer=new IntersectionObserver(function(entries){entries.forEach(function(entry){if(entry.isIntersecting){entry.target.classList.add('visible')}})},{threshold:0.1});
+document.querySelectorAll('.anim-fade').forEach(function(el){observer.observe(el)});
+var sections=document.querySelectorAll('.slide');var navLinks=document.querySelectorAll('.sidebar a');
+window.addEventListener('scroll',function(){var current='';sections.forEach(function(section){var sectionTop=section.offsetTop-200;if(window.scrollY>=sectionTop){current=section.getAttribute('id')}});navLinks.forEach(function(link){link.classList.remove('active');if(link.getAttribute('href')==='#'+current){link.classList.add('active')}})});
+
+// ROI Calculator
+function fmt(n){return n>=1000?'$'+Math.round(n).toLocaleString():'$'+n.toFixed(0)}
+function num(n){return Math.round(n).toLocaleString()}
+
+function calcROI(){
+  var plants=parseInt(document.getElementById('r-plants').value);
+  var slips=parseInt(document.getElementById('r-slips').value);
+  var hours=parseFloat(document.getElementById('r-hours').value);
+  var labor=parseInt(document.getElementById('r-labor').value);
+  var aicost=parseFloat(document.getElementById('r-aicost').value);
+  var review=parseInt(document.getElementById('r-review').value);
+  var days=260;
+  var reviewHrs=review/60;
+
+  // Labels
+  document.getElementById('v-plants').textContent=plants;
+  document.getElementById('v-slips').textContent=slips;
+  document.getElementById('v-hours').textContent=hours;
+  document.getElementById('v-labor').textContent='$'+labor;
+  document.getElementById('v-aicost').textContent='$'+aicost.toFixed(2);
+  document.getElementById('v-review').textContent=review+' min';
+
+  // Totals for all plants
+  var manualHrsDay=hours*plants;
+  var reviewHrsDay=reviewHrs*plants;
+  var savedHrsDay=manualHrsDay-reviewHrsDay;
+  var savedHrsYr=savedHrsDay*days;
+  var laborSaved=savedHrsYr*labor;
+  var aiTotal=slips*plants*aicost*days;
+  var net=laborSaved-aiTotal;
+
+  // Output cards
+  document.getElementById('o-hourssaved').textContent=num(savedHrsYr);
+  document.getElementById('o-laborsaved').textContent=fmt(laborSaved);
+  document.getElementById('o-aicost').textContent=fmt(aiTotal);
+  document.getElementById('o-net').textContent=fmt(net);
+  document.getElementById('o-net').style.color=net>0?'var(--green)':'var(--red)';
+  var roiPct=aiTotal>0?Math.round(net/aiTotal*100):0;
+  document.getElementById('o-roi').textContent=roiPct+'%';
+  document.getElementById('o-roi').style.color=roiPct>0?'var(--green)':'var(--red)';
+
+  // Bar chart
+  document.getElementById('bv-manual').textContent=num(manualHrsDay)+' hrs/day';
+  document.getElementById('bv-after').textContent=num(reviewHrsDay)+' hrs/day';
+  var pct=manualHrsDay>0?Math.round(reviewHrsDay/manualHrsDay*100):0;
+  document.getElementById('bar-after').style.width=Math.max(2,pct)+'%';
+
+  // Table: 1 plant (use $30/hr for Springfield pilot)
+  var usRate=30;
+  var m1=hours; var r1=reviewHrs; var s1=slips;
+  var h1=(m1-r1)*days; var l1=h1*usRate; var a1=s1*aicost*days; var n1=l1-a1;
+  document.getElementById('t-s1').textContent=num(s1);
+  document.getElementById('t-m1').textContent=m1;
+  document.getElementById('t-r1').textContent=r1.toFixed(1);
+  document.getElementById('t-h1').textContent=num(h1);
+  document.getElementById('t-l1').textContent=fmt(l1);
+  document.getElementById('t-a1').textContent=fmt(a1);
+  document.getElementById('t-n1').textContent=fmt(n1);
+  document.getElementById('t-n1').style.color=n1>0?'var(--green)':'var(--red)';
+
+  // Table: 8 US plants
+  var m15=hours*8; var r15=reviewHrs*8; var s15=slips*8;
+  var h15=(m15-r15)*days; var l15=h15*usRate; var a15=s15*aicost*days; var n15=l15-a15;
+  document.getElementById('t-s15').textContent=num(s15);
+  document.getElementById('t-m15').textContent=num(m15);
+  document.getElementById('t-r15').textContent=r15.toFixed(1);
+  document.getElementById('t-h15').textContent=num(h15);
+  document.getElementById('t-l15').textContent=fmt(l15);
+  document.getElementById('t-a15').textContent=fmt(a15);
+  document.getElementById('t-n15').textContent=fmt(n15);
+  document.getElementById('t-n15').style.color=n15>0?'var(--green)':'var(--red)';
+
+  // Table: all N plants (blended rate from slider)
+  var mall=manualHrsDay; var rall=reviewHrsDay; var sall=slips*plants;
+  document.getElementById('th-all').textContent='All '+plants+' Facilities';
+  document.getElementById('t-sall').textContent=num(sall);
+  document.getElementById('t-mall').textContent=num(mall);
+  document.getElementById('t-rall').textContent=num(rall);
+  document.getElementById('t-hall').textContent=num(savedHrsYr);
+  document.getElementById('t-lall').textContent=fmt(laborSaved);
+  document.getElementById('t-aall').textContent=fmt(aiTotal);
+  document.getElementById('t-nall').textContent=fmt(net);
+  document.getElementById('t-nall').style.color=net>0?'var(--green)':'var(--red)';
+}
+
+document.querySelectorAll('#roi-calculator input[type=range]').forEach(function(el){
+  el.addEventListener('input',calcROI);
+});
+calcROI();
+</script>
+</body>
+</html>

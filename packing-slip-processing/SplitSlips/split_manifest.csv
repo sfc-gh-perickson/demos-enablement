@@ -1,0 +1,16 @@
+source,slip_num,start_page,end_page,num_pages,output_file,po_number,supplier
+sample_batch_001.pdf,1,1,1,1,sample_batch_001_slip_001.pdf,PSN877572,Precision Coating and Finishing
+sample_batch_001.pdf,2,2,2,1,sample_batch_001_slip_002.pdf,PSN263032,Apex Electronics and Controls
+sample_batch_001.pdf,3,3,3,1,sample_batch_001_slip_003.pdf,PSN472528,Central Supply Co
+sample_batch_001.pdf,4,4,4,1,sample_batch_001_slip_004.pdf,PSN688637,Eagle Transfer and Logistics
+sample_batch_001.pdf,5,5,5,1,sample_batch_001_slip_005.pdf,PSN632342,Heritage Woodworks
+sample_batch_002.pdf,1,1,1,1,sample_batch_002_slip_001.pdf,PSN359947,"ProLine Extrusions, Inc."
+sample_batch_002.pdf,2,2,2,1,sample_batch_002_slip_002.pdf,PSN863587,Atlas Coatings Inc
+sample_batch_002.pdf,3,3,3,1,sample_batch_002_slip_003.pdf,PSN509386,BoltSource
+sample_batch_002.pdf,4,4,4,1,sample_batch_002_slip_004.pdf,PSN648177,Nova Systems LLC
+sample_batch_002.pdf,5,5,6,2,sample_batch_002_slip_005.pdf,PSN765046,CoreLink Partners
+sample_batch_002.pdf,6,7,7,1,sample_batch_002_slip_006.pdf,PSN270395,Precision Coating and Finishing
+sample_batch_002.pdf,7,8,8,1,sample_batch_002_slip_007.pdf,PSN468203,Apex Electronics and Controls
+sample_batch_003.pdf,1,1,1,1,sample_batch_003_slip_001.pdf,PSN173372,Nova Systems LLC
+sample_batch_003.pdf,2,2,2,1,sample_batch_003_slip_002.pdf,PSN188914,CoreLink Partners
+sample_batch_003.pdf,3,3,3,1,sample_batch_003_slip_003.pdf,PSN284430,Precision Coating and Finishing

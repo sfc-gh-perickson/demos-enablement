@@ -1,0 +1,11 @@
+definition_version: 2
+entities:
+  packing_slip_review:
+    type: streamlit
+    identifier:
+      name: PACKING_SLIP_REVIEW
+      schema: PACKING_SLIPS
+      database: PACKING_SLIP_PROCESSING
+    main_file: streamlit_app.py
+    query_warehouse: COMPUTE_WH
+    title: "Packing Slip Review"

@@ -1,0 +1,142 @@
+-- 01_infrastructure.sql
+-- Creates database, schema, stage, and all pipeline tables.
+-- Run this first on a fresh account.
+
+CREATE DATABASE IF NOT EXISTS PACKING_SLIP_PROCESSING;
+USE DATABASE PACKING_SLIP_PROCESSING;
+CREATE SCHEMA IF NOT EXISTS PACKING_SLIPS;
+USE SCHEMA PACKING_SLIPS;
+
+-- Internal stage for original multi-slip PDF bundles
+CREATE STAGE IF NOT EXISTS RAW_DOCS
+    DIRECTORY = (ENABLE = TRUE)
+    COMMENT = 'Original packing slip PDF bundles (before splitting)';
+
+-- Internal stage for pre-split per-slip PDFs (one PDF per packing slip)
+CREATE STAGE IF NOT EXISTS SPLIT_SLIPS
+    DIRECTORY = (ENABLE = TRUE)
+    COMMENT = 'Pre-split individual packing slip PDFs for pipeline processing';
+
+-- Pipeline error logging
+CREATE TABLE IF NOT EXISTS EXTRACTION_ERRORS (
+    ERROR_ID NUMBER AUTOINCREMENT PRIMARY KEY,
+    FILE_NAME VARCHAR,
+    ERROR_MESSAGE VARCHAR,
+    ERROR_TIMESTAMP TIMESTAMP_NTZ DEFAULT CURRENT_TIMESTAMP(),
+    PIPELINE_STEP VARCHAR,
+    ADDITIONAL_CONTEXT VARIANT
+);
+
+-- Raw OCR text from AI_PARSE_DOCUMENT
+CREATE TABLE IF NOT EXISTS PARSED_DOCUMENTS (
+    PARSE_ID NUMBER AUTOINCREMENT PRIMARY KEY,
+    FILE_NAME VARCHAR,
+    RELATIVE_PATH VARCHAR,
+    PARSED_CONTENT VARCHAR,
+    PAGE_COUNT NUMBER,
+    PARSE_METADATA VARIANT,
+    PARSED_AT TIMESTAMP_NTZ DEFAULT CURRENT_TIMESTAMP()
+);
+
+-- AI_COMPLETE extraction results (raw JSON from claude-sonnet-4-6)
+CREATE TABLE IF NOT EXISTS AI_COMPLETE_EXTRACTIONS (
+    EXTRACTION_ID NUMBER AUTOINCREMENT PRIMARY KEY,
+    FILE_NAME VARCHAR,
+    RELATIVE_PATH VARCHAR,
+    RAW_RESPONSE VARCHAR,
+    PARSED_JSON VARIANT,
+    SLIP_COUNT NUMBER,
+    EXTRACTED_AT TIMESTAMP_NTZ DEFAULT CURRENT_TIMESTAMP()
+);
+
+-- Flattened: one row per packing slip
+CREATE TABLE IF NOT EXISTS PACKING_SLIP_HEADERS (
+    HEADER_ID NUMBER AUTOINCREMENT PRIMARY KEY,
+    EXTRACTION_ID NUMBER,
+    SLIP_INDEX NUMBER,
+    FILE_NAME VARCHAR,
+    PAGE_NUMBER NUMBER,
+    PAGE_FILE VARCHAR,
+    PO_NUMBER VARCHAR,
+    SUPPLIER_NAME VARCHAR,
+    SHIPMENT_NUMBER VARCHAR,
+    SHIPMENT_DATE VARCHAR,
+    CUSTOMER_ID VARCHAR,
+    SHIP_TO_ADDRESS VARCHAR,
+    BILL_TO_ADDRESS VARCHAR,
+    CARRIER VARCHAR,
+    TRACKING_NUMBER VARCHAR,
+    SHIPPING_SERVICE_CODE VARCHAR,
+    RECEIVED_DATE VARCHAR,
+    RECEIVED_BY VARCHAR,
+    CONFIDENCE_SCORE FLOAT DEFAULT 0,
+    REVIEW_STATUS VARCHAR DEFAULT 'PENDING',
+    REVIEWED_BY VARCHAR,
+    REVIEWED_AT TIMESTAMP_NTZ,
+    CREATED_AT TIMESTAMP_NTZ DEFAULT CURRENT_TIMESTAMP()
+);
+
+-- Flattened: one row per line item
+CREATE TABLE IF NOT EXISTS PACKING_SLIP_LINE_ITEMS (
+    LINE_ITEM_ID NUMBER AUTOINCREMENT PRIMARY KEY,
+    HEADER_ID NUMBER,
+    LINE_NUMBER VARCHAR,
+    PART_NUMBER VARCHAR,
+    DESCRIPTION VARCHAR,
+    UNIT_OF_MEASURE VARCHAR,
+    QUANTITY_ORDERED VARCHAR,
+    QUANTITY_SHIPPED VARCHAR,
+    BACK_ORDERED VARCHAR,
+    CONFIDENCE_SCORE FLOAT DEFAULT 0,
+    REVIEW_STATUS VARCHAR DEFAULT 'PENDING',
+    REVIEWED_BY VARCHAR,
+    REVIEWED_AT TIMESTAMP_NTZ,
+    CREATED_AT TIMESTAMP_NTZ DEFAULT CURRENT_TIMESTAMP()
+);
+
+-- Configurable thresholds for confidence scoring
+CREATE TABLE IF NOT EXISTS PIPELINE_CONFIG (
+    CONFIG_KEY VARCHAR PRIMARY KEY,
+    CONFIG_VALUE VARCHAR,
+    DESCRIPTION VARCHAR,
+    UPDATED_AT TIMESTAMP_NTZ DEFAULT CURRENT_TIMESTAMP()
+);
+
+MERGE INTO PIPELINE_CONFIG t
+USING (
+    SELECT * FROM VALUES
+        ('auto_approve_threshold', '0.85', 'Score at/above = auto-approved'),
+        ('needs_review_threshold', '0.60', 'Score below = needs manual review'),
+        ('spot_check_pct', '5', 'Pct of auto-approved randomly flagged for spot-check'),
+        ('max_retries', '3', 'Max extraction retry attempts per file')
+    AS v(CONFIG_KEY, CONFIG_VALUE, DESCRIPTION)
+) s ON t.CONFIG_KEY = s.CONFIG_KEY
+WHEN NOT MATCHED THEN INSERT VALUES (s.CONFIG_KEY, s.CONFIG_VALUE, s.DESCRIPTION, CURRENT_TIMESTAMP())
+WHEN MATCHED THEN UPDATE SET CONFIG_VALUE = s.CONFIG_VALUE, UPDATED_AT = CURRENT_TIMESTAMP();
+
+-- UDF: Render a PDF page as a PNG image (for Streamlit display)
+CREATE OR REPLACE FUNCTION PDF_PAGE_TO_PNG(file_url VARCHAR, page_num INT)
+RETURNS BINARY
+LANGUAGE PYTHON
+RUNTIME_VERSION = '3.11'
+PACKAGES = ('snowflake-snowpark-python', 'pypdfium2', 'pillow')
+HANDLER = 'render_page'
+AS
+$$
+import pypdfium2 as pdfium
+from snowflake.snowpark.files import SnowflakeFile
+import io
+
+def render_page(file_url, page_num):
+    with SnowflakeFile.open(file_url, 'rb') as f:
+        pdf_bytes = f.read()
+    pdf = pdfium.PdfDocument(pdf_bytes)
+    if page_num >= len(pdf):
+        return None
+    page = pdf[page_num]
+    bitmap = page.render(scale=2)
+    pil_image = bitmap.to_pil()
+    buf = io.BytesIO()
+    pil_image.save(buf, format='PNG')
+    return buf.getvalue()
+$$;
