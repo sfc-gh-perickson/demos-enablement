@@ -1,0 +1,13 @@
+evaluation:
+  agent: COCO_WORKSHOP.ANALYTICS.AP_ANALYTICS_ASSISTANT
+  agent_version: LIVE
+  dataset_fqn: COCO_WORKSHOP.ANALYTICS.ap_analytics_assistant_eval_20260909_171623
+metrics:
+  - name: answer_correctness
+    version: v3_0
+  - name: logical_consistency
+    version: v3_0
+  - name: tool_selection_accuracy
+    version: v3_0
+  - name: tool_execution_accuracy
+    version: v3_0

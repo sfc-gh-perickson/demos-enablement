@@ -1,0 +1,231 @@
+name: SV_AP_ANALYTICS
+description: >-
+  Accounts Payable analytics model joining AP invoices with vendor master data.
+  Supports spend analysis by vendor, category, business unit, and time period,
+  open-balance tracking, and payment-terms analysis. Invoices originate from
+  SAP (EUR) and Oracle (USD).
+
+tables:
+  - name: AP_INVOICES
+    base_table:
+      database: COCO_WORKSHOP
+      schema: ANALYTICS
+      table: AP_INVOICES
+    description: >-
+      One row per AP invoice from SAP (European entities, EUR) or Oracle
+      (US entities, USD). Contains posting date, amount, tax, payment terms,
+      and payment status.
+    dimensions:
+      - name: SOURCE_SYSTEM
+        expr: SOURCE_SYSTEM
+        data_type: VARCHAR
+        description: Originating ERP system — SAP for European entities, ORACLE for US entities.
+        sample_values:
+          - SAP
+          - ORACLE
+      - name: INVOICE_ID
+        expr: INVOICE_ID
+        data_type: NUMBER
+        unique: true
+        description: Surrogate invoice key, unique per row.
+      - name: VENDOR_ID
+        expr: VENDOR_ID
+        data_type: NUMBER
+        description: Foreign key to VENDORS.VENDOR_ID.
+      - name: BUSINESS_UNIT
+        expr: BUSINESS_UNIT
+        data_type: VARCHAR
+        description: Internal business unit that incurred the invoice.
+        sample_values:
+          - R&D
+          - IT
+          - Finance
+          - Operations
+          - Sales
+          - HR
+      - name: INVOICE_NUMBER
+        expr: INVOICE_NUMBER
+        data_type: VARCHAR
+        description: Human-readable invoice number from the source system.
+      - name: POSTING_DATE
+        expr: POSTING_DATE
+        data_type: DATE
+        description: Date the invoice was posted to the general ledger.
+      - name: DOCUMENT_DATE
+        expr: DOCUMENT_DATE
+        data_type: DATE
+        description: Date printed on the vendor document, typically a few days before posting.
+      - name: CURRENCY
+        expr: CURRENCY
+        data_type: VARCHAR
+        description: Invoice currency — EUR for SAP invoices, USD for Oracle invoices.
+        sample_values:
+          - EUR
+          - USD
+      - name: PAYMENT_TERMS
+        expr: PAYMENT_TERMS
+        data_type: VARCHAR
+        description: Agreed payment terms for the invoice.
+        sample_values:
+          - NET30
+          - NET45
+          - NET60
+          - DUE_ON_RECEIPT
+      - name: PAYMENT_STATUS
+        expr: PAYMENT_STATUS
+        data_type: VARCHAR
+        description: Whether the invoice has been paid.
+        sample_values:
+          - PAID
+          - OPEN
+      - name: POSTING_MONTH
+        expr: DATE_TRUNC('MONTH', POSTING_DATE)
+        data_type: DATE
+        description: Invoice posting date truncated to the first of the month, for trend analysis.
+
+    measures:
+      - name: INVOICE_COUNT
+        expr: "1"
+        default_aggregation: COUNT
+        description: Count of invoices.
+      - name: TOTAL_SPEND
+        expr: INVOICE_AMOUNT
+        default_aggregation: SUM
+        description: >-
+          Total gross invoice amount. Note: amounts are in local currency
+          (EUR or USD) and should be filtered by currency for accurate totals.
+      - name: AVERAGE_INVOICE_AMOUNT
+        expr: INVOICE_AMOUNT
+        default_aggregation: AVG
+        description: Average gross invoice amount.
+      - name: OPEN_AMOUNT
+        expr: "CASE WHEN PAYMENT_STATUS = 'OPEN' THEN INVOICE_AMOUNT ELSE 0 END"
+        default_aggregation: SUM
+        description: Total gross amount for unpaid (OPEN) invoices only.
+      - name: TAX_AMOUNT
+        expr: TAX_AMOUNT
+        default_aggregation: SUM
+        description: Total tax amount across invoices.
+
+  - name: VENDORS
+    base_table:
+      database: COCO_WORKSHOP
+      schema: ANALYTICS
+      table: VENDORS
+    description: >-
+      Vendor master data with 40 vendors across Europe and the United States.
+      Provides vendor name, country, and spend category.
+    dimensions:
+      - name: VENDOR_ID
+        expr: VENDOR_ID
+        data_type: NUMBER
+        unique: true
+        description: Primary key identifying each vendor.
+      - name: VENDOR_NAME
+        expr: VENDOR_NAME
+        data_type: VARCHAR
+        description: Legal name of the vendor.
+      - name: VENDOR_COUNTRY
+        expr: VENDOR_COUNTRY
+        data_type: VARCHAR
+        description: Country where the vendor is domiciled.
+        sample_values:
+          - Germany
+          - United States
+          - France
+          - Netherlands
+          - Spain
+          - Italy
+          - Ireland
+          - Belgium
+          - Austria
+          - Finland
+      - name: VENDOR_CATEGORY
+        expr: VENDOR_CATEGORY
+        data_type: VARCHAR
+        description: Spend category assigned to the vendor.
+        sample_values:
+          - Manufacturing
+          - IT Services
+          - Consulting
+          - Logistics
+          - Office Supplies
+          - Marketing
+          - Facilities
+          - Utilities
+          - Professional Services
+          - Travel
+
+relationships:
+  - name: INVOICES_TO_VENDORS
+    left_table: AP_INVOICES
+    right_table: VENDORS
+    relationship_columns:
+      - left_column: VENDOR_ID
+        right_column: VENDOR_ID
+    join_type: inner
+    relationship_type: many_to_one
+    description: Each invoice references one vendor; each vendor may have many invoices.
+
+verified_queries:
+  - name: TOP_VENDORS_BY_SPEND
+    question: Which vendors have the highest total spend?
+    sql: >-
+      SELECT v.VENDOR_NAME, COUNT(*) AS invoice_count,
+             SUM(i.INVOICE_AMOUNT) AS total_spend
+        FROM __AP_INVOICES i
+        JOIN __VENDORS v ON i.VENDOR_ID = v.VENDOR_ID
+       GROUP BY v.VENDOR_NAME
+       ORDER BY total_spend DESC
+    verified_at: 1749496800
+    verified_by: cortex_code
+
+  - name: MONTHLY_SPEND_TREND
+    question: How is AP spend trending month over month?
+    sql: >-
+      SELECT DATE_TRUNC('MONTH', i.POSTING_DATE) AS posting_month,
+             COUNT(*) AS invoice_count,
+             SUM(i.INVOICE_AMOUNT) AS total_spend
+        FROM __AP_INVOICES i
+       GROUP BY posting_month
+       ORDER BY posting_month
+    verified_at: 1749496800
+    verified_by: cortex_code
+
+  - name: OPEN_BALANCE_BY_VENDOR
+    question: What is the outstanding unpaid amount by vendor?
+    sql: >-
+      SELECT v.VENDOR_NAME,
+             SUM(i.INVOICE_AMOUNT) AS open_amount
+        FROM __AP_INVOICES i
+        JOIN __VENDORS v ON i.VENDOR_ID = v.VENDOR_ID
+       WHERE i.PAYMENT_STATUS = 'OPEN'
+       GROUP BY v.VENDOR_NAME
+       ORDER BY open_amount DESC
+    verified_at: 1749496800
+    verified_by: cortex_code
+
+  - name: AVG_INVOICE_BY_BU_AND_TERMS
+    question: What is the average invoice amount by business unit and payment terms?
+    sql: >-
+      SELECT i.BUSINESS_UNIT, i.PAYMENT_TERMS,
+             COUNT(*) AS invoice_count,
+             AVG(i.INVOICE_AMOUNT) AS avg_invoice_amount
+        FROM __AP_INVOICES i
+       GROUP BY i.BUSINESS_UNIT, i.PAYMENT_TERMS
+       ORDER BY i.BUSINESS_UNIT, i.PAYMENT_TERMS
+    verified_at: 1749496800
+    verified_by: cortex_code
+
+  - name: SPEND_BY_CATEGORY_AND_CURRENCY
+    question: What is the total spend by vendor category and currency?
+    sql: >-
+      SELECT v.VENDOR_CATEGORY, i.CURRENCY,
+             COUNT(*) AS invoice_count,
+             SUM(i.INVOICE_AMOUNT) AS total_spend
+        FROM __AP_INVOICES i
+        JOIN __VENDORS v ON i.VENDOR_ID = v.VENDOR_ID
+       GROUP BY v.VENDOR_CATEGORY, i.CURRENCY
+       ORDER BY total_spend DESC
+    verified_at: 1749496800
+    verified_by: cortex_code

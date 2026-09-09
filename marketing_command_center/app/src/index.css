@@ -1,27 +1,26 @@
-1... *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-2... html, body, #root { height: 100%; width: 100%; }
-3... body { font-family: 'Inter', system-ui, -apple-system, sans-serif; -webkit-font-smoothing: antialiased; color: #1f2937; background: #f5f7fa; }
-4... input, select, textarea, button { font-family: inherit; }
-5... table { border-spacing: 0; }
-6... ::-webkit-scrollbar { width: 6px; }
-7... ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 3px; }
-8... ::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
-9... 
-10... @keyframes fadeInUp {
-11...   from { opacity: 0; transform: translateY(12px); }
-12...   to { opacity: 1; transform: translateY(0); }
-13... }
-14... 
-15... /* Agent chat markdown */
-16... .agent-markdown p { margin: 0 0 8px; }
-17... .agent-markdown p:last-child { margin-bottom: 0; }
-18... .agent-markdown ul, .agent-markdown ol { margin: 4px 0 8px 16px; }
-19... .agent-markdown li { margin-bottom: 2px; }
-20... .agent-markdown strong { font-weight: 600; }
-21... .agent-markdown h1, .agent-markdown h2, .agent-markdown h3 { margin: 12px 0 6px; font-size: 14px; font-weight: 600; }
-22... .agent-markdown code { background: #e5e7eb; padding: 1px 4px; border-radius: 3px; font-size: 12px; }
-23... .agent-markdown pre { background: #1f2937; color: #e5e7eb; padding: 10px; border-radius: 6px; overflow-x: auto; margin: 8px 0; font-size: 12px; }
-24... .agent-markdown table { width: 100%; border-collapse: collapse; margin: 8px 0; font-size: 12px; }
-25... .agent-markdown th, .agent-markdown td { border: 1px solid #e5e7eb; padding: 4px 8px; text-align: left; }
-26... .agent-markdown th { background: #f9fafb; font-weight: 600; }
-27... 
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html, body, #root { height: 100%; width: 100%; }
+body { font-family: 'Inter', system-ui, -apple-system, sans-serif; -webkit-font-smoothing: antialiased; color: #1f2937; background: #f5f7fa; }
+input, select, textarea, button { font-family: inherit; }
+table { border-spacing: 0; }
+::-webkit-scrollbar { width: 6px; }
+::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+
+@keyframes fadeInUp {
+  from { opacity: 0; transform: translateY(12px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* Agent chat markdown */
+.agent-markdown p { margin: 0 0 8px; }
+.agent-markdown p:last-child { margin-bottom: 0; }
+.agent-markdown ul, .agent-markdown ol { margin: 4px 0 8px 16px; }
+.agent-markdown li { margin-bottom: 2px; }
+.agent-markdown strong { font-weight: 600; }
+.agent-markdown h1, .agent-markdown h2, .agent-markdown h3 { margin: 12px 0 6px; font-size: 14px; font-weight: 600; }
+.agent-markdown code { background: #e5e7eb; padding: 1px 4px; border-radius: 3px; font-size: 12px; }
+.agent-markdown pre { background: #1f2937; color: #e5e7eb; padding: 10px; border-radius: 6px; overflow-x: auto; margin: 8px 0; font-size: 12px; }
+.agent-markdown table { width: 100%; border-collapse: collapse; margin: 8px 0; font-size: 12px; }
+.agent-markdown th, .agent-markdown td { border: 1px solid #e5e7eb; padding: 4px 8px; text-align: left; }
+.agent-markdown th { background: #f9fafb; font-weight: 600; }

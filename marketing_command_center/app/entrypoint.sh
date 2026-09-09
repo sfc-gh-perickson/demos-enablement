@@ -1,9 +1,8 @@
-1... #!/bin/sh
-2... set -e
-3... 
-4... # Start the API proxy (Node.js reads /snowflake/session/token for auth)
-5... node /app/api-proxy.js &
-6... 
-7... # Start nginx in the foreground
-8... exec nginx -g 'daemon off;'
-9... 
+#!/bin/sh
+set -e
+
+# Start the API proxy (Node.js reads /snowflake/session/token for auth)
+node /app/api-proxy.js &
+
+# Start nginx in the foreground
+exec nginx -g 'daemon off;'

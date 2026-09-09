@@ -1,0 +1,14 @@
+version: 1
+artifacts:
+  - path: SV_AP_ANALYTICS.sv.yaml
+    type: semantic_view
+    targets:
+      default:
+        object: COCO_WORKSHOP.ANALYTICS.SV_AP_ANALYTICS
+  - path: AP_ANALYTICS_ASSISTANT.agent.yaml
+    type: cortex_agent
+    targets:
+      default:
+        object: COCO_WORKSHOP.ANALYTICS.AP_ANALYTICS_ASSISTANT
+  - path: ap_analytics_assistant_eval_20260909.eval.yaml
+    type: eval_config
