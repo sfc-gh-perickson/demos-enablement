@@ -58,10 +58,15 @@ def build_lookalike(
     )
     all_customer_list = [row['CUSTOMER_ID'] for row in all_customers.collect()]
 
-    # Get feature views
+    # Get feature views (use latest registered version)
     feature_views = []
     for fv_name in feature_view_names:
-        fv = fs.get_feature_view(fv_name, 'v1')
+        all_versions = [
+            row['VERSION']
+            for row in fs.list_feature_views().filter(F.col('NAME') == fv_name).collect()
+        ]
+        latest = sorted(all_versions)[-1]
+        fv = fs.get_feature_view(fv_name, latest)
         feature_views.append(fv)
 
     # Retrieve features for all customers
