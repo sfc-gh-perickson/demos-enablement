@@ -4,10 +4,10 @@ set -euo pipefail
 # Deploy the Lookalike Builder stored procedure to Snowflake.
 # Usage: bash procedures/deploy_lookalike.sh
 #
-# Requires: snow CLI configured with the my_connection connection.
+# Requires: snow CLI configured with the parker_demo connection.
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-CONNECTION="my_connection"
+CONNECTION="parker_demo"
 
 echo "==> Creating stage..."
 snow sql -c "$CONNECTION" -q "CREATE STAGE IF NOT EXISTS SB_COMMAND_CENTER.PROCEDURES.PROC_STAGE"

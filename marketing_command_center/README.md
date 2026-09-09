@@ -4,7 +4,7 @@ A Snowflake-native ML demo for Summit Brands's marketing team. Shows Feature Sto
 
 ## Prerequisites
 
-- Snowflake account with the `my_connection` connection configured in `~/.snowflake/connections.toml`
+- Snowflake account with the `parker_demo` connection configured in `~/.snowflake/config.toml`
 - Python 3.11 with `snowflake-ml-python>=1.50.0`, `snowflake-snowpark-python`, `xgboost`, `scikit-learn`
 - Compute pool `ML_CPU_POOL` available (auto-resumes on job submit)
 - `snow` CLI installed (for SAR app deployment)
@@ -22,7 +22,10 @@ A Snowflake-native ML demo for Summit Brands's marketing team. Shows Feature Sto
 │   ├── semantic_view.sql             # Semantic view for Cortex Agent
 │   └── agent.sql                     # Cortex Agent definition
 ├── procedures/
-│   └── lookalike_builder.py          # Self-serve lookalike stored procedure
+│   ├── lookalike_builder.py          # Self-serve lookalike stored procedure
+│   └── deploy_lookalike.sh           # Upload + register the procedure
+├── presentations/
+│   └── marketing-command-center.html # Slide deck overview
 ├── app/                              # React dashboard (SAR app)
 │   ├── app.yml                       # SAR v2 deployment manifest
 │   ├── Dockerfile                    # Build + serve config
@@ -146,7 +149,7 @@ npm install
 npm run dev
 ```
 
-The Vite dev server starts at `http://localhost:5173`. It reads your `~/.snowflake/config.toml` (`my_connection` connection) at startup, and proxies `/api/` requests to Snowflake with the PAT from your config — no `.env` or extra setup needed.
+The Vite dev server starts at `http://localhost:5173`. It reads your `~/.snowflake/config.toml` (`parker_demo` connection) at startup, and proxies `/api/` requests to Snowflake with the PAT from your config — no `.env` or extra setup needed.
 
 The dashboard has four pages:
 - **Forecast Dashboard** — demand forecast charts by retailer/brand

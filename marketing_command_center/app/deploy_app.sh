@@ -4,10 +4,10 @@ set -euo pipefail
 # Deploy the Marketing Command Center app to SPCS.
 # Usage: bash app/deploy_app.sh
 #
-# Requires: snow CLI (my_connection connection), Docker running.
+# Requires: snow CLI (parker_demo connection), Docker running.
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-CONNECTION="my_connection"
+CONNECTION="parker_demo"
 DATABASE="SB_COMMAND_CENTER"
 SCHEMA="PUBLIC"
 REPO="IMAGE_REPO"
