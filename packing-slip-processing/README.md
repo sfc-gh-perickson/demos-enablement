@@ -261,20 +261,13 @@ packing-slip-processing/
 1. **Rotated/sideways pages**: Warehouse order acknowledgements with 90-degree
    rotated text extract poorly. Preprocessing to auto-rotate would improve results.
 
-2. **AI function costs**: AI_PARSE_DOCUMENT and AI_COMPLETE consume Cortex credits.
-   Check rates at https://docs.snowflake.com/en/user-guide/snowflake-cortex/aisql-cost
-
-3. **Output truncation**: AI_COMPLETE has a max_tokens limit (set to 16384 in the
-   pipeline). Documents with very many slips (50+) may need to be split into
-   smaller batches.
-
-4. **SiS Streamlit version**: The Streamlit-in-Snowflake runtime runs an older
+2. **SiS Streamlit version**: The Streamlit-in-Snowflake runtime runs an older
    Streamlit version. The app avoids newer APIs (`st.rerun`, `use_container_width`,
    `hide_index`, `type="primary"`, `st.data_editor`). PDF display uses a Python
    UDF (`PDF_PAGE_TO_PNG`) to render pages as images via `st.image`. Line item
    editing uses individual `st.text_input` fields per cell.
 
-5. **Local splitter dependency**: The `split_packing_slips.py` script requires
+3. **Local splitter dependency**: The `split_packing_slips.py` script requires
    `pypdfium2`. For the most accurate slip boundary detection, run the initial
    batch through the Snowflake AI pipeline first to generate the mapping CSV,
    then use it for splitting.
