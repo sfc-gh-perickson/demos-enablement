@@ -1,0 +1,11 @@
+# Snowflake brand palette. Colors only -- no bundled font files, so the app
+# stays lightweight and needs no static file serving.
+[theme]
+base = "light"
+primaryColor = "#29B5E8"
+textColor = "#1A1A1A"
+backgroundColor = "#FFFFFF"
+secondaryBackgroundColor = "#F4FAFD"
+
+[theme.sidebar]
+backgroundColor = "#F4FAFD"

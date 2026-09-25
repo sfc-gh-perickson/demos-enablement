@@ -7,7 +7,13 @@
 --
 -- Prerequisites:
 --   - ACCOUNTADMIN or a role with CREATE DATABASE, CREATE WAREHOUSE
---   - Cross-region inference enabled (for Claude model access)
+--   - Cross-region inference enabled (ALTER ACCOUNT SET
+--     CORTEX_ENABLED_CROSS_REGION = 'ANY_REGION') for broader model access.
+--     Model availability through the gateway varies by region AND over time even
+--     with cross-region enabled: a 503 means the gateway could not serve that
+--     model at that moment, which is often transient capacity rather than a
+--     misconfiguration. Confirm with a test request before building a demo
+--     around a specific model, and keep a fallback in mind.
 --   - SNOWFLAKE.CORTEX_USER database role granted to your role
 -- =============================================================================
 
@@ -209,17 +215,67 @@ tools:
 $$;
 
 -- ─────────────────────────────────────────────────────────────────────────────
--- 8. AI GATEWAY CONFIGURATION
+-- 8. GRANTS (required if your PAT is role-restricted)
+-- ─────────────────────────────────────────────────────────────────────────────
+-- A PAT created with ROLE_RESTRICTION acts as that role only. Without these
+-- grants the MCP server returns:
+--   "MCP server ... does not exist or not authorized"
+-- even though the object exists and SHOW MCP SERVERS lists it as the owner.
+--
+-- Set LAB_ROLE to the role your PAT is restricted to, then run this section.
+-- If your PAT is unrestricted and inherits ACCOUNTADMIN, you can skip it.
+
+SET LAB_ROLE = 'AI_GATEWAY_USER';
+SET LAB_USER = CURRENT_USER();
+
+CREATE ROLE IF NOT EXISTS IDENTIFIER($LAB_ROLE);
+GRANT ROLE IDENTIFIER($LAB_ROLE) TO USER IDENTIFIER($LAB_USER);
+
+GRANT USAGE ON WAREHOUSE GATEWAY_LAB_WH            TO ROLE IDENTIFIER($LAB_ROLE);
+GRANT USAGE ON DATABASE CORTEX_GATEWAY_LAB         TO ROLE IDENTIFIER($LAB_ROLE);
+GRANT USAGE ON SCHEMA CORTEX_GATEWAY_LAB.PUBLIC    TO ROLE IDENTIFIER($LAB_ROLE);
+GRANT SELECT ON ALL TABLES IN SCHEMA CORTEX_GATEWAY_LAB.PUBLIC
+                                                   TO ROLE IDENTIFIER($LAB_ROLE);
+GRANT SELECT ON SEMANTIC VIEW CORTEX_GATEWAY_LAB.PUBLIC.CMO_ANALYTICS
+                                                   TO ROLE IDENTIFIER($LAB_ROLE);
+GRANT USAGE ON CORTEX SEARCH SERVICE CORTEX_GATEWAY_LAB.PUBLIC.STRATEGY_SEARCH_SVC
+                                                   TO ROLE IDENTIFIER($LAB_ROLE);
+GRANT USAGE ON MCP SERVER CORTEX_GATEWAY_LAB.PUBLIC.MARKETING_MCP
+                                                   TO ROLE IDENTIFIER($LAB_ROLE);
+GRANT DATABASE ROLE SNOWFLAKE.CORTEX_USER          TO ROLE IDENTIFIER($LAB_ROLE);
+
+-- ─────────────────────────────────────────────────────────────────────────────
+-- 9. AI GATEWAY CONFIGURATION
 -- ─────────────────────────────────────────────────────────────────────────────
 -- The AI Gateway is auto-provisioned per account (named SNOWFLAKE).
--- There are TWO distinct URL paths:
---   Inference: /api/v2/cortex/v1/chat/completions  (OpenAI-compatible)
---              /api/v2/cortex/v1/messages           (Anthropic-compatible)
---   Admin:     /api/v2/aigateways/SNOWFLAKE         (spec management)
 --
+-- URL paths. Read the authoritative inference base_url off SHOW AI GATEWAYS
+-- rather than hardcoding it:
+--   Inference: /api/v2/aigateways/snowflake/v1/chat/completions  (OpenAI-compatible)
+--              /api/v2/aigateways/snowflake/v1/messages          (Anthropic-compatible)
+--   Admin:     /api/v2/aigateways/SNOWFLAKE                      (spec management)
+--
+-- Do NOT use /api/v2/cortex/v1/*. That is the separate Cortex Inference REST
+-- API. It also answers, so a wrong base_url fails silently rather than
+-- erroring -- but it bypasses the gateway entirely, so those calls never reach
+-- AI_GATEWAY_USAGE_HISTORY, never appear in gateway traces, and are not subject
+-- to the model allowlist, budgets, or quotas configured below.
+--
+-- Note: the base_url returned by SHOW AI GATEWAYS contains the account name
+-- verbatim, which may include underscores. Replace underscores with hyphens
+-- before making requests or TLS verification fails.
+
+-- The gateway is ACCOUNT-LEVEL and SHARED. Capture the current spec first so
+-- you can restore it during cleanup -- the ALTER below replaces it wholesale.
+SHOW AI GATEWAYS;
+
 -- The spec defines:
 --   models:   allowlist of model name patterns (* = all models)
 --   logging:  trace capture, client telemetry, payload recording
+--
+-- WARNING: capture_payload.request_response records full prompt and completion
+-- text for EVERY caller on this account, not just this lab. Leave it off on any
+-- account with real workloads or sensitive data.
 
 ALTER AI GATEWAY SNOWFLAKE FROM SPECIFICATION $$
 models:
@@ -235,7 +291,7 @@ $$;
 SHOW AI GATEWAYS;
 
 -- ─────────────────────────────────────────────────────────────────────────────
--- 8. VERIFY SETUP
+-- 10. VERIFY SETUP
 -- ─────────────────────────────────────────────────────────────────────────────
 
 SHOW TABLES IN SCHEMA CORTEX_GATEWAY_LAB.PUBLIC;
