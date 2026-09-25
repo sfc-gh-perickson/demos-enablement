@@ -669,26 +669,29 @@ End-to-end proactive fraud detection pipeline combining ML model training, SHAP 
 
 **Location:** `cortex-ai-gateway/`
 
-Demonstrates Snowflake's Cortex AI Gateway as a centralized LLM inference layer, combined with a LangChain agent that queries Snowflake data through the Model Context Protocol (MCP). Shows how the gateway provides OpenAI-compatible inference, model governance, and automatic observability — all queryable via SQL.
+Demonstrates Snowflake's Cortex AI Gateway as a centralized LLM inference layer, combined with LangChain agents (multi-model: GPT-5.4, Claude Sonnet 4.6, GPT-5.4 Mini) that query Snowflake data through the Model Context Protocol (MCP). Includes a monitoring dashboard deployed as Streamlit-in-Snowflake with observability, cost management, topic mining, feedback analytics, latency profiling, and LLM-powered skill/workflow recommendations.
 
 **Topics covered:**
 - AI Gateway configuration (model allowlists, logging, payload capture)
-- LangChain `ChatOpenAI` integration via gateway inference endpoint
+- Multi-model inference: `ChatOpenAI` and `ChatAnthropic` via gateway endpoint
 - MCP Server with Cortex Analyst, Cortex Search, and SQL execution tools
-- Agent tool chaining (Analyst generates SQL → execute_sql returns data)
+- Agent tool chaining, multi-turn conversations, feedback simulation
 - Observability deep-dive: trace table, conversation chain reconstruction, credit metering
-- Admin controls: model restriction, role grants, usage quotas
+- Cost management: shared resource budgets and per-user quotas
+- Monitoring dashboard (Streamlit-in-Snowflake): overview, agent explorer, topic mining with recommendations, conversation inspector
 
 **Contents:**
 - `setup.sql` — Database, tables, semantic view, Cortex Search, MCP server, gateway spec
-- `cortex-ai-gateway-langchain-mcp.ipynb` — End-to-end hands-on notebook
+- `cortex-ai-gateway-langchain-mcp.ipynb` — End-to-end hands-on notebook with cost management
 - `cortex-ai-gateway-presentation.html` — 10-slide presentation
+- `monitoring/` — Local Streamlit app (simulate.py, queries.py, app.py)
+- `monitoring_sis/` — Streamlit-in-Snowflake version (deployed to GATEWAY_MONITOR)
 
 **Prerequisites:**
 1. Snowflake account with ACCOUNTADMIN privileges
 2. PAT token in `~/.snowflake/connections.toml`
-3. Python 3.11+ with `langchain-openai`, `langchain-mcp-adapters`, `langgraph`, `snowflake-connector-python`
-4. Run `setup.sql` before starting the notebook
+3. Python 3.11+ with `langchain-openai`, `langchain-anthropic`, `langchain-mcp-adapters`, `langgraph`, `snowflake-connector-python`
+4. Run `setup.sql`, then `python -m monitoring.simulate`, then open the SiS dashboard
 
 ---
 
@@ -780,7 +783,17 @@ enablement/
 ├── cortex-ai-gateway/
 │   ├── setup.sql
 │   ├── cortex-ai-gateway-langchain-mcp.ipynb
-│   └── cortex-ai-gateway-presentation.html
+│   ├── cortex-ai-gateway-presentation.html
+│   ├── monitoring/
+│   │   ├── simulate.py
+│   │   ├── queries.py
+│   │   ├── app.py
+│   │   └── requirements.txt
+│   └── monitoring_sis/
+│       ├── streamlit_app.py
+│       ├── queries.py
+│       ├── environment.yml
+│       └── snowflake.yml
 ├── cortex-agent-cost-observability/
 │   ├── lab/
 │   │   ├── setup.sql
@@ -913,7 +926,7 @@ enablement/
    - **Agent Observability & Analysis:** Follow notebook Section 1 in `agent_observability_analysis/observability-to-evals.ipynb` (self-contained setup)
    - **Agentic Schema Mapping:** Run `setup.sql`, `seed_reference_data.sql`, then `deploy.sql` in the `agentic-schema-mapping/` directory
    - **Proactive Fraud Detection Agent:** Run scripts `01`-`06` in `proactive-fraud-agent/setup/`, then `cd app && npm install && snow app deploy`
-   - **Cortex AI Gateway:** Run `cortex-ai-gateway/setup.sql`, then open `cortex-ai-gateway-langchain-mcp.ipynb`
+   - **Cortex AI Gateway:** Run `cortex-ai-gateway/setup.sql`, then open `cortex-ai-gateway-langchain-mcp.ipynb`; run `python -m monitoring.simulate` for multi-agent data, then open the SiS dashboard `GATEWAY_MONITOR`
    - **CoCo Getting Started:** Run `coco-getting-started/setup.sql`, then follow the 3-tier prompts in the speaker notes
 
 ---

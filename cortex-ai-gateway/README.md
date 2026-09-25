@@ -2,7 +2,7 @@
 
 [View Presentation](https://sfc-gh-perickson.github.io/demos-enablement/cortex-ai-gateway/cortex-ai-gateway-presentation.html)
 
-An enablement module demonstrating Snowflake's Cortex AI Gateway as a centralized LLM inference layer, combined with a LangChain agent that queries Snowflake data through the Model Context Protocol (MCP).
+An enablement module demonstrating Snowflake's Cortex AI Gateway as a centralized LLM inference layer, combined with a LangChain agent that queries Snowflake data through the Model Context Protocol (MCP). Includes a monitoring dashboard deployed as Streamlit-in-Snowflake for observability, cost management, topic mining, and agent improvement recommendations.
 
 ## Audience
 
@@ -11,27 +11,41 @@ SEs, Solution Architects, Platform Engineers, and customers evaluating centraliz
 ## Topics Covered
 
 - **AI Gateway fundamentals** — auto-provisioned per account, OpenAI-compatible API, model allowlists, logging and payload capture
-- **LangChain integration** — `ChatOpenAI` pointed at the gateway inference endpoint with PAT authentication
+- **Multi-model inference** — GPT-5.4, Claude Sonnet 4.6 (Anthropic API), and GPT-5.4 Mini routed through a single gateway
+- **LangChain integration** — `ChatOpenAI` and `ChatAnthropic` pointed at the gateway inference endpoint with PAT authentication
 - **MCP Server** — Snowflake-native MCP server exposing Cortex Analyst, Cortex Search, and SQL execution as tools (no Cortex Agent wrapper needed)
 - **Agent tool chaining** — Cortex Analyst generates SQL, `execute_sql` runs it and returns data, Cortex Search provides RAG over documents
+- **Multi-turn conversations** — follow-up questions within the same trace for richer interaction patterns
 - **Observability** — `AGENT_TRACE_TABLE('SNOWFLAKE')` for per-request OpenTelemetry traces with full conversation chain reconstruction; `AI_GATEWAY_USAGE_HISTORY` for token/credit metering
-- **Admin controls** — model restriction (`'*'` vs `'claude-*'`), role grants (USAGE vs MONITOR), usage quotas with block enforcement
+- **Cost management** — shared resource budgets (team-level) and per-user quotas (individual hard blocks)
+- **Monitoring dashboard** — Streamlit-in-Snowflake app with 4 tabs: Overview, Agent Explorer, Topic Mining, Conversation Inspector
+- **Topic mining & recommendations** — LLM-powered classification of user questions + actionable suggestions for semantic view gaps, new skills, and workflow improvements
+- **Feedback analytics** — positive/negative feedback tracking with per-agent drill-down
+- **Latency analytics** — percentile distributions (P50/P90/P99), latency vs token scatter plots
 
 ## Contents
 
 | File | Description |
 |------|-------------|
 | `setup.sql` | SQL setup script — database, tables, semantic view, Cortex Search service, MCP server, gateway spec |
-| `cortex-ai-gateway-langchain-mcp.ipynb` | Hands-on notebook — gateway + LangChain + MCP end-to-end with observability queries |
+| `cortex-ai-gateway-langchain-mcp.ipynb` | Hands-on notebook — gateway + LangChain + MCP end-to-end with observability and cost management |
 | `cortex-ai-gateway-presentation.html` | 10-slide presentation covering architecture, benefits, and demo walkthrough |
+| `monitoring/simulate.py` | Simulation script — 3 agents × 3 models × ~13 queries each (some multi-turn) with feedback |
+| `monitoring/queries.py` | SQL query library for the local Streamlit app |
+| `monitoring/app.py` | Local Streamlit app with 4 tabs |
+| `monitoring_sis/streamlit_app.py` | Streamlit-in-Snowflake version (deployed to `CORTEX_GATEWAY_LAB.PUBLIC.GATEWAY_MONITOR`) |
+| `monitoring_sis/queries.py` | SQL query library for the SiS app (uses Snowpark session) |
+| `monitoring_sis/snowflake.yml` | SiS deployment manifest |
 
 ## Architecture
 
 ```
 ┌─────────────────────────────────────────────────────────────┐
-│                   LangChain Agent (ReAct)                    │
+│                   LangChain Agents (ReAct)                   │
 │                                                              │
-│  LLM: ChatOpenAI → AI Gateway → GPT-5.4 (Snowflake-hosted) │
+│  CMO Assistant     → ChatOpenAI     → GPT-5.4               │
+│  Finance Analyst   → ChatAnthropic  → Claude Sonnet 4.6     │
+│  Strategy Advisor  → ChatOpenAI     → GPT-5.4 Mini          │
 │                                                              │
 │  Tools: MCP Client → Snowflake MCP Server (MARKETING_MCP)   │
 │         ├── query_campaigns  (Cortex Analyst → SQL)          │
@@ -42,6 +56,17 @@ SEs, Solution Architects, Platform Engineers, and customers evaluating centraliz
                             ▼
           AGENT_TRACE_TABLE('SNOWFLAKE')  — per-request traces
           AI_GATEWAY_USAGE_HISTORY       — token/credit metering
+          GATEWAY_AGENT_TRACES           — trace → agent mapping
+          GATEWAY_AGENT_FEEDBACK         — user feedback
+                            │
+                            ▼
+          ┌─────────────────────────────────┐
+          │  Streamlit-in-Snowflake App     │
+          │  ├── Overview Dashboard         │
+          │  ├── Agent Explorer             │
+          │  ├── Topic Mining & Search      │
+          │  └── Conversation Inspector     │
+          └─────────────────────────────────┘
 ```
 
 ## Key URLs
@@ -63,7 +88,7 @@ The AI Gateway uses two distinct URL paths:
 
 - A Snowflake account with ACCOUNTADMIN (or CREATE DATABASE + CREATE WAREHOUSE privileges)
 - A Personal Access Token (PAT) stored in `~/.snowflake/connections.toml`
-- Python 3.11+ with `langchain-openai`, `langchain-mcp-adapters`, `langgraph`, `snowflake-connector-python`
+- Python 3.11+ with `langchain-openai`, `langchain-anthropic`, `langchain-mcp-adapters`, `langgraph`, `snowflake-connector-python`
 - Cross-region inference enabled (for model access)
 
 ### Steps
@@ -71,14 +96,23 @@ The AI Gateway uses two distinct URL paths:
 1. Run `setup.sql` in your Snowflake account to create all objects
 2. Verify: `SHOW AI GATEWAYS` and `SHOW MCP SERVERS IN SCHEMA CORTEX_GATEWAY_LAB.PUBLIC`
 3. Open `cortex-ai-gateway-langchain-mcp.ipynb` and run cells sequentially
-4. The notebook connects to the gateway, loads MCP tools, runs agent queries, and queries observability data
+4. Run the simulation to populate multi-agent data: `python -m monitoring.simulate`
+5. Open the monitoring dashboard in Snowflake: `CORTEX_GATEWAY_LAB.PUBLIC.GATEWAY_MONITOR`
 
 ### What the notebook demonstrates
 
 1. **Gateway inference** — `ChatOpenAI` pointed at `/api/v2/aigateways/snowflake/v1` with PAT auth
 2. **MCP tool loading** — `MultiServerMCPClient` with streamable HTTP transport, no npx bridge
 3. **Agent queries** — structured data (Analyst → execute_sql), unstructured search (Cortex Search), and hybrid questions using both
-4. **Observability** — trace table queries showing per-span token counts, conversation chain reconstruction from `gen_ai.input.messages`/`gen_ai.output.messages`, and credit usage from `AI_GATEWAY_USAGE_HISTORY`
+4. **Observability** — trace table queries showing per-span token counts, conversation chain reconstruction, and credit usage
+5. **Cost management** — shared resource budgets and per-user quotas for gateway spend
+
+### What the monitoring dashboard shows
+
+1. **Overview** — KPIs, request volume by model, latency percentiles, tool usage across agents, feedback ratio
+2. **Agent Explorer** — per-agent model usage, token trends, tool calls, top users, feedback detail, latency distribution, skill/workflow suggestions
+3. **Topic Mining** — LLM-classified topics across all agents, thematic browsing, actionable recommendations for semantic view/search/agent improvements
+4. **Conversation Inspector** — trace replay with paired tool call/response expanders, summary metrics
 
 ## Cleanup
 
