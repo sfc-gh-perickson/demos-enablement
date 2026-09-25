@@ -1,0 +1,15 @@
+definition_version: 2
+entities:
+  gateway_monitor:
+    type: streamlit
+    identifier:
+      name: GATEWAY_MONITOR
+      database: CORTEX_GATEWAY_LAB
+      schema: PUBLIC
+    title: "AI Gateway Monitor"
+    query_warehouse: GATEWAY_LAB_WH
+    main_file: streamlit_app.py
+    artifacts:
+      - streamlit_app.py
+      - queries.py
+      - environment.yml

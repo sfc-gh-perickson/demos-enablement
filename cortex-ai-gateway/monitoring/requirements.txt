@@ -1,0 +1,7 @@
+streamlit>=1.35
+snowflake-connector-python>=4.0
+plotly>=5.0
+pandas>=2.0
+langchain-openai>=1.0
+langchain-mcp-adapters>=0.3
+langgraph>=1.0
