@@ -96,8 +96,23 @@ The AI Gateway uses two distinct URL paths:
 1. Run `setup.sql` in your Snowflake account to create all objects
 2. Verify: `SHOW AI GATEWAYS` and `SHOW MCP SERVERS IN SCHEMA CORTEX_GATEWAY_LAB.PUBLIC`
 3. Open `cortex-ai-gateway-langchain-mcp.ipynb` and run cells sequentially
-4. Run the simulation to populate multi-agent data: `python -m monitoring.simulate`
-5. Open the monitoring dashboard in Snowflake: `CORTEX_GATEWAY_LAB.PUBLIC.GATEWAY_MONITOR`
+
+### Populate the monitoring dashboard
+
+4. Install dependencies: `pip install -r monitoring/requirements.txt`
+5. Simulate multi-agent traffic: `python -m monitoring.simulate`
+   - Sends ~39 queries across 3 agents (CMO Assistant on GPT-5.4, Finance Analyst on Claude Sonnet 4.6, Strategy Advisor on GPT-5.4 Mini)
+   - Creates mapping tables (`GATEWAY_AGENTS`, `GATEWAY_AGENT_TRACES`, `GATEWAY_AGENT_FEEDBACK`)
+   - Includes multi-turn conversations and contextual positive/negative feedback
+
+### Deploy the Streamlit-in-Snowflake dashboard
+
+6. Deploy: `cd monitoring_sis && snow streamlit deploy --replace`
+7. Open in Snowsight: **Projects > Streamlit > GATEWAY_MONITOR** (or direct link from deploy output)
+
+The SiS app uses warehouse runtime with `environment.yml` (plotly from Anaconda channel) — no EAI or compute pool needed.
+
+To run locally instead: `streamlit run monitoring/app.py`
 
 ### What the notebook demonstrates
 
