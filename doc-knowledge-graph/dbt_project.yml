@@ -1,0 +1,26 @@
+name: doc_knowledge_graph
+version: '1.0.0'
+profile: doc_knowledge_graph
+
+models:
+  doc_knowledge_graph:
+    staging:
+      +schema: pipeline
+      +materialized: dynamic_table
+      +snowflake_warehouse: KV_WH
+      +target_lag: DOWNSTREAM
+    ontology:
+      +schema: serving
+      +materialized: dynamic_table
+      +snowflake_warehouse: KV_WH
+      +target_lag: DOWNSTREAM
+    graph:
+      +schema: serving
+      +materialized: dynamic_table
+      +snowflake_warehouse: KV_WH
+      +target_lag: '1 hour'
+
+seeds:
+  doc_knowledge_graph:
+    ontology:
+      +schema: serving

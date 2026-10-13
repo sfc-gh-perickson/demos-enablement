@@ -1,0 +1,13 @@
+doc_knowledge_graph:
+  target: prod
+  outputs:
+    prod:
+      type: snowflake
+      account: "{{ env_var('SNOWFLAKE_ACCOUNT') }}"
+      user: "{{ env_var('SNOWFLAKE_USER') }}"
+      authenticator: programmatic_access_token
+      token: "{{ env_var('SNOWFLAKE_TOKEN') }}"
+      database: DOC_KNOWLEDGE_GRAPH_DEMO
+      warehouse: KV_WH
+      schema: PIPELINE
+      threads: 4

@@ -1,0 +1,25 @@
+version: 2
+
+models:
+  - name: stg_notes_parsed
+    description: "Parsed and normalized concept notes from the knowledge vault"
+    columns:
+      - name: note_id
+        tests: [unique, not_null]
+      - name: slug
+        tests: [unique, not_null]
+
+  - name: stg_notes_embedded
+    description: "Concept notes with Arctic Embed L v2.0 vector embeddings"
+    columns:
+      - name: note_id
+        tests: [unique, not_null]
+
+  - name: stg_entities_extracted
+    description: "LLM-extracted entities and relationships from concept note prose"
+    columns:
+      - name: note_id
+        tests: [unique, not_null]
+
+  - name: stg_entity_resolved
+    description: "Normalized and deduplicated entity mentions across all notes"

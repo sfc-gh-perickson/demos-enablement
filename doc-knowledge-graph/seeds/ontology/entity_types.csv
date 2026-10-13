@@ -1,0 +1,10 @@
+entity_type,description,examples,is_active,parent_entity_type
+METRIC,"A named quantitative measure, KPI, or calculated field used in reporting","""Activation Rate"", ""Net Revenue"", ""Customer Retention"", ""LTV""",TRUE,
+DIMENSION,"A categorical attribute or grouping used to slice data","""Plan"", ""Channel"", ""Region"", ""Cohort""",TRUE,
+BUSINESS_RULE,"A named logic rule, policy, or calculation methodology that governs data transformation or business behavior","""Revenue Recognition Rule"", ""Cohort Definition"", ""Attribution Window""",TRUE,
+PERSONA,"A named user role, audience segment, or stakeholder archetype","""Account Executive"", ""Marketing Analyst"", ""Channel Partner Admin""",TRUE,
+DATA_SOURCE,"A named upstream system, feed, or integration that produces data","""Salesforce"", ""Stripe"", ""Google Analytics"", ""HubSpot""",TRUE,
+GLOSSARY,"A defined business term, acronym, or concept that requires standardized meaning","""ARR"", ""Cohort"", ""Contract Start Date"", ""Product Mix""",TRUE,
+PRODUCT,"A named product, plan, or service offering","""Starter"", ""Professional"", ""Enterprise"", ""Add-On""",TRUE,GLOSSARY
+ORGANIZATION,"A named company, institution, partner, or business unit","""Acme Corp"", ""Global Analytics Inc"", ""EMEA Region""",TRUE,
+SYSTEM,"A named internal application, platform, or tool used in operations","""Tableau"", ""Snowflake"", ""dbt"", ""Looker""",TRUE,DATA_SOURCE

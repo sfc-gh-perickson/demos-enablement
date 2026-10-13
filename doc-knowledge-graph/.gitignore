@@ -1,0 +1,5 @@
+target/
+dbt_packages/
+logs/
+notes_manifest.json
+.user.yml

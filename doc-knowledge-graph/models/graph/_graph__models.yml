@@ -1,0 +1,18 @@
+version: 2
+
+models:
+  - name: graph_concept_nodes
+    description: "Canonical entity nodes in the knowledge graph — one row per unique concept"
+    columns:
+      - name: entity_id
+        tests: [unique, not_null]
+      - name: entity_name
+        tests: [not_null]
+      - name: entity_type
+        tests: [not_null]
+
+  - name: graph_concept_relationships
+    description: "Canonical edges in the knowledge graph combining LLM-extracted and explicit see-also relationships"
+    columns:
+      - name: relationship_id
+        tests: [unique, not_null]

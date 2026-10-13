@@ -1,0 +1,438 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="snowflake-source" content="cortex-agent-authored">
+  <title>Knowledge Vault — Graph-Structured Knowledge for Cortex Agents</title>
+  <style>
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+
+:root {
+  --bg: #0F1B2D;
+  --sidebar-bg: #1B2A4A;
+  --primary: #29B5E8;
+  --accent: #7C3AED;
+  --text: #E2E8F0;
+  --text-muted: #94A3B8;
+  --card-bg: #162236;
+  --border: #2D4A6F;
+  --green: #10B981;
+  --orange: #F59E0B;
+  --red: #EF4444;
+}
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+body {
+  font-family: 'Inter', sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  line-height: 1.6;
+  overflow-x: hidden;
+}
+
+.progress-bar {
+  position: fixed; top: 0; left: 0; height: 3px;
+  background: linear-gradient(90deg, var(--primary), var(--accent));
+  z-index: 1000; transition: width 0.1s;
+}
+
+.sidebar {
+  position: fixed; left: 0; top: 0; width: 260px; height: 100vh;
+  background: var(--sidebar-bg); padding: 2rem 1.5rem;
+  overflow-y: auto; border-right: 1px solid var(--border); z-index: 100;
+}
+
+.sidebar h2 {
+  font-size: 1rem; font-weight: 600; color: var(--primary);
+  margin-bottom: 1.5rem; text-transform: uppercase; letter-spacing: 0.05em;
+}
+
+.sidebar a {
+  display: block; color: var(--text-muted); text-decoration: none;
+  padding: 0.5rem 0.75rem; border-radius: 6px; font-size: 0.85rem;
+  margin-bottom: 0.25rem; transition: all 0.2s;
+}
+
+.sidebar a:hover, .sidebar a.active {
+  color: var(--text); background: rgba(41, 181, 232, 0.1);
+}
+
+.sidebar a.active {
+  border-left: 3px solid var(--primary); padding-left: calc(0.75rem - 3px);
+}
+
+.main { margin-left: 260px; padding: 0; }
+
+.slide {
+  min-height: 100vh; display: flex; flex-direction: column;
+  justify-content: center; align-items: center;
+  padding: 4rem 3rem; max-width: 1200px; margin: 0 auto;
+}
+
+.slide h1 {
+  font-size: 2.5rem; font-weight: 700; margin-bottom: 1rem;
+  background: linear-gradient(135deg, var(--primary), var(--accent));
+  -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
+}
+
+.slide h2 { font-size: 1.75rem; font-weight: 600; color: var(--text); margin-bottom: 1.5rem; }
+.slide h3 { font-size: 1.25rem; font-weight: 500; color: var(--text-muted); margin-bottom: 1rem; }
+.slide p { font-size: 1.1rem; color: var(--text-muted); max-width: 700px; text-align: center; }
+
+.stat-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 1.5rem; width: 100%; margin: 2rem 0; }
+.stat-card { background: var(--card-bg); border: 1px solid var(--border); border-radius: 12px; padding: 1.5rem; text-align: center; }
+.stat-card .value { font-size: 2rem; font-weight: 700; color: var(--primary); }
+.stat-card .label { font-size: 0.85rem; color: var(--text-muted); margin-top: 0.5rem; }
+
+.card-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 1.5rem; width: 100%; margin: 2rem 0; }
+.card { background: var(--card-bg); border: 1px solid var(--border); border-radius: 12px; padding: 1.5rem; }
+.card h4 { font-size: 1rem; font-weight: 600; color: var(--text); margin-bottom: 0.75rem; }
+.card p, .card ul { font-size: 0.9rem; color: var(--text-muted); text-align: left; }
+.card ul { list-style: none; padding: 0; }
+.card ul li { padding: 0.3rem 0; padding-left: 1rem; position: relative; }
+.card ul li::before { content: ''; position: absolute; left: 0; top: 50%; transform: translateY(-50%); width: 6px; height: 6px; border-radius: 50%; background: var(--primary); }
+
+table { width: 100%; border-collapse: collapse; margin: 2rem 0; font-size: 0.9rem; }
+th { background: var(--card-bg); color: var(--primary); font-weight: 600; padding: 0.75rem 1rem; text-align: left; border-bottom: 2px solid var(--border); }
+td { padding: 0.75rem 1rem; border-bottom: 1px solid var(--border); color: var(--text); }
+tr:hover td { background: rgba(41, 181, 232, 0.05); }
+
+.highlight-box { background: rgba(41, 181, 232, 0.1); border: 1px solid var(--primary); border-radius: 12px; padding: 1.5rem; margin: 1.5rem 0; width: 100%; }
+.context-box { background: rgba(124, 58, 237, 0.1); border: 1px solid var(--accent); border-radius: 12px; padding: 1.5rem; margin: 1.5rem 0; width: 100%; }
+
+.badge-green { background: rgba(16, 185, 129, 0.15); color: var(--green); padding: 0.25rem 0.75rem; border-radius: 99px; font-size: 0.8rem; font-weight: 500; }
+.badge-blue { background: rgba(41, 181, 232, 0.15); color: var(--primary); padding: 0.25rem 0.75rem; border-radius: 99px; font-size: 0.8rem; font-weight: 500; }
+.badge-purple { background: rgba(124, 58, 237, 0.15); color: var(--accent); padding: 0.25rem 0.75rem; border-radius: 99px; font-size: 0.8rem; font-weight: 500; }
+.badge-orange { background: rgba(245, 158, 11, 0.15); color: var(--orange); padding: 0.25rem 0.75rem; border-radius: 99px; font-size: 0.8rem; font-weight: 500; }
+
+.slide ul { list-style: none; width: 100%; max-width: 700px; }
+.slide ul li { padding: 0.75rem 0; padding-left: 1.5rem; position: relative; color: var(--text); font-size: 1.05rem; }
+.slide ul li::before { content: ''; position: absolute; left: 0; top: 50%; transform: translateY(-50%); width: 8px; height: 8px; border-radius: 50%; background: var(--primary); }
+
+.flow-diagram { display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap; justify-content: center; margin: 2rem 0; width: 100%; }
+.flow-step { background: var(--card-bg); border: 1px solid var(--border); border-radius: 10px; padding: 1rem 1.25rem; text-align: center; min-width: 140px; }
+.flow-step .step-title { font-size: 0.85rem; font-weight: 600; color: var(--text); }
+.flow-step .step-detail { font-size: 0.75rem; color: var(--text-muted); margin-top: 0.25rem; }
+.flow-arrow { color: var(--primary); font-size: 1.5rem; font-weight: 300; }
+
+code { background: rgba(41, 181, 232, 0.1); color: var(--primary); padding: 0.15rem 0.4rem; border-radius: 4px; font-size: 0.85em; font-family: 'SF Mono', 'Fira Code', monospace; }
+
+.anim-fade { opacity: 0; transform: translateY(20px); transition: opacity 0.6s ease, transform 0.6s ease; }
+.anim-fade.visible { opacity: 1; transform: translateY(0); }
+
+@media (max-width: 900px) {
+  .sidebar { display: none; }
+  .main { margin-left: 0; }
+  .stat-grid { grid-template-columns: repeat(2, 1fr); }
+  .slide { padding: 2rem 1.5rem; }
+  .flow-diagram { flex-direction: column; }
+  .flow-arrow { transform: rotate(90deg); }
+}
+  </style>
+</head>
+<body>
+  <div class="progress-bar"></div>
+
+  <nav class="sidebar">
+    <h2>Knowledge Vault</h2>
+    <a href="#hero">Overview</a>
+    <a href="#problem">The Problem</a>
+    <a href="#solution">How It Works</a>
+    <a href="#pipeline">Pipeline Architecture</a>
+    <a href="#ontology">Ontology Design</a>
+    <a href="#graph">Knowledge Graph</a>
+    <a href="#agent">Cortex Agent</a>
+    <a href="#disambiguation">Disambiguation</a>
+    <a href="#demo">Live Demo</a>
+    <a href="#deploy">Deployment</a>
+    <a href="#closing">Next Steps</a>
+  </nav>
+
+  <main class="main">
+
+    <!-- HERO -->
+    <section class="slide" id="hero">
+      <h1>Knowledge Vault</h1>
+      <p>A graph-structured knowledge base in Snowflake that turns curated concept notes into a searchable knowledge graph, powered by Cortex AI and served via a Cortex Agent.</p>
+      <div class="stat-grid" style="margin-top: 2.5rem;">
+        <div class="stat-card anim-fade"><div class="value">13</div><div class="label">Concept Notes</div></div>
+        <div class="stat-card anim-fade"><div class="value">9</div><div class="label">Entity Types</div></div>
+        <div class="stat-card anim-fade"><div class="value">14</div><div class="label">Relationship Types</div></div>
+        <div class="stat-card anim-fade"><div class="value">5</div><div class="label">Agent Tools</div></div>
+      </div>
+    </section>
+
+    <!-- THE PROBLEM -->
+    <section class="slide" id="problem">
+      <h2>The Problem</h2>
+      <p style="margin-bottom: 2rem;">Business knowledge lives in wikis, Slack threads, spreadsheets, and tribal memory. When teams need definitions, they get inconsistent answers.</p>
+      <div class="card-grid">
+        <div class="card anim-fade">
+          <h4>Ambiguous Terms</h4>
+          <p>"CR" means Completion Rate to the Analytics team and Credit Rating to Finance. Without context, queries return the wrong definition.</p>
+        </div>
+        <div class="card anim-fade">
+          <h4>Hidden Relationships</h4>
+          <p>Retention Rate drives LTV which depends on Revenue Recognition rules. These connections aren't explicit in any single document.</p>
+        </div>
+        <div class="card anim-fade">
+          <h4>No Source of Truth</h4>
+          <p>Metric calculations vary by team. Is LTV based on billed or recognized revenue? The answer depends on who you ask.</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- HOW IT WORKS -->
+    <section class="slide" id="solution">
+      <h2>How It Works</h2>
+      <p style="margin-bottom: 2rem;">Curated markdown notes are transformed into a knowledge graph through a fully automated Cortex AI pipeline.</p>
+      <div class="flow-diagram anim-fade">
+        <div class="flow-step"><div class="step-title">Markdown Notes</div><div class="step-detail">YAML frontmatter + body</div></div>
+        <div class="flow-arrow">&rarr;</div>
+        <div class="flow-step"><div class="step-title">Embed</div><div class="step-detail">Arctic Embed L v2.0</div></div>
+        <div class="flow-arrow">&rarr;</div>
+        <div class="flow-step"><div class="step-title">Extract</div><div class="step-detail">LLM + Ontology</div></div>
+        <div class="flow-arrow">&rarr;</div>
+        <div class="flow-step"><div class="step-title">Resolve</div><div class="step-detail">Dedup + Canonicalize</div></div>
+        <div class="flow-arrow">&rarr;</div>
+        <div class="flow-step"><div class="step-title">Graph</div><div class="step-detail">Nodes + Edges</div></div>
+        <div class="flow-arrow">&rarr;</div>
+        <div class="flow-step"><div class="step-title">Agent</div><div class="step-detail">Search + Traverse</div></div>
+      </div>
+      <div class="highlight-box anim-fade" style="margin-top: 1rem;">
+        <strong>Key insight:</strong> The entire pipeline runs as dbt dynamic tables with automatic refresh. Add a note in git, and the graph updates within an hour.
+      </div>
+    </section>
+
+    <!-- PIPELINE ARCHITECTURE -->
+    <section class="slide" id="pipeline">
+      <h2>Pipeline Architecture</h2>
+      <h3>dbt Dynamic Tables with Cortex AI Functions</h3>
+      <div style="overflow-x: auto; width: 100%;" class="anim-fade">
+        <table>
+          <thead>
+            <tr><th>Layer</th><th>Model</th><th>What It Does</th><th>Cortex Function</th></tr>
+          </thead>
+          <tbody>
+            <tr><td><span class="badge-blue">Staging</span></td><td><code>stg_notes_parsed</code></td><td>Normalize raw notes, extract frontmatter</td><td>&mdash;</td></tr>
+            <tr><td><span class="badge-blue">Staging</span></td><td><code>stg_notes_embedded</code></td><td>Generate 1024-dim vector embeddings</td><td><code>EMBED_TEXT_1024</code></td></tr>
+            <tr><td><span class="badge-blue">Staging</span></td><td><code>stg_entities_extracted</code></td><td>Ontology-guided entity &amp; relationship extraction</td><td><code>COMPLETE</code> (llama3.1-70b)</td></tr>
+            <tr><td><span class="badge-blue">Staging</span></td><td><code>stg_entity_resolved</code></td><td>Name normalization + SHA2 dedup</td><td>&mdash;</td></tr>
+            <tr><td><span class="badge-purple">Ontology</span></td><td><code>ont_*_embedded</code></td><td>Embed entity/relationship type descriptions</td><td><code>EMBED_TEXT_1024</code></td></tr>
+            <tr><td><span class="badge-green">Graph</span></td><td><code>graph_concept_nodes</code></td><td>Canonical entity nodes</td><td>&mdash;</td></tr>
+            <tr><td><span class="badge-green">Graph</span></td><td><code>graph_concept_relationships</code></td><td>Edges from LLM extraction + see_also links</td><td>&mdash;</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- ONTOLOGY -->
+    <section class="slide" id="ontology">
+      <h2>Ontology Design</h2>
+      <p style="margin-bottom: 2rem;">A seed-driven ontology guides LLM extraction. The top-5 most relevant types are retrieved per note via cosine similarity.</p>
+      <div class="card-grid">
+        <div class="card anim-fade">
+          <h4>9 Entity Types</h4>
+          <ul>
+            <li>Metric</li>
+            <li>Dimension</li>
+            <li>Business Rule</li>
+            <li>Persona</li>
+            <li>Data Source</li>
+            <li>Glossary</li>
+            <li>Product</li>
+            <li>Organization</li>
+            <li>System</li>
+          </ul>
+        </div>
+        <div class="card anim-fade">
+          <h4>14 Relationship Types</h4>
+          <ul>
+            <li>DEPENDS_ON, SLICED_BY</li>
+            <li>GOVERNED_BY, SOURCED_FROM</li>
+            <li>CONSUMED_BY, PRODUCED_BY</li>
+            <li>MEASURES, SERVES, OFFERED_BY</li>
+            <li>SEE_ALSO, SYNONYM_OF</li>
+            <li>REFINES, CONTRADICTS</li>
+            <li>STEERS_QUERY</li>
+          </ul>
+        </div>
+        <div class="card anim-fade">
+          <h4>Why Ontology-Guided?</h4>
+          <p>Without ontology guidance, LLMs hallucinate entity types and relationship names. By embedding the ontology and retrieving the top-5 relevant types per note, we constrain extraction to a consistent, curated vocabulary.</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- KNOWLEDGE GRAPH -->
+    <section class="slide" id="graph">
+      <h2>The Knowledge Graph</h2>
+      <p style="margin-bottom: 2rem;">Two sources of edges produce a rich, interconnected graph.</p>
+      <div class="card-grid" style="grid-template-columns: repeat(2, 1fr);">
+        <div class="card anim-fade">
+          <h4>LLM-Extracted Relationships</h4>
+          <p>The entity extraction model identifies relationships mentioned in the note body. Example: "Retention Rate is the strongest lever for LTV" produces a <code>DEPENDS_ON</code> edge from LTV to Retention Rate.</p>
+        </div>
+        <div class="card anim-fade">
+          <h4>Explicit <code>see_also</code> Links</h4>
+          <p>Authors declare cross-references in frontmatter. These become <code>SEE_ALSO</code> edges, ensuring important connections survive even if the LLM misses them.</p>
+        </div>
+      </div>
+      <div class="context-box anim-fade" style="margin-top: 1.5rem;">
+        <strong>Graph traversal example:</strong> Starting from "Activation Rate", a 2-hop traversal discovers Salesforce (data source), Revenue Recognition (business rule), Lead Source (dimension), and Cohort (glossary) &mdash; the full context an analyst needs to write a correct query.
+      </div>
+    </section>
+
+    <!-- CORTEX AGENT -->
+    <section class="slide" id="agent">
+      <h2>Cortex Agent</h2>
+      <h3>5 tools for search, retrieval, and graph traversal</h3>
+      <div style="overflow-x: auto; width: 100%;" class="anim-fade">
+        <table>
+          <thead>
+            <tr><th>Tool</th><th>Type</th><th>Purpose</th></tr>
+          </thead>
+          <tbody>
+            <tr><td><code>concept_search</code></td><td><span class="badge-blue">Cortex Search</span></td><td>Full-text search over concept notes with kind and org filtering</td></tr>
+            <tr><td><code>entity_search</code></td><td><span class="badge-blue">Cortex Search</span></td><td>Search named entities (metrics, systems, personas) by name or type</td></tr>
+            <tr><td><code>get_concept_subgraph</code></td><td><span class="badge-purple">Stored Proc</span></td><td>Full context for one concept: type, description, top 15 relationships</td></tr>
+            <tr><td><code>get_related_concepts</code></td><td><span class="badge-purple">Stored Proc</span></td><td>Multi-hop graph traversal from a seed concept</td></tr>
+            <tr><td><code>get_concept_context</code></td><td><span class="badge-purple">Stored Proc</span></td><td>Full markdown body of a concept note by slug or title</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="highlight-box anim-fade" style="margin-top: 1rem;">
+        <strong>Tool routing:</strong> The agent's orchestration instructions route definitional questions to <code>concept_search</code>, relationship questions to graph traversal, and full-text retrieval to <code>get_concept_context</code>.
+      </div>
+    </section>
+
+    <!-- DISAMBIGUATION -->
+    <section class="slide" id="disambiguation">
+      <h2>Org-Based Disambiguation</h2>
+      <p style="margin-bottom: 2rem;">The same abbreviation resolves differently based on the user's team context.</p>
+      <div class="card-grid" style="grid-template-columns: repeat(2, 1fr);">
+        <div class="card anim-fade">
+          <h4><span class="badge-green">Analytics Team</span></h4>
+          <p style="margin-bottom: 0.75rem;"><strong>User:</strong> "What is CR?"</p>
+          <p><strong>Agent:</strong> "I'm interpreting 'CR' as <strong>Completion Rate</strong> based on your Analytics team context. If you meant 'Credit Rating' (used by the Finance team), let me know."</p>
+        </div>
+        <div class="card anim-fade">
+          <h4><span class="badge-orange">Finance Team</span></h4>
+          <p style="margin-bottom: 0.75rem;"><strong>User:</strong> "What is CR?"</p>
+          <p><strong>Agent:</strong> "I'm interpreting 'CR' as <strong>Credit Rating</strong> based on your Finance team context. If you meant 'Completion Rate' (used by Analytics), let me know."</p>
+        </div>
+      </div>
+      <div class="context-box anim-fade" style="margin-top: 1.5rem;">
+        <strong>How it works:</strong> Each concept note has an <code>applicable_orgs</code> array in frontmatter. The user's team is passed in the system prompt. The agent soft-prefers notes whose <code>applicable_orgs</code> matches, and always states its interpretation explicitly.
+      </div>
+    </section>
+
+    <!-- LIVE DEMO -->
+    <section class="slide" id="demo">
+      <h2>Live Demo</h2>
+      <p style="margin-bottom: 2rem;">Three interaction patterns to show in a demo.</p>
+      <div class="card-grid">
+        <div class="card anim-fade">
+          <h4>1. Concept Lookup</h4>
+          <p>"What is activation rate?"</p>
+          <p style="margin-top: 0.5rem; font-size: 0.8rem; color: var(--text-muted);">Shows: search, definition retrieval, related concepts suggestion</p>
+        </div>
+        <div class="card anim-fade">
+          <h4>2. Disambiguation</h4>
+          <p>"What is CR?" (with different team contexts)</p>
+          <p style="margin-top: 0.5rem; font-size: 0.8rem; color: var(--text-muted);">Shows: org-aware resolution, explicit interpretation, correction handling</p>
+        </div>
+        <div class="card anim-fade">
+          <h4>3. Graph Traversal</h4>
+          <p>"How is Activation Rate related to its data sources and business rules?"</p>
+          <p style="margin-top: 0.5rem; font-size: 0.8rem; color: var(--text-muted);">Shows: multi-hop traversal, Salesforce table mapping, governance rules</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- DEPLOYMENT -->
+    <section class="slide" id="deploy">
+      <h2>Deployment</h2>
+      <h3>8 steps, all idempotent</h3>
+      <div style="overflow-x: auto; width: 100%;" class="anim-fade">
+        <table>
+          <thead>
+            <tr><th>#</th><th>Step</th><th>Command</th><th>Creates</th></tr>
+          </thead>
+          <tbody>
+            <tr><td>1</td><td>Infrastructure</td><td><code>snow sql -f scripts/00_setup_infrastructure.sql</code></td><td>DB, schemas, warehouse, tables</td></tr>
+            <tr><td>2</td><td>dbt packages</td><td><code>dbt deps</code></td><td>dbt_utils</td></tr>
+            <tr><td>3</td><td>Ontology seeds</td><td><code>dbt seed --full-refresh</code></td><td>Entity &amp; relationship type tables</td></tr>
+            <tr><td>4</td><td>Load notes</td><td><code>python compile_notes.py</code> + deploy</td><td>Base table rows</td></tr>
+            <tr><td>5</td><td>dbt pipeline</td><td><code>dbt run</code></td><td>8 dynamic tables</td></tr>
+            <tr><td>6</td><td>Search services</td><td><code>snow sql -f scripts/01_*</code></td><td>2 Cortex Search services</td></tr>
+            <tr><td>7</td><td>Agent tools</td><td><code>snow sql -f scripts/02_*</code></td><td>3 stored procedures</td></tr>
+            <tr><td>8</td><td>Cortex Agent</td><td><code>snow sql -f scripts/03_*</code></td><td>1 Cortex Agent</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="highlight-box anim-fade" style="margin-top: 1rem;">
+        <strong>Cost:</strong> ~13 Cortex COMPLETE calls on initial build (one per note), X-Small warehouse with 60s auto-suspend, minimal Cortex Search indexing. Ongoing cost is near-zero until notes are added or changed.
+      </div>
+    </section>
+
+    <!-- CLOSING -->
+    <section class="slide" id="closing">
+      <h2>Next Steps</h2>
+      <div class="card-grid">
+        <div class="card anim-fade">
+          <h4>Add Your Domain</h4>
+          <p>Replace the SaaS concept notes with your organization's metrics, dimensions, and business rules. The pipeline, ontology, and agent are domain-agnostic.</p>
+        </div>
+        <div class="card anim-fade">
+          <h4>Scale the Vault</h4>
+          <p>The architecture is designed for 50-100+ notes. Add CI/CD with <code>compile_notes.py</code> to auto-deploy on git merge.</p>
+        </div>
+        <div class="card anim-fade">
+          <h4>Promote to Analyst</h4>
+          <p>Use the Promotion Fragments table to feed verified query pairs and steering rules from the vault into Cortex Analyst semantic views.</p>
+        </div>
+        <div class="card anim-fade">
+          <h4>Embed in Applications</h4>
+          <p>Call the agent via REST API from Streamlit dashboards, Slack bots, or any application that needs on-demand business context.</p>
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <script>
+    const progressBar = document.querySelector('.progress-bar');
+    window.addEventListener('scroll', () => {
+      const scrollTop = window.scrollY;
+      const docHeight = document.documentElement.scrollHeight - window.innerHeight;
+      progressBar.style.width = (scrollTop / docHeight * 100) + '%';
+    });
+
+    const observer = new IntersectionObserver((entries) => {
+      entries.forEach(entry => {
+        if (entry.isIntersecting) { entry.target.classList.add('visible'); }
+      });
+    }, { threshold: 0.1 });
+
+    document.querySelectorAll('.anim-fade').forEach(el => observer.observe(el));
+
+    const sections = document.querySelectorAll('.slide');
+    const navLinks = document.querySelectorAll('.sidebar a');
+
+    window.addEventListener('scroll', () => {
+      let current = '';
+      sections.forEach(section => {
+        const sectionTop = section.offsetTop - 200;
+        if (window.scrollY >= sectionTop) { current = section.getAttribute('id'); }
+      });
+      navLinks.forEach(link => {
+        link.classList.remove('active');
+        if (link.getAttribute('href') === '#' + current) { link.classList.add('active'); }
+      });
+    });
+  </script>
+</body>
+</html>

@@ -1,0 +1,23 @@
+version: 2
+
+sources:
+  - name: raw
+    database: DOC_KNOWLEDGE_GRAPH_DEMO
+    schema: RAW
+    tables:
+      - name: notes_raw
+        description: "Base table holding concept notes ingested from the knowledge vault"
+        columns:
+          - name: note_id
+            tests: [unique, not_null]
+          - name: slug
+            tests: [unique, not_null]
+
+  - name: ontology
+    database: DOC_KNOWLEDGE_GRAPH_DEMO
+    schema: SERVING
+    tables:
+      - name: entity_types
+        description: "Ontology entity type definitions (from dbt seed)"
+      - name: relationship_types
+        description: "Ontology relationship type definitions (from dbt seed)"

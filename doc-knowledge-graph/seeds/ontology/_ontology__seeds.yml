@@ -1,0 +1,22 @@
+version: 2
+
+seeds:
+  - name: entity_types
+    description: "Knowledge vault ontology: entity type definitions"
+    columns:
+      - name: entity_type
+        tests: [unique, not_null]
+      - name: is_active
+        tests: [not_null]
+
+  - name: relationship_types
+    description: "Knowledge vault ontology: relationship type definitions"
+    columns:
+      - name: relationship_type
+        tests: [unique, not_null]
+      - name: source_entity_type
+        tests: [not_null]
+      - name: target_entity_type
+        tests: [not_null]
+      - name: is_active
+        tests: [not_null]
