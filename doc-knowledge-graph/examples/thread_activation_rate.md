@@ -1,6 +1,6 @@
 # Example Agent Thread
 
-This is a representative conversation with the Knowledge Vault Agent showing concept lookup, full note retrieval, and relationship traversal.
+This is a representative conversation with the Document Knowledge Graph agent showing concept lookup, full note retrieval, and relationship traversal.
 
 ---
 

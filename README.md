@@ -30,7 +30,7 @@ An internal enablement repository for Snowflake sales engineers and account exec
   - [Proactive Fraud Detection Agent](#proactive-fraud-detection-agent)
   - [Cortex AI Gateway](#cortex-ai-gateway)
   - [CoCo Getting Started — Data Engineering](#coco-getting-started--data-engineering)
-  - [Knowledge Vault (Document Knowledge Graph)](#knowledge-vault-document-knowledge-graph)
+  - [Document Knowledge Graph](#document-knowledge-graph)
 - [Repository Structure](#repository-structure)
 - [Getting Started](#getting-started)
 - [Presentation Format](#presentation-format)
@@ -65,7 +65,7 @@ This repository contains twenty-three enablement modules covering key Cortex AI 
 | Proactive Fraud Detection Agent | SEs, Data Scientists, Customers | Presentation + End-to-End Demo App | [View](https://sfc-gh-perickson.github.io/demos-enablement/proactive-fraud-agent/presentations/proactive-fraud-detection-agent.html) |
 | Cortex AI Gateway | SEs, Solution Architects, Platform Engineers | Presentation + Hands-on Lab | [View](https://sfc-gh-perickson.github.io/demos-enablement/cortex-ai-gateway/cortex-ai-gateway-presentation.html) |
 | CoCo Getting Started — Data Engineering | SEs, Customers, Data Engineers | Presentation + Hands-on Lab + Skill | [View](https://sfc-gh-perickson.github.io/demos-enablement/coco-getting-started/presentations/coco-data-engineering.html) |
-| Knowledge Vault (Doc Knowledge Graph) | SEs, Analytics Engineers, Customers | Presentation + dbt Project + Demo Notebook | [View](https://sfc-gh-perickson.github.io/demos-enablement/doc-knowledge-graph/presentations/knowledge-vault.html) |
+| Document Knowledge Graph | SEs, Analytics Engineers, Customers | Presentation + dbt Project + Demo Notebook | [View](https://sfc-gh-perickson.github.io/demos-enablement/doc-knowledge-graph/presentations/knowledge-vault.html) |
 
 Each module includes an HTML slide deck and companion speaker notes. The evaluations, many-model-training, feature-store, cortex-ai-observability, cortex-agent-multi-tenancy, and label-studio-spcs modules also provide complete hands-on labs with SQL setup and notebooks.
 
@@ -726,7 +726,7 @@ A 30-minute hands-on lab demonstrating how Cortex Code (CoCo) accelerates data e
 
 ---
 
-### Knowledge Vault (Document Knowledge Graph)
+### Document Knowledge Graph
 
 **Location:** `doc-knowledge-graph/`
 
@@ -988,7 +988,7 @@ enablement/
    - **Proactive Fraud Detection Agent:** Run scripts `01`-`06` in `proactive-fraud-agent/setup/`, then `cd app && npm install && snow app deploy`
    - **Cortex AI Gateway:** Run `cortex-ai-gateway/setup.sql`, then open `cortex-ai-gateway-langchain-mcp.ipynb`; run `python -m monitoring.simulate` for multi-agent data, then open the SiS dashboard `GATEWAY_MONITOR`
     - **CoCo Getting Started:** Run `coco-getting-started/setup.sql`, then follow the 3-tier prompts in the speaker notes
-    - **Knowledge Vault:** Set `SNOWFLAKE_ACCOUNT`, `SNOWFLAKE_USER`, `SNOWFLAKE_TOKEN` env vars, then run `doc-knowledge-graph/scripts/00_setup_infrastructure.sql` through `03_create_agent.sql` in order with `dbt seed --full-refresh && dbt run` between steps 3 and 6
+    - **Document Knowledge Graph:** Set `SNOWFLAKE_ACCOUNT`, `SNOWFLAKE_USER`, `SNOWFLAKE_TOKEN` env vars, then run `doc-knowledge-graph/scripts/00_setup_infrastructure.sql` through `03_create_agent.sql` in order with `dbt seed --full-refresh && dbt run` between steps 3 and 6
 
 ---
 

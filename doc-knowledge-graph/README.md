@@ -1,4 +1,4 @@
-# Knowledge Vault
+# Document Knowledge Graph
 
 A graph-structured knowledge base in Snowflake that turns curated concept notes into a searchable knowledge graph, powered by Cortex AI and served via a Cortex Agent.
 
@@ -33,7 +33,7 @@ snow sql -f scripts/00_setup_infrastructure.sql
 
 This creates:
 - `DOC_KNOWLEDGE_GRAPH_DEMO` database with `RAW`, `PIPELINE`, and `SERVING` schemas
-- `KV_WH` warehouse (X-Small, auto-suspend 60s)
+- `DKG_WH` warehouse (X-Small, auto-suspend 60s)
 - `NOTES_RAW` base table and `NOTES_STAGE` stage
 - `PROMOTION_FRAGMENTS` table
 
@@ -135,7 +135,7 @@ snow sql -f scripts/03_create_agent.sql
 
 ## Calling the Agent
 
-The agent is available at `DOC_KNOWLEDGE_GRAPH_DEMO.SERVING.KNOWLEDGE_VAULT_AGENT`.
+The agent is available at `DOC_KNOWLEDGE_GRAPH_DEMO.SERVING.DOC_KNOWLEDGE_GRAPH_AGENT`.
 
 ### Via REST API (with org context for disambiguation)
 
@@ -143,7 +143,7 @@ Include the user's team in the system prompt so the agent can disambiguate share
 
 ```json
 {
-  "model": "DOC_KNOWLEDGE_GRAPH_DEMO.SERVING.KNOWLEDGE_VAULT_AGENT",
+  "model": "DOC_KNOWLEDGE_GRAPH_DEMO.SERVING.DOC_KNOWLEDGE_GRAPH_AGENT",
   "messages": [
     {
       "role": "system",
@@ -165,7 +165,7 @@ The agent will prefer the concept note tagged with `applicable_orgs` matching "A
 
 ```sql
 SELECT SNOWFLAKE.CORTEX.INVOKE_AGENT(
-  'DOC_KNOWLEDGE_GRAPH_DEMO.SERVING.KNOWLEDGE_VAULT_AGENT',
+  'DOC_KNOWLEDGE_GRAPH_DEMO.SERVING.DOC_KNOWLEDGE_GRAPH_AGENT',
   'What metrics depend on the Cohort dimension?'
 );
 ```
@@ -268,4 +268,4 @@ Activation Rate measures the percentage of trial users who...
 - **LLM extraction** (`stg_entities_extracted`): Runs once per note via `llama3.1-70b`. With 13 notes, this is ~13 Cortex COMPLETE calls on initial build, then only for new/changed notes.
 - **Embeddings** (`stg_notes_embedded`, ontology models): Arctic Embed is lightweight; cost is negligible.
 - **Cortex Search**: Billed per indexed row. At 13 notes + a few hundred entities, this is minimal.
-- **Warehouse**: `KV_WH` at X-Small with 60s auto-suspend keeps costs low during idle periods.
+- **Warehouse**: `DKG_WH` at X-Small with 60s auto-suspend keeps costs low during idle periods.

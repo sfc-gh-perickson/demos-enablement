@@ -7,17 +7,17 @@ models:
     staging:
       +schema: pipeline
       +materialized: dynamic_table
-      +snowflake_warehouse: KV_WH
+      +snowflake_warehouse: DKG_WH
       +target_lag: DOWNSTREAM
     ontology:
       +schema: serving
       +materialized: dynamic_table
-      +snowflake_warehouse: KV_WH
+      +snowflake_warehouse: DKG_WH
       +target_lag: DOWNSTREAM
     graph:
       +schema: serving
       +materialized: dynamic_table
-      +snowflake_warehouse: KV_WH
+      +snowflake_warehouse: DKG_WH
       +target_lag: '1 hour'
 
 seeds:

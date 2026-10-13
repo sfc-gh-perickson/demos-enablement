@@ -2,7 +2,7 @@
   config(
     materialized = 'dynamic_table',
     target_lag = 'DOWNSTREAM',
-    snowflake_warehouse = 'KV_WH'
+    snowflake_warehouse = 'DKG_WH'
   )
 }}
 

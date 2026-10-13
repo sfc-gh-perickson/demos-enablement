@@ -8,13 +8,13 @@
 
 USE DATABASE DOC_KNOWLEDGE_GRAPH_DEMO;
 USE SCHEMA SERVING;
-USE WAREHOUSE KV_WH;
+USE WAREHOUSE DKG_WH;
 
 -- 1. Concept Search: search over concept note prose with graph-enriched metadata
 CREATE OR REPLACE CORTEX SEARCH SERVICE SERVING.CONCEPT_SEARCH_SERVICE
   ON search_text
   ATTRIBUTES kind, title, related_concepts, applicable_orgs
-  WAREHOUSE = KV_WH
+  WAREHOUSE = DKG_WH
   TARGET_LAG = '1 hour'
 AS
 WITH note_relationships AS (
@@ -42,7 +42,7 @@ LEFT JOIN note_relationships nr ON UPPER(nr.note_title) = UPPER(n.title);
 CREATE OR REPLACE CORTEX SEARCH SERVICE SERVING.ENTITY_SEARCH_SERVICE
   ON search_text
   ATTRIBUTES entity_type, entity_name
-  WAREHOUSE = KV_WH
+  WAREHOUSE = DKG_WH
   TARGET_LAG = '1 hour'
 AS
 SELECT

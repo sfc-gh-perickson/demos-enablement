@@ -4,9 +4,9 @@
 
 USE DATABASE DOC_KNOWLEDGE_GRAPH_DEMO;
 USE SCHEMA SERVING;
-USE WAREHOUSE KV_WH;
+USE WAREHOUSE DKG_WH;
 
-CREATE OR REPLACE AGENT SERVING.KNOWLEDGE_VAULT_AGENT
+CREATE OR REPLACE AGENT SERVING.DOC_KNOWLEDGE_GRAPH_AGENT
 FROM SPECIFICATION $$
 models:
   orchestration: auto
@@ -94,17 +94,17 @@ tool_resources:
     function: DOC_KNOWLEDGE_GRAPH_DEMO.SERVING.GET_CONCEPT_SUBGRAPH
     execution_environment:
       type: warehouse
-      warehouse: KV_WH
+      warehouse: DKG_WH
   get_related_concepts:
     type: function
     function: DOC_KNOWLEDGE_GRAPH_DEMO.SERVING.GET_RELATED_CONCEPTS
     execution_environment:
       type: warehouse
-      warehouse: KV_WH
+      warehouse: DKG_WH
   get_concept_context:
     type: function
     function: DOC_KNOWLEDGE_GRAPH_DEMO.SERVING.GET_CONCEPT_CONTEXT
     execution_environment:
       type: warehouse
-      warehouse: KV_WH
+      warehouse: DKG_WH
 $$;

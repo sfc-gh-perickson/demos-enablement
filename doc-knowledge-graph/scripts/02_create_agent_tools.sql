@@ -4,7 +4,7 @@
 
 USE DATABASE DOC_KNOWLEDGE_GRAPH_DEMO;
 USE SCHEMA SERVING;
-USE WAREHOUSE KV_WH;
+USE WAREHOUSE DKG_WH;
 
 -- ─────────────────────────────────────────────────────────────────────────────
 -- 1. GET_CONCEPT_SUBGRAPH: Complete context for a named concept

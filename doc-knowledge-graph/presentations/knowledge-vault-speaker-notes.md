@@ -1,6 +1,6 @@
-# Knowledge Vault — Speaker Notes
+# Document Knowledge Graph — Speaker Notes
 
-This presentation covers the Knowledge Vault pattern: a graph-structured knowledge base in Snowflake that turns curated markdown concept notes into a searchable knowledge graph served by a Cortex Agent. The demo uses a SaaS analytics domain (activation rates, CLV, retention, revenue recognition) but the architecture is domain-agnostic. Use this deck for enablement sessions, customer discovery calls where knowledge management or metric governance is a pain point, or as a Cortex Agent + Cortex Search technical deep-dive.
+This presentation covers the Document Knowledge Graph pattern: a graph-structured knowledge base in Snowflake that turns curated markdown concept notes into a searchable knowledge graph served by a Cortex Agent. The demo uses a SaaS analytics domain (activation rates, CLV, retention, revenue recognition) but the architecture is domain-agnostic. Use this deck for enablement sessions, customer discovery calls where knowledge management or metric governance is a pain point, or as a Cortex Agent + Cortex Search technical deep-dive.
 
 ---
 
