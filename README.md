@@ -30,6 +30,7 @@ An internal enablement repository for Snowflake sales engineers and account exec
   - [Proactive Fraud Detection Agent](#proactive-fraud-detection-agent)
   - [Cortex AI Gateway](#cortex-ai-gateway)
   - [CoCo Getting Started — Data Engineering](#coco-getting-started--data-engineering)
+  - [Knowledge Vault (Document Knowledge Graph)](#knowledge-vault-document-knowledge-graph)
 - [Repository Structure](#repository-structure)
 - [Getting Started](#getting-started)
 - [Presentation Format](#presentation-format)
@@ -38,7 +39,7 @@ An internal enablement repository for Snowflake sales engineers and account exec
 
 ## Overview
 
-This repository contains twenty-two enablement modules covering key Cortex AI and Snowflake ML topics:
+This repository contains twenty-three enablement modules covering key Cortex AI and Snowflake ML topics:
 
 | Module | Audience | Format | Slides |
 |--------|----------|--------|--------|
@@ -64,6 +65,7 @@ This repository contains twenty-two enablement modules covering key Cortex AI an
 | Proactive Fraud Detection Agent | SEs, Data Scientists, Customers | Presentation + End-to-End Demo App | [View](https://sfc-gh-perickson.github.io/demos-enablement/proactive-fraud-agent/presentations/proactive-fraud-detection-agent.html) |
 | Cortex AI Gateway | SEs, Solution Architects, Platform Engineers | Presentation + Hands-on Lab | [View](https://sfc-gh-perickson.github.io/demos-enablement/cortex-ai-gateway/cortex-ai-gateway-presentation.html) |
 | CoCo Getting Started — Data Engineering | SEs, Customers, Data Engineers | Presentation + Hands-on Lab + Skill | [View](https://sfc-gh-perickson.github.io/demos-enablement/coco-getting-started/presentations/coco-data-engineering.html) |
+| Knowledge Vault (Doc Knowledge Graph) | SEs, Analytics Engineers, Customers | Presentation + dbt Project + Demo Notebook | [View](https://sfc-gh-perickson.github.io/demos-enablement/doc-knowledge-graph/presentations/knowledge-vault.html) |
 
 Each module includes an HTML slide deck and companion speaker notes. The evaluations, many-model-training, feature-store, cortex-ai-observability, cortex-agent-multi-tenancy, and label-studio-spcs modules also provide complete hands-on labs with SQL setup and notebooks.
 
@@ -724,6 +726,41 @@ A 30-minute hands-on lab demonstrating how Cortex Code (CoCo) accelerates data e
 
 ---
 
+### Knowledge Vault (Document Knowledge Graph)
+
+**Location:** `doc-knowledge-graph/`
+
+A graph-structured knowledge base that turns curated markdown concept notes into a searchable knowledge graph in Snowflake, powered by Cortex AI (COMPLETE, EMBED_TEXT_1024, Cortex Search) and served via a Cortex Agent. Uses a SaaS analytics domain (activation rates, CLV, retention, revenue recognition) with org-based disambiguation of shared abbreviations.
+
+**Topics covered:**
+- Ontology-guided LLM entity and relationship extraction
+- dbt dynamic table pipelines with Cortex AI functions
+- Knowledge graph construction (nodes + edges from dual sources)
+- Cortex Agent with search + graph traversal tools
+- Org-based disambiguation of ambiguous terms
+
+**Contents:**
+
+| File | Description |
+|------|-------------|
+| [`presentations/knowledge-vault.html`](https://sfc-gh-perickson.github.io/demos-enablement/doc-knowledge-graph/presentations/knowledge-vault.html) | 11-slide presentation deck |
+| `presentations/knowledge-vault-speaker-notes.md` | Speaker notes with per-slide talking points |
+| `scripts/00_setup_infrastructure.sql` | Creates `DOC_KNOWLEDGE_GRAPH_DEMO` database, schemas, warehouse, tables |
+| `scripts/01-04_*.sql` | Search services, agent tools, Cortex Agent, deploy script |
+| `notes/` | 13 concept notes (metrics, dimensions, business rules, data sources) |
+| `seeds/ontology/` | 9 entity types + 14 relationship types |
+| `models/` | dbt dynamic tables (staging, ontology, graph layers) |
+| `demo_agent.ipynb` | Demo notebook calling the agent via REST API |
+| `examples/thread_activation_rate.md` | Example multi-turn agent conversation |
+
+#### Lab Prerequisites
+
+1. A Snowflake account with Cortex AI functions enabled
+2. Set `SNOWFLAKE_ACCOUNT`, `SNOWFLAKE_USER`, `SNOWFLAKE_TOKEN` env vars
+3. Run scripts 00-04 in order, then `dbt seed --full-refresh && dbt run`
+
+---
+
 ## Repository Structure
 
 ```
@@ -780,6 +817,29 @@ enablement/
 │   └── skills/
 │       └── dbt-ingest-pipeline/
 │           └── skill.md
+├── doc-knowledge-graph/
+│   ├── compile_notes.py
+│   ├── dbt_project.yml
+│   ├── profiles.yml
+│   ├── packages.yml
+│   ├── demo_agent.ipynb
+│   ├── notes/                          # 13 concept notes
+│   ├── seeds/ontology/
+│   ├── models/
+│   │   ├── staging/
+│   │   ├── ontology/
+│   │   └── graph/
+│   ├── scripts/
+│   │   ├── 00_setup_infrastructure.sql
+│   │   ├── 01_create_search_services.sql
+│   │   ├── 02_create_agent_tools.sql
+│   │   ├── 03_create_agent.sql
+│   │   └── 04_deploy_notes.sql
+│   ├── examples/
+│   │   └── thread_activation_rate.md
+│   └── presentations/
+│       ├── knowledge-vault.html
+│       └── knowledge-vault-speaker-notes.md
 ├── cortex-ai-gateway/
 │   ├── setup.sql
 │   ├── cortex-ai-gateway-langchain-mcp.ipynb
@@ -927,7 +987,8 @@ enablement/
    - **Agentic Schema Mapping:** Run `setup.sql`, `seed_reference_data.sql`, then `deploy.sql` in the `agentic-schema-mapping/` directory
    - **Proactive Fraud Detection Agent:** Run scripts `01`-`06` in `proactive-fraud-agent/setup/`, then `cd app && npm install && snow app deploy`
    - **Cortex AI Gateway:** Run `cortex-ai-gateway/setup.sql`, then open `cortex-ai-gateway-langchain-mcp.ipynb`; run `python -m monitoring.simulate` for multi-agent data, then open the SiS dashboard `GATEWAY_MONITOR`
-   - **CoCo Getting Started:** Run `coco-getting-started/setup.sql`, then follow the 3-tier prompts in the speaker notes
+    - **CoCo Getting Started:** Run `coco-getting-started/setup.sql`, then follow the 3-tier prompts in the speaker notes
+    - **Knowledge Vault:** Set `SNOWFLAKE_ACCOUNT`, `SNOWFLAKE_USER`, `SNOWFLAKE_TOKEN` env vars, then run `doc-knowledge-graph/scripts/00_setup_infrastructure.sql` through `03_create_agent.sql` in order with `dbt seed --full-refresh && dbt run` between steps 3 and 6
 
 ---
 
