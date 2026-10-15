@@ -498,6 +498,7 @@
     <a href="#eval-assembly">Eval Dataset Assembly</a>
     <a href="#eval-execution">Running Evaluations</a>
     <a href="#improvement-levers">Improvement Levers</a>
+    <a href="#coco-improvement">CoCo Autonomous Fix</a>
     <a href="#closing">Closing the Loop</a>
   </nav>
 
@@ -526,7 +527,7 @@
     <!-- The Flywheel -->
     <section class="slide" id="flywheel">
       <h2>The Agent Data Flywheel</h2>
-      <p style="margin-bottom: 1.5rem;">Deployment is the starting line, not the finish. Every interaction compounds into improvement when your data is converged.</p>
+      <p style="margin-bottom: 1.5rem;">Deployment is the starting line, not the finish. Every interaction compounds into improvement &mdash; including autonomous spec refinement via CoCo.</p>
       <div class="flywheel-container anim-fade">
         <div class="flywheel-ring"></div>
         <div class="flywheel-center">
@@ -540,22 +541,22 @@
           <div class="node-label"><strong>Observe</strong><br>Capture traces</div>
         </div>
         <div class="flywheel-node right">
-          <div class="node-label"><strong>Mine</strong><br>Extract signal</div>
+          <div class="node-label"><strong>Mine</strong><br>Feedback signals</div>
         </div>
         <div class="flywheel-node bottom-right">
           <div class="node-label"><strong>Evaluate</strong><br>Score quality</div>
         </div>
         <div class="flywheel-node bottom">
-          <div class="node-label"><strong>Analyze</strong><br>Find failures</div>
+          <div class="node-label"><strong>Analyze</strong><br>Root-cause failures</div>
         </div>
         <div class="flywheel-node bottom-left">
-          <div class="node-label"><strong>Improve</strong><br>Refine agent</div>
+          <div class="node-label"><strong>CoCo</strong><br>Fix agent spec</div>
         </div>
         <div class="flywheel-node left">
-          <div class="node-label"><strong>Validate</strong><br>Run evals</div>
+          <div class="node-label"><strong>Validate</strong><br>Re-run evals</div>
         </div>
         <div class="flywheel-node top-left">
-          <div class="node-label"><strong>Redeploy</strong><br>Ship improvement</div>
+          <div class="node-label"><strong>Merge</strong><br>Ship if improved</div>
         </div>
       </div>
       <div class="highlight-box anim-fade" style="margin-top: 1rem;">
@@ -675,6 +676,16 @@ $$</div>
           <div class="step-title">Evaluate</div>
           <div class="step-desc">Run evals</div>
         </div>
+        <div class="flow-arrow">&rarr;</div>
+        <div class="flow-step active">
+          <div class="step-title">CoCo</div>
+          <div class="step-desc">Fix agent</div>
+        </div>
+        <div class="flow-arrow">&rarr;</div>
+        <div class="flow-step">
+          <div class="step-title">Validate</div>
+          <div class="step-desc">Re-eval V2</div>
+        </div>
       </div>
       <div class="card-grid card-grid-2 anim-fade" style="margin-top: 1rem;">
         <div class="card">
@@ -684,6 +695,10 @@ $$</div>
         <div class="card">
           <h4>Sections 5&ndash;10: Mine &amp; Evaluate</h4>
           <p>Queries <code>GET_AI_OBSERVABILITY_EVENTS</code> to extract explicit feedback, detect rephrase patterns, classify intents, assemble an eval dataset with auto-generated ground truth, and runs <code>EXECUTE_AI_EVALUATION</code>.</p>
+        </div>
+        <div class="card">
+          <h4>Sections 11&ndash;14: Improve &amp; Validate</h4>
+          <p>Invokes a managed Coding Agent (CoCo) via the Cortex Agent SDK to analyze failures and generate an improved V2 spec. Deploys with <code>ALTER AGENT</code>, re-runs evals, and gates promotion on score improvement.</p>
         </div>
       </div>
       <div class="warning-box anim-fade">
@@ -781,7 +796,7 @@ $$</div>
         <div class="card">
           <span class="card-number">3</span>
           <h4>Intent Classification</h4>
-          <p>Classify all queries into intent categories using <code>CORTEX.COMPLETE</code>. Cross-reference with feedback rates to identify which intents have the highest failure rate &mdash; focus improvement there.</p>
+          <p>Classify all queries into intent categories using <code>AI_COMPLETE</code>. Cross-reference with feedback rates to identify which intents have the highest failure rate &mdash; focus improvement there.</p>
           <div class="pill-row">
             <span class="badge-green">Low priority</span>
             <span class="badge-purple">Coverage</span>
@@ -802,16 +817,16 @@ $$</div>
           <h4>Step 1: Embedding Similarity Filter</h4>
           <p>For each turn where <code>parent_message_id &gt; 0</code>, compare it against <code>first_message_in_thread</code>. Pairs exceeding a cosine similarity threshold (0.6) proceed to step 2.</p>
           <div class="code-block" style="margin-top: 1rem; font-size: 0.7rem;"><span class="function">VECTOR_COSINE_SIMILARITY</span>(
-  <span class="function">SNOWFLAKE.CORTEX.EMBED_TEXT_768</span>(
+  <span class="function">AI_EMBED</span>(
     <span class="string">'snowflake-arctic-embed-m-v1.5'</span>, FIRST_MSG)::VECTOR(FLOAT,768),
-  <span class="function">SNOWFLAKE.CORTEX.EMBED_TEXT_768</span>(
+  <span class="function">AI_EMBED</span>(
     <span class="string">'snowflake-arctic-embed-m-v1.5'</span>, CURRENT_MSG)::VECTOR(FLOAT,768)
 ) &gt; <span class="string">0.6</span></div>
         </div>
         <div class="card">
           <h4>Step 2: LLM Intent Confirmation</h4>
-          <p><code>CORTEX.COMPLETE</code> classifies the pair as REPHRASE (user unsatisfied, same question reworded) or FOLLOW_UP (genuinely new question building on the topic). Only confirmed rephrases become eval candidates.</p>
-          <div class="code-block" style="margin-top: 1rem; font-size: 0.7rem;"><span class="function">SNOWFLAKE.CORTEX.COMPLETE</span>(<span class="string">'mistral-large2'</span>,
+          <p><code>AI_COMPLETE</code> classifies the pair as REPHRASE (user unsatisfied, same question reworded) or FOLLOW_UP (genuinely new question building on the topic). Only confirmed rephrases become eval candidates.</p>
+          <div class="code-block" style="margin-top: 1rem; font-size: 0.7rem;"><span class="function">AI_COMPLETE</span>(<span class="string">'mistral-large2'</span>,
   <span class="string">'Two messages from same user:
   Msg 1: '</span> || FIRST_MSG || <span class="string">'
   Msg 2: '</span> || CURRENT_MSG || <span class="string">'
@@ -863,7 +878,7 @@ $$</div>
       <div class="card-grid card-grid-2 anim-fade" style="margin-top: 1rem;">
         <div class="card">
           <h4>Ground Truth Generation</h4>
-          <p><code>CORTEX.COMPLETE</code> generates a JSON object with <code>ground_truth_output</code> (expected answer) and <code>expected_tools</code> (which tools should be called). The prompt incorporates the user's feedback text so the ground truth addresses the specific gap.</p>
+          <p><code>AI_COMPLETE</code> generates a JSON object with <code>ground_truth_output</code> (expected answer) and <code>expected_tools</code> (which tools should be called). The prompt incorporates the user's feedback text so the ground truth addresses the specific gap.</p>
         </div>
         <div class="card">
           <h4>Deduplication &amp; Human Review</h4>
@@ -917,7 +932,7 @@ metrics:
     <!-- Improvement Levers -->
     <section class="slide" id="improvement-levers">
       <h2>From Evaluation to Improvement</h2>
-      <p style="margin-bottom: 2rem;">Classifying negative feedback with <code>CORTEX.COMPLETE</code> reveals systemic patterns that map directly to improvement actions.</p>
+      <p style="margin-bottom: 2rem;">Classifying negative feedback with <code>AI_COMPLETE</code> reveals systemic patterns that map directly to improvement actions.</p>
       <div class="anim-fade" style="width: 100%; overflow-x: auto;">
         <table>
           <thead>
@@ -963,7 +978,71 @@ metrics:
         </table>
       </div>
       <div class="context-box anim-fade" style="margin-top: 1.5rem;">
-        <strong>The classification prompt:</strong> <code>CORTEX.COMPLETE('mistral-large2', 'Classify this feedback: WRONG_ANSWER, MISSING_DETAIL, FORMAT_ISSUE, TOOL_SELECTION_ERROR, SCOPE_ERROR, HALLUCINATION. Feedback: ' || feedback_message)</code> &mdash; simple, fast, and gives you a distribution you can act on.
+        <strong>The classification prompt:</strong> <code>AI_COMPLETE('mistral-large2', 'Classify this feedback: WRONG_ANSWER, MISSING_DETAIL, FORMAT_ISSUE, TOOL_SELECTION_ERROR, SCOPE_ERROR, HALLUCINATION. Feedback: ' || feedback_message)</code> &mdash; simple, fast, and gives you a distribution you can act on.
+      </div>
+    </section>
+
+    <!-- CoCo Autonomous Improvement -->
+    <section class="slide" id="coco-improvement">
+      <h2>CoCo: Autonomous Agent Improvement</h2>
+      <p style="margin-bottom: 2rem;">A managed Coding Agent analyzes evaluation failures and writes an improved agent spec — closing the flywheel without manual intervention.</p>
+      <div class="flow-container anim-fade">
+        <div class="flow-step">
+          <div class="step-title">Eval Results</div>
+          <div class="step-desc">Per-question scores</div>
+        </div>
+        <div class="flow-arrow">&rarr;</div>
+        <div class="flow-step">
+          <div class="step-title">Root Cause</div>
+          <div class="step-desc">Classify failures</div>
+        </div>
+        <div class="flow-arrow">&rarr;</div>
+        <div class="flow-step active">
+          <div class="step-title">Coding Agent</div>
+          <div class="step-desc">Analyze & generate</div>
+        </div>
+        <div class="flow-arrow">&rarr;</div>
+        <div class="flow-step">
+          <div class="step-title">V2 Spec</div>
+          <div class="step-desc">Written to stage</div>
+        </div>
+        <div class="flow-arrow">&rarr;</div>
+        <div class="flow-step">
+          <div class="step-title">ALTER AGENT</div>
+          <div class="step-desc">Deploy & re-eval</div>
+        </div>
+      </div>
+      <div class="card-grid card-grid-2 anim-fade" style="margin-top: 1.5rem;">
+        <div class="card">
+          <h4>What CoCo Receives</h4>
+          <p>The V1 agent spec, the full evaluation results (all questions ordered by score), and the root cause distribution with failure counts and affected metrics. CoCo is <em>not</em> told what to fix — it derives improvements from the data.</p>
+          <div class="code-block" style="margin-top: 0.75rem; font-size: 0.7rem;"><span class="keyword">from</span> cortex_agent_sdk <span class="keyword">import</span> CortexAgentClient
+
+client = CortexAgentClient(account=account, auth=pat)
+conversation = client.conversations.create(
+    origin_application=<span class="string">"obs-flywheel"</span>,
+    agent={<span class="string">"type"</span>: <span class="string">"coding"</span>, <span class="string">"spec"</span>: {
+        <span class="string">"models"</span>: {<span class="string">"orchestration"</span>: <span class="string">"auto"</span>}
+    }},
+)
+turn = conversation.send(coco_prompt)
+answer = turn.result()</div>
+        </div>
+        <div class="card">
+          <h4>What CoCo Produces</h4>
+          <p>An updated V2 YAML agent spec that addresses the failure patterns, and optionally a SKILL.md file if failures indicate a knowledge gap. Artifacts are written directly to Snowflake stages.</p>
+          <div class="pill-row" style="margin-top: 0.75rem;">
+            <span class="badge-blue">Cortex Agent SDK</span>
+            <span class="badge-purple">code_toolset_all</span>
+            <span class="badge-green">snowflake_sql_execute</span>
+          </div>
+        </div>
+      </div>
+      <div class="highlight-box anim-fade" style="margin-top: 1.5rem;">
+        <strong>Key design choice:</strong> The prompt is intentionally non-prescriptive. We don't tell CoCo "add percentage rules" or "fix multi-tool routing" — because we don't know the failures a priori. CoCo reads the evaluation data and decides what to change. This makes the flywheel generalizable to any agent, not hardcoded to one set of fixes.
+      </div>
+      <div class="context-box anim-fade" style="margin-top: 1rem;">
+        <strong>Merge gate:</strong> After CoCo generates V2, we run the same evaluation again. V2 is only promoted if it improves on V1's scores across all metrics. This prevents regressions and gives confidence in automated improvement.
       </div>
     </section>
 
@@ -981,6 +1060,10 @@ metrics:
           <p>Schedule mining with a Snowflake Task. As new feedback accumulates, the eval dataset grows organically &mdash; always testing the agent's real weak spots.</p>
         </div>
         <div class="card">
+          <h4>Improve Autonomously</h4>
+          <p>A managed Coding Agent (CoCo) reads the failure analysis and writes an improved spec. Non-prescriptive &mdash; the agent derives fixes from the data, making the pipeline generalizable.</p>
+        </div>
+        <div class="card">
           <h4>Evaluate on Every Change</h4>
           <p>Before promoting agent versions, run the mined eval dataset as a regression gate. Improvements prove themselves against actual failure modes.</p>
         </div>
@@ -996,7 +1079,7 @@ metrics:
         <ul style="margin-top: 0.75rem; list-style: none;">
           <li style="padding: 0.25rem 0; font-size: 0.9rem;">&#x2022; <code>SNOWFLAKE.CORTEX_USER</code> database role granted</li>
           <li style="padding: 0.25rem 0; font-size: 0.9rem;">&#x2022; <code>READ UNREDACTED AI OBSERVABILITY EVENTS TABLE</code> privilege (for feedback text)</li>
-          <li style="padding: 0.25rem 0; font-size: 0.9rem;">&#x2022; Cross-region inference enabled for CORTEX.COMPLETE</li>
+          <li style="padding: 0.25rem 0; font-size: 0.9rem;">&#x2022; Cross-region inference enabled for AI_COMPLETE</li>
           <li style="padding: 0.25rem 0; font-size: 0.9rem;">&#x2022; Cortex Agent with observability enabled (automatic for all agents)</li>
         </ul>
       </div>
