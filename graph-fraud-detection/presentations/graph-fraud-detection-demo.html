@@ -1,0 +1,603 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="snowflake-source" content="cortex-agent-authored">
+  <title>Graph-Powered Fraud Ring Detection on Snowflake</title>
+  <script type="application/json" id="snowflake-report-metadata">
+  {
+    "generated": "2026-10-12",
+    "intent": "Customer demo presentation for the organization: GPU-accelerated graph fraud ring detection with cuGraph, Online Feature Store (5 FVs + 3 entities), ML Jobs + Tuner HPO, Gateway canary deployment, and Model Monitor",
+    "sections": [
+      {"id": "hero", "title": "Overview"},
+      {"id": "problem", "title": "The Problem"},
+      {"id": "architecture", "title": "Architecture"},
+      {"id": "data-scale", "title": "Data Scale"},
+      {"id": "leiden", "title": "Leiden Community Detection"},
+      {"id": "incremental", "title": "Three-Entity Coverage"},
+      {"id": "feature-store", "title": "Feature Store"},
+      {"id": "training", "title": "Model Training"},
+      {"id": "inference", "title": "Gateway Deployment"},
+      {"id": "monitoring", "title": "Model Monitoring"},
+      {"id": "net-new", "title": "Net-New Application Flow"},
+      {"id": "closing", "title": "Next Steps"}
+    ]
+  }
+  </script>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+    :root {
+      --bg: #0F1B2D;
+      --sidebar-bg: #1B2A4A;
+      --primary: #29B5E8;
+      --accent: #7C3AED;
+      --text: #E2E8F0;
+      --text-muted: #94A3B8;
+      --card-bg: #162236;
+      --border: #2D4A6F;
+      --green: #10B981;
+      --orange: #F59E0B;
+      --red: #EF4444;
+    }
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { font-family: 'Inter', sans-serif; background: var(--bg); color: var(--text); line-height: 1.6; overflow-x: hidden; }
+    .progress-bar { position: fixed; top: 0; left: 0; height: 3px; background: linear-gradient(90deg, var(--primary), var(--accent)); z-index: 1000; transition: width 0.1s; }
+    .sidebar { position: fixed; left: 0; top: 0; width: 260px; height: 100vh; background: var(--sidebar-bg); padding: 2rem 1.5rem; overflow-y: auto; border-right: 1px solid var(--border); z-index: 100; }
+    .sidebar h2 { font-size: 0.85rem; font-weight: 600; color: var(--primary); margin-bottom: 1.5rem; text-transform: uppercase; letter-spacing: 0.05em; }
+    .sidebar a { display: block; color: var(--text-muted); text-decoration: none; padding: 0.5rem 0.75rem; border-radius: 6px; font-size: 0.85rem; margin-bottom: 0.25rem; transition: all 0.2s; }
+    .sidebar a:hover, .sidebar a.active { color: var(--text); background: rgba(41, 181, 232, 0.1); }
+    .sidebar a.active { border-left: 3px solid var(--primary); padding-left: calc(0.75rem - 3px); }
+    .main { margin-left: 260px; padding: 0; }
+    .slide { min-height: 100vh; display: flex; flex-direction: column; justify-content: center; align-items: center; padding: 4rem 3rem; max-width: 1200px; margin: 0 auto; }
+    .slide h1 { font-size: 2.5rem; font-weight: 700; margin-bottom: 1rem; background: linear-gradient(135deg, var(--primary), var(--accent)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; }
+    .slide h2 { font-size: 1.75rem; font-weight: 600; color: var(--text); margin-bottom: 1.5rem; }
+    .slide h3 { font-size: 1.25rem; font-weight: 500; color: var(--text-muted); margin-bottom: 1rem; }
+    .slide p { font-size: 1.1rem; color: var(--text-muted); max-width: 700px; text-align: center; }
+    .stat-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 1.5rem; width: 100%; margin: 2rem 0; }
+    .stat-card { background: var(--card-bg); border: 1px solid var(--border); border-radius: 12px; padding: 1.5rem; text-align: center; }
+    .stat-card .value { font-size: 2rem; font-weight: 700; color: var(--primary); }
+    .stat-card .label { font-size: 0.85rem; color: var(--text-muted); margin-top: 0.5rem; }
+    .card-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 1.5rem; width: 100%; margin: 2rem 0; }
+    .card { background: var(--card-bg); border: 1px solid var(--border); border-radius: 12px; padding: 1.5rem; }
+    .card h4 { font-size: 1rem; font-weight: 600; color: var(--text); margin-bottom: 0.75rem; }
+    .card p { font-size: 0.9rem; color: var(--text-muted); text-align: left; }
+    table { width: 100%; border-collapse: collapse; margin: 2rem 0; font-size: 0.9rem; }
+    th { background: var(--card-bg); color: var(--primary); font-weight: 600; padding: 0.75rem 1rem; text-align: left; border-bottom: 2px solid var(--border); }
+    td { padding: 0.75rem 1rem; border-bottom: 1px solid var(--border); color: var(--text); }
+    tr:hover td { background: rgba(41, 181, 232, 0.05); }
+    .highlight-box { background: rgba(41, 181, 232, 0.1); border: 1px solid var(--primary); border-radius: 12px; padding: 1.5rem; margin: 1.5rem 0; width: 100%; }
+    .context-box { background: rgba(124, 58, 237, 0.1); border: 1px solid var(--accent); border-radius: 12px; padding: 1.5rem; margin: 1.5rem 0; width: 100%; }
+    .badge-green { background: rgba(16, 185, 129, 0.15); color: var(--green); padding: 0.25rem 0.75rem; border-radius: 99px; font-size: 0.8rem; font-weight: 500; }
+    .badge-blue { background: rgba(41, 181, 232, 0.15); color: var(--primary); padding: 0.25rem 0.75rem; border-radius: 99px; font-size: 0.8rem; font-weight: 500; }
+    .badge-purple { background: rgba(124, 58, 237, 0.15); color: var(--accent); padding: 0.25rem 0.75rem; border-radius: 99px; font-size: 0.8rem; font-weight: 500; }
+    .badge-orange { background: rgba(245, 158, 11, 0.15); color: var(--orange); padding: 0.25rem 0.75rem; border-radius: 99px; font-size: 0.8rem; font-weight: 500; }
+    .bar-chart { width: 100%; margin: 2rem 0; }
+    .bar-row { display: flex; align-items: center; margin-bottom: 0.75rem; }
+    .bar-label { width: 200px; font-size: 0.85rem; color: var(--text-muted); flex-shrink: 0; }
+    .bar-track { flex: 1; height: 28px; background: var(--card-bg); border-radius: 6px; overflow: hidden; }
+    .bar-fill { height: 100%; background: linear-gradient(90deg, var(--primary), var(--accent)); border-radius: 6px; transition: width 0.8s ease; }
+    .bar-value { margin-left: 0.75rem; font-size: 0.85rem; font-weight: 600; color: var(--text); min-width: 80px; }
+    .slide > ul { list-style: none; width: 100%; max-width: 700px; }
+    .slide > ul > li { padding: 0.75rem 0; padding-left: 1.5rem; position: relative; color: var(--text); font-size: 1.05rem; }
+    .slide > ul > li::before { content: ''; position: absolute; left: 0; top: 50%; transform: translateY(-50%); width: 8px; height: 8px; border-radius: 50%; background: var(--primary); }
+    .anim-fade { opacity: 0; transform: translateY(20px); transition: opacity 0.6s ease, transform 0.6s ease; }
+    .anim-fade.visible { opacity: 1; transform: translateY(0); }
+    .flow-diagram { display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap; justify-content: center; width: 100%; margin: 2rem 0; }
+    .flow-step { background: var(--card-bg); border: 1px solid var(--border); border-radius: 10px; padding: 1rem 1.25rem; text-align: center; min-width: 140px; }
+    .flow-step .step-label { font-size: 0.7rem; color: var(--primary); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 0.25rem; }
+    .flow-step .step-title { font-size: 0.9rem; font-weight: 600; color: var(--text); }
+    .flow-step .step-detail { font-size: 0.75rem; color: var(--text-muted); margin-top: 0.25rem; }
+    .flow-arrow { color: var(--primary); font-size: 1.5rem; font-weight: 300; }
+    .two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 2rem; width: 100%; margin: 2rem 0; }
+    @media (max-width: 900px) {
+      .sidebar { display: none; }
+      .main { margin-left: 0; }
+      .stat-grid { grid-template-columns: repeat(2, 1fr); }
+      .slide { padding: 2rem 1.5rem; }
+      .two-col { grid-template-columns: 1fr; }
+      .flow-diagram { flex-direction: column; }
+      .flow-arrow { transform: rotate(90deg); }
+    }
+  </style>
+</head>
+<body>
+  <div class="progress-bar"></div>
+
+  <nav class="sidebar">
+    <h2>Fraud Ring Detection</h2>
+    <a href="#hero">Overview</a>
+    <a href="#problem">The Problem</a>
+    <a href="#architecture">Architecture</a>
+    <a href="#data-scale">Data Scale</a>
+    <a href="#leiden">Leiden on GPU</a>
+    <a href="#cugraph">cuGraph Algorithms</a>
+    <a href="#incremental">Three-Entity Coverage</a>
+    <a href="#feature-store">Feature Store</a>
+    <a href="#training">Model Training</a>
+    <a href="#inference">Gateway Deployment</a>
+    <a href="#monitoring">Model Monitoring</a>
+    <a href="#net-new">Net-New Application</a>
+    <a href="#closing">Next Steps</a>
+  </nav>
+
+  <main class="main">
+
+    <!-- HERO -->
+    <section class="slide" id="hero">
+      <h1>Graph-Powered Fraud Ring Detection</h1>
+      <p>GPU-accelerated community detection, real-time feature engineering, and fraud scoring — all on Snowflake.</p>
+      <div class="stat-grid" style="margin-top: 2rem;">
+        <div class="stat-card anim-fade"><div class="value">3M</div><div class="label">Applications / Period</div></div>
+        <div class="stat-card anim-fade"><div class="value">9M+</div><div class="label">Graph Edges</div></div>
+        <div class="stat-card anim-fade"><div class="value">~10ms</div><div class="label">Online Feature Read (p50)</div></div>
+        <div class="stat-card anim-fade"><div class="value">&lt;1 min</div><div class="label">New Applicant Assignment</div></div>
+      </div>
+    </section>
+
+    <!-- THE PROBLEM -->
+    <section class="slide" id="problem">
+      <h2>The Problem: Fraud Rings in Tax Filing</h2>
+      <p style="margin-bottom: 2rem;">Multiple fraudulent applicants operating from the same apartment, sharing IPs, devices, and bank accounts — filing bogus claims for payouts.</p>
+      <div class="card-grid">
+        <div class="card anim-fade">
+          <h4>Shared Addresses</h4>
+          <p>Dozens of returns filed from a single apartment unit. Traditional rules catch obvious cases but miss sophisticated rings.</p>
+        </div>
+        <div class="card anim-fade">
+          <h4>Shared Infrastructure</h4>
+          <p>Same IP addresses, device fingerprints, and bank accounts used across seemingly unrelated applicants.</p>
+        </div>
+        <div class="card anim-fade">
+          <h4>Evolving Patterns</h4>
+          <p>Rings adapt — rotating addresses, using VPNs, splitting across submission dates. Point-in-time rules can't keep up.</p>
+        </div>
+      </div>
+      <div class="highlight-box anim-fade" style="margin-top: 1rem;">
+        <strong>Why graph analytics?</strong> Fraud rings are fundamentally a <em>network</em> problem. Community detection algorithms like Leiden find clusters of connected applicants that rules-based systems miss — even when individual transactions look normal.
+      </div>
+    </section>
+
+    <!-- ARCHITECTURE -->
+    <section class="slide" id="architecture">
+      <h2>End-to-End Architecture</h2>
+      <h3>Everything runs on Snowflake — no data leaves the platform</h3>
+      <div class="flow-diagram anim-fade">
+        <div class="flow-step">
+          <div class="step-label">Ingestion</div>
+          <div class="step-title">Applications</div>
+          <div class="step-detail">Raw applications</div>
+        </div>
+        <div class="flow-arrow">&rarr;</div>
+        <div class="flow-step">
+          <div class="step-label">Dynamic Table</div>
+          <div class="step-title">Edge Construction</div>
+          <div class="step-detail">Shared attributes</div>
+        </div>
+        <div class="flow-arrow">&rarr;</div>
+        <div class="flow-step">
+          <div class="step-label">SPCS GPU</div>
+          <div class="step-title">Leiden Detection</div>
+          <div class="step-detail">cuGraph communities</div>
+        </div>
+        <div class="flow-arrow">&rarr;</div>
+        <div class="flow-step">
+          <div class="step-label">Feature Store</div>
+          <div class="step-title">5 FVs + OFS</div>
+          <div class="step-detail">3 batch + stream + RT</div>
+        </div>
+        <div class="flow-arrow">&rarr;</div>
+        <div class="flow-step">
+          <div class="step-label">Gateway</div>
+          <div class="step-title">Canary Deploy</div>
+          <div class="step-detail">V1/V2 traffic split</div>
+        </div>
+      </div>
+      <div style="overflow-x: auto; width: 100%;">
+        <table class="anim-fade">
+          <thead><tr><th>Component</th><th>Snowflake Feature</th><th>Purpose</th></tr></thead>
+          <tbody>
+            <tr><td>Edge construction</td><td><span class="badge-blue">Dynamic Tables</span></td><td>Incremental shared-attribute graph</td></tr>
+            <tr><td>Community detection</td><td><span class="badge-purple">SPCS Job Service</span></td><td>cuGraph Leiden on GPU</td></tr>
+            <tr><td>Entity coverage</td><td><span class="badge-green">Feature Store</span></td><td>3 entities (Applicant, Address, IP) for inherited context</td></tr>
+            <tr><td>Feature engineering</td><td><span class="badge-green">Feature Store</span></td><td>5 FVs: 3 batch + stream + real-time, Postgres online store</td></tr>
+            <tr><td>Model training</td><td><span class="badge-orange">ML Jobs + Tuner</span></td><td>XGBoost V1 + BayesOpt HPO V2</td></tr>
+            <tr><td>Canary deployment</td><td><span class="badge-purple">Gateway</span></td><td>Traffic split across SPCS V1 + V2 services</td></tr>
+            <tr><td>Drift detection</td><td><span class="badge-orange">Model Monitor</span></td><td>PSI drift on inference autocapture DT</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- DATA SCALE -->
+    <section class="slide" id="data-scale">
+      <h2>Data Scale: One Tax Season</h2>
+      <h3>Synthetic data matching the organization's production volume</h3>
+      <div class="stat-grid anim-fade">
+        <div class="stat-card"><div class="value">3M</div><div class="label">Applicants</div></div>
+        <div class="stat-card"><div class="value">3M</div><div class="label">Applications</div></div>
+        <div class="stat-card"><div class="value">500K</div><div class="label">Addresses</div></div>
+        <div class="stat-card"><div class="value">9.1M</div><div class="label">Graph Edges</div></div>
+      </div>
+      <div class="two-col anim-fade">
+        <div class="card">
+          <h4>Edge Types</h4>
+          <p>Edges connect applicants who share:</p>
+          <ul style="list-style: disc; padding-left: 1.5rem; margin-top: 0.5rem;">
+            <li style="padding: 0.25rem 0; font-size: 0.9rem;">Filing address (same apartment)</li>
+            <li style="padding: 0.25rem 0; font-size: 0.9rem;">IP address</li>
+            <li style="padding: 0.25rem 0; font-size: 0.9rem;">Device fingerprint</li>
+            <li style="padding: 0.25rem 0; font-size: 0.9rem;">Bank account</li>
+          </ul>
+        </div>
+        <div class="card">
+          <h4>Planted Fraud Rings</h4>
+          <p>100 synthetic fraud rings with 5-50 members each (~2,700 total fraudulent applicants). Rings share apartment addresses and IPs — mimicking the "multiple filers in one apartment" pattern.</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- LEIDEN -->
+    <section class="slide" id="leiden">
+      <h2>GPU-Accelerated Leiden Community Detection</h2>
+      <h3>NVIDIA cuGraph on Snowpark Container Services</h3>
+      <div class="card-grid anim-fade">
+        <div class="card">
+          <h4>Why Leiden?</h4>
+          <p>Leiden improves on Louvain with guaranteed connected communities and better resolution control. Ideal for detecting tightly-knit fraud rings of varying sizes.</p>
+        </div>
+        <div class="card">
+          <h4>Why GPU?</h4>
+          <p>3M nodes and 9M edges is too large for pure-SQL or CPU graph algorithms at interactive speeds. cuGraph on a single GPU completes in seconds.</p>
+        </div>
+        <div class="card">
+          <h4>SPCS Job Service</h4>
+          <p>Container starts, reads edges via Snowpark, runs Leiden + centrality, writes results back, exits. GPU released on completion — no idle cost.</p>
+        </div>
+      </div>
+      <h3 style="margin-top: 2rem;">Benchmark: 3M Nodes / 9M Edges on GPU_NV_S</h3>
+      <div class="highlight-box anim-fade">
+        <strong>Key insight:</strong> Leiden itself runs in single-digit seconds on GPU. The bottleneck is I/O — reading edges from Snowflake and writing results back. Actual benchmark timings are captured in the SPCS job logs and demonstrated live in the notebook.
+      </div>
+    </section>
+
+    <!-- THREE-ENTITY COVERAGE -->
+    <section class="slide" id="incremental">
+      <h2>Three-Entity Coverage: No Applicant Left Behind</h2>
+      <h3>ADDRESS and IP entities provide inherited community context for new applicants</h3>
+      <div class="two-col anim-fade">
+        <div>
+          <div class="card" style="margin-bottom: 1rem;">
+            <h4>ADDRESS Entity</h4>
+            <p>Aggregates community members per application address. A brand-new applicant at a known fraud-ring address immediately inherits that community's features — dominant community, number of applicants, average claim.</p>
+          </div>
+          <div class="card">
+            <h4>IP_NETWORK Entity</h4>
+            <p>Same approach for IP addresses. An applicant sharing an IP with known ring members gets inherited community context, even with no direct Leiden assignment yet.</p>
+          </div>
+        </div>
+        <div>
+          <div class="card" style="height: 100%;">
+            <h4>Coverage Hierarchy</h4>
+            <div style="overflow-x: auto;">
+              <table style="margin: 1rem 0; font-size: 0.85rem;">
+                <thead><tr><th>Source</th><th>Entity</th><th>Freshness</th></tr></thead>
+                <tbody>
+                  <tr><td>Leiden (direct)</td><td style="color: var(--green); font-weight: 600;">APPLICANT</td><td>Every 15 min</td></tr>
+                  <tr><td>Address inherited</td><td style="color: var(--primary); font-weight: 600;">ADDRESS</td><td>~1 min (batch FV)</td></tr>
+                  <tr><td>IP inherited</td><td style="color: var(--primary); font-weight: 600;">IP_NETWORK</td><td>~1 min (batch FV)</td></tr>
+                  <tr><td>Stream velocity</td><td style="color: var(--accent); font-weight: 600;">APPLICANT</td><td>2-3s (stream FV)</td></tr>
+                </tbody>
+              </table>
+            </div>
+            <p style="font-size: 0.85rem;">The real-time FV's <code>compute_fn</code> picks the best available: direct Leiden &gt; address inherited &gt; IP inherited.</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- CUGRAPH FLEXIBILITY -->
+    <section class="slide" id="cugraph">
+      <h2>Beyond Leiden: cuGraph Algorithm Library</h2>
+      <h3>The same SPCS GPU infrastructure supports 30+ graph algorithms</h3>
+      <div class="card-grid">
+        <div class="card anim-fade">
+          <h4>Community Detection</h4>
+          <ul style="list-style: none; padding: 0;">
+            <li style="padding: 0.2rem 0; font-size: 0.85rem; color: var(--text-muted);">Leiden (current)</li>
+            <li style="padding: 0.2rem 0; font-size: 0.85rem; color: var(--text-muted);">Louvain, ECG, Spectral Clustering</li>
+            <li style="padding: 0.2rem 0; font-size: 0.85rem; color: var(--text-muted);">K-Truss, Triangle Counting</li>
+          </ul>
+        </div>
+        <div class="card anim-fade">
+          <h4>Centrality &amp; Influence</h4>
+          <ul style="list-style: none; padding: 0;">
+            <li style="padding: 0.2rem 0; font-size: 0.85rem; color: var(--text-muted);">PageRank, HITS</li>
+            <li style="padding: 0.2rem 0; font-size: 0.85rem; color: var(--text-muted);">Betweenness Centrality</li>
+            <li style="padding: 0.2rem 0; font-size: 0.85rem; color: var(--text-muted);">Katz, Eigenvector Centrality</li>
+          </ul>
+        </div>
+        <div class="card anim-fade">
+          <h4>Link Prediction &amp; Similarity</h4>
+          <ul style="list-style: none; padding: 0;">
+            <li style="padding: 0.2rem 0; font-size: 0.85rem; color: var(--text-muted);">Jaccard, Cosine, Overlap</li>
+            <li style="padding: 0.2rem 0; font-size: 0.85rem; color: var(--text-muted);">Sorensen Coefficient</li>
+            <li style="padding: 0.2rem 0; font-size: 0.85rem; color: var(--text-muted);">Predict missing/future edges</li>
+          </ul>
+        </div>
+        <div class="card anim-fade">
+          <h4>Traversal &amp; Pathfinding</h4>
+          <ul style="list-style: none; padding: 0;">
+            <li style="padding: 0.2rem 0; font-size: 0.85rem; color: var(--text-muted);">BFS, SSSP</li>
+            <li style="padding: 0.2rem 0; font-size: 0.85rem; color: var(--text-muted);">Connected Components</li>
+            <li style="padding: 0.2rem 0; font-size: 0.85rem; color: var(--text-muted);">Minimum Spanning Tree</li>
+          </ul>
+        </div>
+        <div class="card anim-fade">
+          <h4>Sampling &amp; Embedding</h4>
+          <ul style="list-style: none; padding: 0;">
+            <li style="padding: 0.2rem 0; font-size: 0.85rem; color: var(--text-muted);">Random Walks (Node2Vec-style)</li>
+            <li style="padding: 0.2rem 0; font-size: 0.85rem; color: var(--text-muted);">Neighbor Sampling (for GNNs)</li>
+            <li style="padding: 0.2rem 0; font-size: 0.85rem; color: var(--text-muted);">Force Atlas 2 (layout/viz)</li>
+          </ul>
+        </div>
+        <div class="card anim-fade">
+          <h4>Multi-GPU Support</h4>
+          <ul style="list-style: none; padding: 0;">
+            <li style="padding: 0.2rem 0; font-size: 0.85rem; color: var(--text-muted);">Scale to GPU_NV_M (4x A10G)</li>
+            <li style="padding: 0.2rem 0; font-size: 0.85rem; color: var(--text-muted);">or GPU_NV_L (8x A100)</li>
+            <li style="padding: 0.2rem 0; font-size: 0.85rem; color: var(--text-muted);">via cugraph.dask</li>
+          </ul>
+        </div>
+      </div>
+      <div class="context-box anim-fade" style="margin-top: 1rem;">
+        <strong>Future directions:</strong> Graph embeddings via random walks can create dense vector representations of applicants for similarity search. Neighbor sampling enables training Graph Neural Networks (GNNs) for more sophisticated fraud detection. All algorithms run on the same SPCS GPU infrastructure — swap the algorithm in the job script, no infrastructure changes needed.
+      </div>
+    </section>
+
+    <!-- FEATURE STORE -->
+    <section class="slide" id="feature-store">
+      <h2>Snowflake Feature Store + Online Feature Store</h2>
+      <h3>5 Feature Views across 3 entities, served from Postgres online store</h3>
+      <div class="card-grid">
+        <div class="card anim-fade">
+          <h4>GRAPH_COMMUNITY_FEATURES</h4>
+          <p style="margin-bottom: 0.5rem;"><span class="badge-blue">Batch</span> <span class="badge-green">APPLICANT</span></p>
+          <ul style="list-style: none; padding: 0;">
+            <li style="padding: 0.2rem 0; font-size: 0.85rem; color: var(--text-muted);">community_size, degree</li>
+            <li style="padding: 0.2rem 0; font-size: 0.85rem; color: var(--text-muted);">shared_address/ip/device/bank_count</li>
+            <li style="padding: 0.2rem 0; font-size: 0.85rem; color: var(--text-muted);">avg_community_claim, stddev</li>
+          </ul>
+        </div>
+        <div class="card anim-fade">
+          <h4>ADDRESS_COMMUNITY_FEATURES</h4>
+          <p style="margin-bottom: 0.5rem;"><span class="badge-blue">Batch</span> <span class="badge-green">ADDRESS</span></p>
+          <ul style="list-style: none; padding: 0;">
+            <li style="padding: 0.2rem 0; font-size: 0.85rem; color: var(--text-muted);">dominant_community_id</li>
+            <li style="padding: 0.2rem 0; font-size: 0.85rem; color: var(--text-muted);">num_applicants_at_address</li>
+            <li style="padding: 0.2rem 0; font-size: 0.85rem; color: var(--text-muted);">avg_claim_at_address</li>
+          </ul>
+        </div>
+        <div class="card anim-fade">
+          <h4>IP_COMMUNITY_FEATURES</h4>
+          <p style="margin-bottom: 0.5rem;"><span class="badge-blue">Batch</span> <span class="badge-green">IP_NETWORK</span></p>
+          <ul style="list-style: none; padding: 0;">
+            <li style="padding: 0.2rem 0; font-size: 0.85rem; color: var(--text-muted);">dominant_community_id_ip</li>
+            <li style="padding: 0.2rem 0; font-size: 0.85rem; color: var(--text-muted);">num_applicants_at_ip</li>
+            <li style="padding: 0.2rem 0; font-size: 0.85rem; color: var(--text-muted);">avg_claim_at_ip</li>
+          </ul>
+        </div>
+        <div class="card anim-fade">
+          <h4>STREAM_VELOCITY</h4>
+          <p style="margin-bottom: 0.5rem;"><span class="badge-purple">Stream FV</span> <span class="badge-green">APPLICANT</span></p>
+          <ul style="list-style: none; padding: 0;">
+            <li style="padding: 0.2rem 0; font-size: 0.85rem; color: var(--text-muted);">claim_amount, submission_hour</li>
+            <li style="padding: 0.2rem 0; font-size: 0.85rem; color: var(--text-muted);">is_high_claim, is_odd_hour</li>
+            <li style="padding: 0.2rem 0; font-size: 0.85rem; color: var(--text-muted);">2-3s freshness via REST Ingest</li>
+          </ul>
+        </div>
+        <div class="card anim-fade">
+          <h4>COMBINED_FRAUD_FEATURES</h4>
+          <p style="margin-bottom: 0.5rem;"><span class="badge-purple">Real-time FV</span> <span class="badge-green">APPLICANT</span></p>
+          <ul style="list-style: none; padding: 0;">
+            <li style="padding: 0.2rem 0; font-size: 0.85rem; color: var(--text-muted);">Assembles 15 raw features at query time</li>
+            <li style="padding: 0.2rem 0; font-size: 0.85rem; color: var(--text-muted);">compute_fn picks best entity source</li>
+            <li style="padding: 0.2rem 0; font-size: 0.85rem; color: var(--text-muted);">Direct Leiden > address > IP fallback</li>
+          </ul>
+        </div>
+      </div>
+      <div class="highlight-box anim-fade" style="margin-top: 1rem;">
+        <strong>Three tiers of freshness.</strong> Batch FVs refresh every minute via managed DTs. The Postgres online store syncs in ~30s for ~10ms p50 reads. Stream FV delivers 2-3s freshness via REST Ingest API. Real-time FV computes at query time — zero lag for the assembled feature vector.
+      </div>
+    </section>
+
+    <!-- TRAINING -->
+    <section class="slide" id="training">
+      <h2>Model Training via ML Jobs + Tuner HPO</h2>
+      <h3>XGBoost fraud classifier with 15 graph-community features</h3>
+      <div class="card-grid anim-fade">
+        <div class="card">
+          <h4>1. Generate Training Set</h4>
+          <p>Feature Store <code>generate_training_set()</code> creates point-in-time correct data by joining APPLICATIONS spine (with IS_FRAUD labels) against the 3 batch FVs.</p>
+        </div>
+        <div class="card">
+          <h4>2. ML Job V1 (Baseline)</h4>
+          <p>Training script submitted via <code>submit_directory()</code> to ML_TRAINING_POOL. ExperimentTracking logs metrics. Registered as V1 with SPCS target.</p>
+        </div>
+        <div class="card">
+          <h4>3. Tuner HPO V2</h4>
+          <p>BayesOpt hyperparameter optimization — 10 trials across 5 params (n_estimators, max_depth, learning_rate, scale_pos_weight, min_child_weight). Best trial registered as V2.</p>
+        </div>
+      </div>
+      <div class="context-box anim-fade" style="margin-top: 1rem;">
+        <strong>15 features, three signal families:</strong> Graph-structural (community size, degree, shared counts), address/IP-inherited (applicant count, avg claim at shared locations), and velocity (submission hour, claim amount, high-claim flag). The model learns that <code>HAS_DIRECT_GRAPH=0</code> + <code>ADDR_N_APPLICANTS > 10</code> = "new applicant at suspicious address" — no hand-crafted risk score needed.
+      </div>
+    </section>
+
+    <!-- GATEWAY DEPLOYMENT -->
+    <section class="slide" id="inference">
+      <h2>Snowflake Gateway: Canary Model Deployment</h2>
+      <h3>Zero-downtime model upgrades with traffic splitting</h3>
+      <div class="stat-grid anim-fade">
+        <div class="stat-card"><div class="value">~10ms</div><div class="label">Online Feature Read</div></div>
+        <div class="stat-card"><div class="value">2</div><div class="label">SPCS Services</div></div>
+        <div class="stat-card"><div class="value">1 URL</div><div class="label">Stable Gateway</div></div>
+        <div class="stat-card"><div class="value">Instant</div><div class="label">Rollback</div></div>
+      </div>
+      <div class="flow-diagram anim-fade" style="margin: 2rem 0;">
+        <div class="flow-step">
+          <div class="step-label">Start</div>
+          <div class="step-title">V1: 100%</div>
+          <div class="step-detail">V2: 0%</div>
+        </div>
+        <div class="flow-arrow">&rarr;</div>
+        <div class="flow-step">
+          <div class="step-label">Canary</div>
+          <div class="step-title">V1: 90%</div>
+          <div class="step-detail">V2: 10%</div>
+        </div>
+        <div class="flow-arrow">&rarr;</div>
+        <div class="flow-step">
+          <div class="step-label">Split</div>
+          <div class="step-title">V1: 50%</div>
+          <div class="step-detail">V2: 50%</div>
+        </div>
+        <div class="flow-arrow">&rarr;</div>
+        <div class="flow-step">
+          <div class="step-label">Promote</div>
+          <div class="step-title">V1: 0%</div>
+          <div class="step-detail">V2: 100%</div>
+        </div>
+      </div>
+      <div class="card-grid anim-fade">
+        <div class="card">
+          <h4>Permanent URL</h4>
+          <p>The Gateway provides a stable hostname that survives service recreation. Clients never change their endpoint — traffic routing happens server-side via <code>ALTER GATEWAY</code>.</p>
+        </div>
+        <div class="card">
+          <h4>Instant Rollback</h4>
+          <p>If V2 shows degraded metrics, restore V1 with a single <code>ALTER GATEWAY</code> — zero client impact, no redeployment needed.</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- MODEL MONITORING -->
+    <section class="slide" id="monitoring">
+      <h2>Model Monitoring: Drift Detection</h2>
+      <h3>Automated observability for production fraud scoring</h3>
+      <div class="card-grid anim-fade">
+        <div class="card">
+          <h4>Inference Autocapture</h4>
+          <p>A Dynamic Table reads <code>INFERENCE_TABLE()</code> every 10 minutes, extracting all 15 features + predictions from the SPCS service logs. Zero instrumentation code needed.</p>
+        </div>
+        <div class="card">
+          <h4>Monitoring Baseline</h4>
+          <p>5,000-row snapshot from the training distribution, cast to FLOAT. This is the reference for PSI drift detection — how does production data compare to what the model was trained on?</p>
+        </div>
+        <div class="card">
+          <h4>Model Monitor</h4>
+          <p>Tracks PSI (Population Stability Index) drift on CLAIM_AMOUNT with daily refresh and aggregation. Alerts when the production distribution shifts from the training baseline.</p>
+        </div>
+      </div>
+      <div class="highlight-box anim-fade" style="margin-top: 1rem;">
+        <strong>Why monitor?</strong> Fraud rings adapt. If ring members shift to lower claim amounts or different submission patterns, PSI drift on CLAIM_AMOUNT catches the distribution change before accuracy degrades — triggering retraining with fresh labels.
+      </div>
+    </section>
+
+    <!-- NET-NEW APPLICATION -->
+    <section class="slide" id="net-new">
+      <h2>Net-New Application: Real-Time Flow</h2>
+      <h3>A new application arrives — what happens?</h3>
+      <div class="flow-diagram anim-fade" style="margin: 2rem 0;">
+        <div class="flow-step">
+          <div class="step-label">0s</div>
+          <div class="step-title">Return Filed</div>
+          <div class="step-detail">New row in APPLICATIONS</div>
+        </div>
+        <div class="flow-arrow">&rarr;</div>
+        <div class="flow-step">
+          <div class="step-label">2-3s</div>
+          <div class="step-title">Stream FV</div>
+          <div class="step-detail">Velocity features</div>
+        </div>
+        <div class="flow-arrow">&rarr;</div>
+        <div class="flow-step">
+          <div class="step-label">&lt;1 min</div>
+          <div class="step-title">Entity Inheritance</div>
+          <div class="step-detail">Address/IP context</div>
+        </div>
+        <div class="flow-arrow">&rarr;</div>
+        <div class="flow-step">
+          <div class="step-label">Gateway</div>
+          <div class="step-title">Fraud Score</div>
+          <div class="step-detail">Stable REST API</div>
+        </div>
+      </div>
+      <div class="two-col anim-fade">
+        <div class="card">
+          <h4>Case A: Suspicious Applicant</h4>
+          <p>Shares address with known fraud ring members. ADDRESS entity provides inherited community features (large community, high applicant count). Model receives 15 features via Gateway and scores <strong style="color: var(--red);">HIGH RISK</strong> — even before Leiden processes the filer directly.</p>
+        </div>
+        <div class="card">
+          <h4>Case B: Clean Applicant</h4>
+          <p>Unique address, unique IP — no inherited community context. Real-time FV falls through to zero for entity-inherited features. Model scores on velocity and claim features only. Scores <strong style="color: var(--green);">LOW RISK</strong>.</p>
+        </div>
+      </div>
+      <div class="highlight-box anim-fade" style="margin-top: 1rem;">
+        <strong>The link between graph analytics and real-time ML:</strong> Leiden community features flow through three entities — APPLICANT (direct), ADDRESS (inherited), IP_NETWORK (inherited). The real-time FV assembles 15 raw features; the model learns which combinations indicate fraud. Full Leiden corrects every 15 minutes. The Gateway routes to the best model version automatically.
+      </div>
+    </section>
+
+    <!-- CLOSING -->
+    <section class="slide" id="closing">
+      <h2>Next Steps</h2>
+      <div class="card-grid anim-fade">
+        <div class="card">
+          <h4>1. Data Integration</h4>
+          <p>Connect to the organization's actual login and application data. Map their schema to the edge construction pipeline. Validate planted-ring recovery against known fraud cases.</p>
+        </div>
+        <div class="card">
+          <h4>2. Scale Validation</h4>
+          <p>Run Leiden on production-scale data. Benchmark GPU performance at full volume. Tune resolution parameter for optimal ring detection.</p>
+        </div>
+        <div class="card">
+          <h4>3. Production Pipeline</h4>
+          <p>Deploy the full pipeline: stream ingest for real-time velocity, batch FVs for graph + address + IP features, scheduled Leiden jobs, Gateway-fronted model services.</p>
+        </div>
+        <div class="card">
+          <h4>4. Continuous Improvement</h4>
+          <p>Monitor PSI drift on CLAIM_AMOUNT. When drift exceeds threshold, retrain with fresh labels. Deploy V3 via Gateway canary — V2 stays live until V3 is validated.</p>
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <script>
+    var progressBar = document.querySelector('.progress-bar');
+    window.addEventListener('scroll', function() {
+      var scrollTop = window.scrollY;
+      var docHeight = document.documentElement.scrollHeight - window.innerHeight;
+      progressBar.style.width = (scrollTop / docHeight * 100) + '%';
+    });
+    var observer = new IntersectionObserver(function(entries) {
+      entries.forEach(function(entry) {
+        if (entry.isIntersecting) { entry.target.classList.add('visible'); }
+      });
+    }, { threshold: 0.1 });
+    document.querySelectorAll('.anim-fade').forEach(function(el) { observer.observe(el); });
+    var sections = document.querySelectorAll('.slide');
+    var navLinks = document.querySelectorAll('.sidebar a');
+    window.addEventListener('scroll', function() {
+      var current = '';
+      sections.forEach(function(section) {
+        if (window.scrollY >= section.offsetTop - 200) { current = section.getAttribute('id'); }
+      });
+      navLinks.forEach(function(link) {
+        link.classList.remove('active');
+        if (link.getAttribute('href') === '#' + current) { link.classList.add('active'); }
+      });
+    });
+  </script>
+</body>
+</html>
