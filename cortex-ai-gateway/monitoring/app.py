@@ -2,7 +2,7 @@
 
 import json
 import streamlit as st
-import plotly.express as px
+import altair as alt
 import snowflake.connector
 from pathlib import Path
 import toml
@@ -32,8 +32,8 @@ def get_connection():
 # Page config
 # ---------------------------------------------------------------------------
 
-st.set_page_config(page_title="AI Gateway Monitor", layout="wide")
-st.title("AI Gateway Monitor")
+st.set_page_config(page_title="AI Gateway Monitor", page_icon=":material/monitoring:", layout="wide")
+st.title(":material/monitoring: AI Gateway Monitor")
 
 conn = get_connection()
 
@@ -52,36 +52,44 @@ with tab1:
     credits_df = queries.estimated_credits(conn, days)
 
     if not kpi.empty:
-        c1, c2, c3, c4, c5 = st.columns(5)
-        c1.metric("Total Requests", f"{int(kpi.iloc[0]['TOTAL_REQUESTS']):,}")
-        c2.metric("Unique Traces", f"{int(kpi.iloc[0]['UNIQUE_TRACES']):,}")
-        c3.metric("Models Used", int(kpi.iloc[0]["MODELS_USED"]))
-        c4.metric("Credits", f"{float(credits_df.iloc[0]['TOTAL_CREDITS']):.4f}")
-        fb = queries.feedback_summary(conn, days)
-        if not fb.empty:
-            pos = int(fb["POSITIVE"].sum())
-            neg = int(fb["NEGATIVE"].sum())
-            c5.metric("Feedback", f"+{pos} / -{neg}")
+        with st.container(border=True):
+            c1, c2, c3, c4, c5 = st.columns(5)
+            c1.metric("Total Requests", f"{int(kpi.iloc[0]['TOTAL_REQUESTS']):,}")
+            c2.metric("Unique Traces", f"{int(kpi.iloc[0]['UNIQUE_TRACES']):,}")
+            c3.metric("Models Used", int(kpi.iloc[0]["MODELS_USED"]))
+            c4.metric("Credits", f"{float(credits_df.iloc[0]['TOTAL_CREDITS']):.4f}")
+            fb = queries.feedback_summary(conn, days)
+            if not fb.empty:
+                pos = int(fb["POSITIVE"].sum())
+                neg = int(fb["NEGATIVE"].sum())
+                c5.metric("Feedback", f"+{pos} / -{neg}")
 
     # Requests per hour
     rph = queries.requests_per_hour(conn, days)
     if not rph.empty:
-        fig = px.line(
-            rph, x="HOUR", y="REQUEST_COUNT", color="MODEL",
-            title="Requests per Hour by Model",
+        st.caption("Requests per Hour by Model")
+        chart = alt.Chart(rph).mark_line(point=True).encode(
+            x=alt.X("HOUR:T"),
+            y=alt.Y("REQUEST_COUNT:Q"),
+            color=alt.Color("MODEL:N"),
         )
-        st.plotly_chart(fig, use_container_width=True)
+        st.altair_chart(chart, use_container_width=True)
 
     # Requests by agent
     rba = queries.requests_by_agent(conn, days)
     if not rba.empty:
         col_left, col_right = st.columns(2)
         with col_left:
-            fig2 = px.bar(
-                rba, x="AGENT_NAME", y="REQUEST_COUNT", color="MODEL",
-                title="Requests by Agent",
+            st.caption("Requests by Agent")
+            chart2 = alt.Chart(rba).mark_bar(
+                cornerRadiusTopLeft=3,
+                cornerRadiusTopRight=3,
+            ).encode(
+                x=alt.X("AGENT_NAME:N"),
+                y=alt.Y("REQUEST_COUNT:Q"),
+                color=alt.Color("MODEL:N"),
             )
-            st.plotly_chart(fig2, use_container_width=True)
+            st.altair_chart(chart2, use_container_width=True)
         with col_right:
             st.subheader("Per-Agent Summary")
             display_cols = [
@@ -89,7 +97,16 @@ with tab1:
                 "AVG_INPUT_TOKENS", "AVG_OUTPUT_TOKENS",
                 "TOTAL_INPUT_TOKENS", "TOTAL_OUTPUT_TOKENS",
             ]
-            st.dataframe(rba[[c for c in display_cols if c in rba.columns]], hide_index=True)
+            st.dataframe(
+                rba[[c for c in display_cols if c in rba.columns]],
+                hide_index=True,
+                column_config={
+                    "AVG_INPUT_TOKENS": st.column_config.NumberColumn(format="%.0f"),
+                    "AVG_OUTPUT_TOKENS": st.column_config.NumberColumn(format="%.0f"),
+                    "TOTAL_INPUT_TOKENS": st.column_config.NumberColumn(format="%d"),
+                    "TOTAL_OUTPUT_TOKENS": st.column_config.NumberColumn(format="%d"),
+                },
+            )
     else:
         st.info("No agent data found. Run simulate.py first to populate gateway traces.")
 
@@ -111,25 +128,41 @@ with tab2:
         if not mu.empty:
             col1, col2 = st.columns(2)
             with col1:
-                fig = px.pie(mu, names="MODEL", values="REQUEST_COUNT", title="Model Usage")
-                st.plotly_chart(fig, use_container_width=True)
+                st.caption("Model Usage")
+                chart3 = alt.Chart(mu).mark_arc().encode(
+                    theta=alt.Theta("REQUEST_COUNT:Q"),
+                    color=alt.Color("MODEL:N"),
+                )
+                st.altair_chart(chart3, use_container_width=True)
             with col2:
                 st.dataframe(mu, hide_index=True)
 
         # Token trend
         tt = queries.agent_token_trend(conn, agent_name, days2)
         if not tt.empty:
-            fig = px.line(
-                tt, x="HOUR", y=["INPUT_TOKENS", "OUTPUT_TOKENS"],
-                title=f"Token Trend — {agent_name}",
+            st.caption(f"Token Trend — {agent_name}")
+            tt_melted = tt.melt(id_vars=["HOUR"], value_vars=["INPUT_TOKENS", "OUTPUT_TOKENS"],
+                                var_name="TOKEN_TYPE", value_name="TOKENS")
+            chart4 = alt.Chart(tt_melted).mark_line(point=True).encode(
+                x=alt.X("HOUR:T"),
+                y=alt.Y("TOKENS:Q"),
+                color=alt.Color("TOKEN_TYPE:N"),
             )
-            st.plotly_chart(fig, use_container_width=True)
+            st.altair_chart(chart4, use_container_width=True)
 
         # Tool usage
         tu = queries.agent_tool_usage(conn, agent_name, days2)
         if not tu.empty:
-            fig = px.bar(tu, x="TOOL_NAME", y="CALL_COUNT", title="Tool Usage")
-            st.plotly_chart(fig, use_container_width=True)
+            st.caption("Tool Usage")
+            chart5 = alt.Chart(tu).mark_bar(
+                color="#4A90D9",
+                cornerRadiusTopLeft=3,
+                cornerRadiusTopRight=3,
+            ).encode(
+                x=alt.X("TOOL_NAME:N"),
+                y=alt.Y("CALL_COUNT:Q"),
+            )
+            st.altair_chart(chart5, use_container_width=True)
         else:
             st.caption("No tool calls recorded for this agent.")
 
@@ -209,11 +242,16 @@ with tab3:
         # Topic distribution chart
         topic_counts = msgs.groupby(["AGENT_NAME", "TOPIC"]).size().reset_index(name="COUNT")
         if not topic_counts.empty:
-            fig = px.bar(
-                topic_counts, x="AGENT_NAME", y="COUNT", color="TOPIC",
-                title="Topic Distribution by Agent", barmode="stack",
+            st.caption("Topic Distribution by Agent")
+            chart6 = alt.Chart(topic_counts).mark_bar(
+                cornerRadiusTopLeft=3,
+                cornerRadiusTopRight=3,
+            ).encode(
+                x=alt.X("AGENT_NAME:N"),
+                y=alt.Y("COUNT:Q"),
+                color=alt.Color("TOPIC:N"),
             )
-            st.plotly_chart(fig, use_container_width=True)
+            st.altair_chart(chart6, use_container_width=True)
 
         # Search box
         search = st.text_input("Search user messages", key="topic_search")
