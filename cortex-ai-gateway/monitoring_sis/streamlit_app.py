@@ -175,9 +175,9 @@ with tab2:
         else:
             st.caption("No tool calls recorded for this agent.")
 
-        cs = queries.agent_credit_spend(session, days2)
+        cs = queries.agent_credit_spend(session, agent_name, days2)
         if not cs.empty:
-            st.subheader("Credit Spend (all agents)")
+            st.subheader(f"Token Usage — {agent_name}")
             st.dataframe(cs, hide_index=True)
 
         # Top users

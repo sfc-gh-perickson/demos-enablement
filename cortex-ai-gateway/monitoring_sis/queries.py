@@ -229,44 +229,58 @@ def agent_token_trend(session, agent_name, days=7):
 
 def agent_tool_usage(session, agent_name, days=7):
     return _run(session, f"""
-        WITH spans AS (
-            SELECT t.RECORD_ATTRIBUTES:"gen_ai.output.messages"::STRING AS OUT_MSGS
+        WITH agent_spans AS (
+            SELECT
+                t.RECORD_ATTRIBUTES:"gen_ai.input.messages"::STRING AS IN_MSGS,
+                t.RECORD_ATTRIBUTES:"gen_ai.output.messages"::STRING AS OUT_MSGS
             FROM TABLE(AGENT_TRACE_TABLE('{GATEWAY_NAME}')) t
             INNER JOIN CORTEX_GATEWAY_LAB.PUBLIC.GATEWAY_AGENT_TRACES at
                 ON t.TRACE:trace_id::STRING = at.TRACE_ID
             WHERE t.TIMESTAMP > DATEADD('day', -{days}, CURRENT_TIMESTAMP())
               AND at.AGENT_NAME = %s
-              AND OUT_MSGS IS NOT NULL
         ),
-        tool_calls AS (
-            SELECT
-                p.value:"name"::STRING AS TOOL_NAME
-            FROM spans,
-                LATERAL FLATTEN(input => PARSE_JSON(OUT_MSGS)) m,
+        tool_parts AS (
+            SELECT p.value:"response" AS RESP
+            FROM agent_spans,
+                LATERAL FLATTEN(input => PARSE_JSON(IN_MSGS)) m,
                 LATERAL FLATTEN(input => m.value:"parts") p
-            WHERE p.value:"type"::STRING = 'tool_call'
+            WHERE IN_MSGS IS NOT NULL
+              AND m.value:"role"::STRING = 'tool'
+              AND RESP IS NOT NULL
+        ),
+        inner_content AS (
+            SELECT TRY_PARSE_JSON(r.value:"text"::STRING) AS PARSED
+            FROM tool_parts, LATERAL FLATTEN(input => RESP) r
+            WHERE r.value:"text" IS NOT NULL
+        ),
+        inner_tools AS (
+            SELECT c.value:"tool_use":"name"::STRING AS TOOL_NAME
+            FROM inner_content, LATERAL FLATTEN(input => PARSED:"content") c
+            WHERE PARSED IS NOT NULL
+              AND c.value:"tool_use":"name" IS NOT NULL
         )
         SELECT TOOL_NAME, COUNT(*) AS CALL_COUNT
-        FROM tool_calls
+        FROM inner_tools
         GROUP BY 1
         ORDER BY 2 DESC
     """, (agent_name,))
 
 
-def agent_credit_spend(session, days=7):
+def agent_credit_spend(session, agent_name, days=7):
     return _run(session, f"""
         SELECT
-            f.key                                   AS MODEL,
-            COUNT(*)                                 AS REQUEST_COUNT,
-            SUM(f.value:"input_tokens"::INT)         AS TOTAL_INPUT_TOKENS,
-            SUM(f.value:"output_tokens"::INT)        AS TOTAL_OUTPUT_TOKENS,
-            SUM(CREDITS)                             AS TOTAL_CREDITS
-        FROM SNOWFLAKE.ACCOUNT_USAGE.AI_GATEWAY_USAGE_HISTORY,
-            LATERAL FLATTEN(input => OPERATION_DETAILS) f
-        WHERE START_TIME > DATEADD('day', -{days}, CURRENT_TIMESTAMP())
-        GROUP BY f.key
-        ORDER BY TOTAL_CREDITS DESC
-    """)
+            t.RECORD_ATTRIBUTES:"gen_ai.request.model"::STRING AS MODEL,
+            COUNT(*)                                             AS REQUEST_COUNT,
+            SUM(t.RECORD_ATTRIBUTES:"gen_ai.usage.input_tokens"::INT)  AS TOTAL_INPUT_TOKENS,
+            SUM(t.RECORD_ATTRIBUTES:"gen_ai.usage.output_tokens"::INT) AS TOTAL_OUTPUT_TOKENS
+        FROM TABLE(AGENT_TRACE_TABLE('{GATEWAY_NAME}')) t
+        INNER JOIN CORTEX_GATEWAY_LAB.PUBLIC.GATEWAY_AGENT_TRACES at
+            ON t.TRACE:trace_id::STRING = at.TRACE_ID
+        WHERE t.TIMESTAMP > DATEADD('day', -{days}, CURRENT_TIMESTAMP())
+          AND at.AGENT_NAME = %s
+        GROUP BY 1
+        ORDER BY TOTAL_INPUT_TOKENS DESC
+    """, (agent_name,))
 
 
 # ---------------------------------------------------------------------------
