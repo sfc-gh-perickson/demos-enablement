@@ -1,9 +1,67 @@
-"""SQL queries for the AI Gateway monitoring app (Streamlit-in-Snowflake version).
+"""SQL queries for the AI Gateway monitoring app.
 Each function takes a Snowpark session and returns a pandas DataFrame."""
 
+import streamlit as st
 import pandas as pd
 
 GATEWAY_NAME = "SNOWFLAKE"
+
+
+def get_session():
+    """Return a Snowpark session — works both in SiS and locally."""
+    try:
+        from snowflake.snowpark.context import get_active_session
+        return get_active_session()
+    except Exception:
+        return st.connection("parker_demo", type="snowflake").session()
+
+
+def _complete(session, model, prompt):
+    """Run a completion — SDK locally, SQL in SiS."""
+    try:
+        from cortex_agent_sdk import CortexAgentClient, AgentResponse
+    except ImportError:
+        return _complete_sql(session, model, prompt)
+
+    try:
+        import toml, os
+
+        # Get account identifier
+        account = session.sql(
+            "SELECT CURRENT_ORGANIZATION_NAME() || '-' || CURRENT_ACCOUNT_NAME()"
+        ).collect()[0][0]
+
+        # Get PAT: SiS session token first, then config file
+        try:
+            with open('/snowflake/session/token', 'r') as f:
+                pat = f.read().strip()
+        except FileNotFoundError:
+            cfg = toml.load(os.path.expanduser("~/.snowflake/config.toml"))
+            pat = cfg["connections"]["parker_demo"]["password"]
+
+        client = CortexAgentClient(account=account, auth=pat)
+        conversation = client.conversations.create(
+            origin_application="gateway_monitor",
+            agent={"type": "coding", "spec": {"models": {"orchestration": "auto"}}},
+        )
+        turn = conversation.send(prompt)
+        answer: AgentResponse = turn.result()
+        return answer.text
+    except Exception as e:
+        st.warning(f"SDK call failed, falling back to SQL: {e}")
+        return _complete_sql(session, model, prompt)
+
+
+def _complete_sql(session, model, prompt):
+    """Fallback: run completion via SNOWFLAKE.CORTEX.COMPLETE() SQL."""
+    safe_prompt = prompt.replace("'", "''")
+    result = session.sql(f"""
+        SELECT SNOWFLAKE.CORTEX.COMPLETE(
+            '{model}',
+            $${safe_prompt}$$
+        ) AS RESPONSE
+    """).to_pandas()
+    return result.iloc[0]["RESPONSE"] if not result.empty else ""
 
 
 def _run(session, sql, params=None):
@@ -257,19 +315,14 @@ def cached_topics(session):
 
 
 def classify_topic(session, user_message):
-    safe_msg = user_message.replace("'", "''")
     prompt = (
         "Classify the following user question into exactly one of these categories: "
         "analytics, strategy, comparison, executive_summary, cost_analysis, out_of_scope. "
         "Reply with only the category name, nothing else.\n\nQuestion: "
-        + safe_msg
+        + user_message
     )
-    return _run(session, f"""
-        SELECT TRIM(SNOWFLAKE.CORTEX.COMPLETE(
-            'mistral-large2',
-            $${prompt}$$
-        )) AS TOPIC
-    """)
+    topic = _complete(session, "mistral-large2", prompt).strip()
+    return pd.DataFrame([{"TOPIC": topic}])
 
 
 def insert_topic_cache(session, trace_id, user_message, topic):
@@ -346,16 +399,9 @@ Based on these questions and feedback, provide specific, actionable recommendati
 
 For each recommendation, be specific: name the metric/dimension/document/tool. Explain what user questions it would address."""
 
-    safe_prompt = prompt.replace("'", "''")
-    result = _run(session, f"""
-        SELECT SNOWFLAKE.CORTEX.COMPLETE(
-            'mistral-large2',
-            $${safe_prompt}$$
-        ) AS RECOMMENDATIONS
-    """)
+    recs = _complete(session, "mistral-large2", prompt)
 
-    if not result.empty:
-        recs = result.iloc[0]["RECOMMENDATIONS"]
+    if recs:
         safe_recs = recs.replace("'", "''")
         session.sql(f"""
             INSERT INTO CORTEX_GATEWAY_LAB.PUBLIC.GATEWAY_TOPIC_RECOMMENDATIONS
@@ -443,17 +489,7 @@ Provide specific, actionable suggestions in these categories:
 
 Be specific and actionable. Reference the actual questions and feedback."""
 
-    safe_prompt = prompt.replace("'", "''")
-    result = _run(session, f"""
-        SELECT SNOWFLAKE.CORTEX.COMPLETE(
-            'mistral-large2',
-            $${safe_prompt}$$
-        ) AS SUGGESTIONS
-    """)
-
-    if not result.empty:
-        return result.iloc[0]["SUGGESTIONS"]
-    return "No suggestions generated."
+    return _complete(session, "mistral-large2", prompt) or "No suggestions generated."
 
 
 # ---------------------------------------------------------------------------

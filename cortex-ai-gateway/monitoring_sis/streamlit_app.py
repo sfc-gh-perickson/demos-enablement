@@ -3,7 +3,6 @@
 import json
 import streamlit as st
 import altair as alt
-from snowflake.snowpark.context import get_active_session
 
 import queries
 
@@ -11,7 +10,7 @@ import queries
 # Session
 # ---------------------------------------------------------------------------
 
-session = get_active_session()
+session = queries.get_session()
 
 # ---------------------------------------------------------------------------
 # Page config
@@ -35,7 +34,7 @@ with tab1:
     credits_df = queries.estimated_credits(session, days)
 
     if not kpi.empty:
-        with st.container(border=True):
+        with st.container():
             c1, c2, c3, c4, c5 = st.columns(5)
             c1.metric("Total Requests", f"{int(kpi.iloc[0]['TOTAL_REQUESTS']):,}")
             c2.metric("Unique Traces", f"{int(kpi.iloc[0]['UNIQUE_TRACES']):,}")
@@ -80,12 +79,6 @@ with tab1:
             st.dataframe(
                     rba[[c for c in display_cols if c in rba.columns]],
                     hide_index=True,
-                    column_config={
-                        "AVG_INPUT_TOKENS": st.column_config.NumberColumn(format="%.0f"),
-                        "AVG_OUTPUT_TOKENS": st.column_config.NumberColumn(format="%.0f"),
-                        "AVG_LATENCY_SEC": st.column_config.NumberColumn(format="%.2f s"),
-                        "MAX_LATENCY_SEC": st.column_config.NumberColumn(format="%.2f s"),
-                    },
                 )
     else:
         st.info("No agent data found. Run simulate.py first to populate gateway traces.")
@@ -218,7 +211,7 @@ with tab2:
         lat_pct = queries.agent_latency_percentiles(session, agent_name, days2)
         if not lat_pct.empty and lat_pct.iloc[0]["TOTAL_CALLS"] > 0:
             row = lat_pct.iloc[0]
-            with st.container(border=True):
+            with st.container():
                 lc1, lc2, lc3, lc4, lc5 = st.columns(5)
                 lc1.metric("Avg", f"{row['AVG_SEC']}s")
                 lc2.metric("P50", f"{row['P50_SEC']}s")
@@ -426,7 +419,7 @@ with tab4:
                 models_used = detail["MODEL"].dropna().unique().tolist()
                 avg_latency = detail["LATENCY_SEC"].mean()
 
-                with st.container(border=True):
+                with st.container():
                     mc1, mc2, mc3, mc4 = st.columns(4)
                     mc1.metric("Gateway Calls", len(detail))
                     mc2.metric("Total Tokens", f"{int(total_in + total_out):,}")
