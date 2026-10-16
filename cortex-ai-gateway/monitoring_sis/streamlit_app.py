@@ -301,7 +301,7 @@ with tab3:
                     queries.insert_topic_cache(session, row["TRACE_ID"], row["USER_MESSAGE"], topic)
                     cached_lookup[(row["TRACE_ID"], row["USER_MESSAGE"])] = topic
                     bar.progress((i + 1) / len(uncached))
-                st.experimental_rerun()
+                st.rerun()
 
         msgs["TOPIC"] = msgs.apply(
             lambda r: cached_lookup.get((r["TRACE_ID"], r["USER_MESSAGE"]), "unclassified"),
@@ -369,7 +369,7 @@ with tab3:
                             for _, r in fd.iterrows():
                                 fb_detail_all.append((r["IS_POSITIVE"], r["USER_MESSAGE"], r["FEEDBACK_MESSAGE"]))
                     recs = queries.generate_topic_recommendations(session, selected_topic, topic_questions, fb_detail_all)
-                    st.experimental_rerun()
+                    st.rerun()
             else:
                 if st.button(f"Generate Recommendations for '{selected_topic}'", key="gen_recs"):
                     with st.spinner("Analyzing questions and feedback..."):
