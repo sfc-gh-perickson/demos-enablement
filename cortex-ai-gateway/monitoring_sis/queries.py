@@ -126,27 +126,21 @@ def overview_latency(session, days=7):
 
 def overview_tool_usage(session, days=7):
     return _run(session, f"""
-        WITH spans AS (
+        WITH tool_calls AS (
             SELECT
-                t.RECORD_ATTRIBUTES:"gen_ai.output.messages"::STRING AS OUT_MSGS,
-                at.AGENT_NAME
+                at.AGENT_NAME,
+                p.value:"name"::STRING AS TOOL_NAME
             FROM TABLE(AGENT_TRACE_TABLE('{GATEWAY_NAME}')) t
             INNER JOIN CORTEX_GATEWAY_LAB.PUBLIC.GATEWAY_AGENT_TRACES at
-                ON t.TRACE:trace_id::STRING = at.TRACE_ID
-            WHERE t.TIMESTAMP > DATEADD('day', -{days}, CURRENT_TIMESTAMP())
-              AND OUT_MSGS IS NOT NULL
-        ),
-        tool_calls AS (
-            SELECT
-                s.AGENT_NAME,
-                p.value:"name"::STRING AS TOOL_NAME
-            FROM spans s,
-                LATERAL FLATTEN(input => PARSE_JSON(s.OUT_MSGS)) m,
+                ON t.TRACE:trace_id::STRING = at.TRACE_ID,
+                LATERAL FLATTEN(input => PARSE_JSON(t.RECORD_ATTRIBUTES:"gen_ai.output.messages"::STRING)) m,
                 LATERAL FLATTEN(input => m.value:"parts") p
-            WHERE p.value:"type"::STRING = 'tool_call'
+            WHERE t.TIMESTAMP > DATEADD('day', -{days}, CURRENT_TIMESTAMP())
+              AND p.value:"type"::STRING = 'tool_call'
         )
         SELECT AGENT_NAME, TOOL_NAME, COUNT(*) AS CALL_COUNT
         FROM tool_calls
+        WHERE TOOL_NAME IS NOT NULL
         GROUP BY 1, 2
         ORDER BY CALL_COUNT DESC
     """)
@@ -229,38 +223,20 @@ def agent_token_trend(session, agent_name, days=7):
 
 def agent_tool_usage(session, agent_name, days=7):
     return _run(session, f"""
-        WITH agent_spans AS (
-            SELECT
-                t.RECORD_ATTRIBUTES:"gen_ai.input.messages"::STRING AS IN_MSGS,
-                t.RECORD_ATTRIBUTES:"gen_ai.output.messages"::STRING AS OUT_MSGS
+        WITH tool_calls AS (
+            SELECT p.value:"name"::STRING AS TOOL_NAME
             FROM TABLE(AGENT_TRACE_TABLE('{GATEWAY_NAME}')) t
             INNER JOIN CORTEX_GATEWAY_LAB.PUBLIC.GATEWAY_AGENT_TRACES at
-                ON t.TRACE:trace_id::STRING = at.TRACE_ID
+                ON t.TRACE:trace_id::STRING = at.TRACE_ID,
+                LATERAL FLATTEN(input => PARSE_JSON(t.RECORD_ATTRIBUTES:"gen_ai.output.messages"::STRING)) m,
+                LATERAL FLATTEN(input => m.value:"parts") p
             WHERE t.TIMESTAMP > DATEADD('day', -{days}, CURRENT_TIMESTAMP())
               AND at.AGENT_NAME = %s
-        ),
-        tool_parts AS (
-            SELECT p.value:"response" AS RESP
-            FROM agent_spans,
-                LATERAL FLATTEN(input => PARSE_JSON(IN_MSGS)) m,
-                LATERAL FLATTEN(input => m.value:"parts") p
-            WHERE IN_MSGS IS NOT NULL
-              AND m.value:"role"::STRING = 'tool'
-              AND RESP IS NOT NULL
-        ),
-        inner_content AS (
-            SELECT TRY_PARSE_JSON(r.value:"text"::STRING) AS PARSED
-            FROM tool_parts, LATERAL FLATTEN(input => RESP) r
-            WHERE r.value:"text" IS NOT NULL
-        ),
-        inner_tools AS (
-            SELECT c.value:"tool_use":"name"::STRING AS TOOL_NAME
-            FROM inner_content, LATERAL FLATTEN(input => PARSED:"content") c
-            WHERE PARSED IS NOT NULL
-              AND c.value:"tool_use":"name" IS NOT NULL
+              AND p.value:"type"::STRING = 'tool_call'
         )
         SELECT TOOL_NAME, COUNT(*) AS CALL_COUNT
-        FROM inner_tools
+        FROM tool_calls
+        WHERE TOOL_NAME IS NOT NULL
         GROUP BY 1
         ORDER BY 2 DESC
     """, (agent_name,))
