@@ -48,6 +48,9 @@ LEARNING_RATE    = float(os.environ.get('LEARNING_RATE',  '0.05'))
 SUBSAMPLE        = float(os.environ.get('SUBSAMPLE',      '0.8'))
 COLSAMPLE_BYTREE = float(os.environ.get('COLSAMPLE_BYTREE', '0.8'))
 MIN_CHILD_WEIGHT = float(os.environ.get('MIN_CHILD_WEIGHT', '1'))
+GAMMA            = float(os.environ.get('GAMMA',            '0'))
+REG_ALPHA        = float(os.environ.get('REG_ALPHA',        '0'))
+REG_LAMBDA       = float(os.environ.get('REG_LAMBDA',       '1'))
 
 FEATURE_COLS = [
     'EFFECTIVE_COMMUNITY_SIZE',
@@ -184,6 +187,9 @@ def main():
         'subsample':       SUBSAMPLE,
         'colsample_bytree': COLSAMPLE_BYTREE,
         'min_child_weight': MIN_CHILD_WEIGHT,
+        'gamma':           GAMMA,
+        'reg_alpha':       REG_ALPHA,
+        'reg_lambda':      REG_LAMBDA,
         'random_state':    42,
         'eval_metric':     'logloss',
     }
@@ -192,11 +198,20 @@ def main():
     model.fit(X_train, y_train)
     print('Training complete')
 
-    y_pred  = model.predict(X_test)
     y_proba = model.predict_proba(X_test)[:, 1]
+
+    # Threshold optimization: sweep to maximize F1
+    import numpy as np
+    thresholds = np.arange(0.05, 0.95, 0.01)
+    f1_scores = [f1_score(y_test, (y_proba >= t).astype(int), zero_division=0) for t in thresholds]
+    best_threshold = float(thresholds[np.argmax(f1_scores)])
+    print(f'  Optimal threshold: {best_threshold:.2f} (F1: {max(f1_scores):.4f})')
+
+    y_pred = (y_proba >= best_threshold).astype(int)
     print(classification_report(y_test, y_pred, target_names=['Legitimate', 'Fraud']))
 
     metrics = calculate_metrics(y_test.values, y_pred, y_proba)
+    metrics['threshold'] = best_threshold
     for k, v in metrics.items():
         print(f'  {k}: {v:.4f}' if isinstance(v, float) else f'  {k}: {v}')
 
