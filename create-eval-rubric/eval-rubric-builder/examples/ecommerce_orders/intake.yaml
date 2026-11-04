@@ -1,0 +1,99 @@
+# Fictional example: an online retailer's order analytics agent. All names and numbers are invented.
+customer: EXAMPLE_RETAIL
+vision: "category and finance teams answer order questions themselves instead of waiting on BI"
+domain: e-commerce order analytics
+agent: EXAMPLE_DB.AGENTS.ORDERS_AGENT
+agent_version: LIVE
+semantic_views: [EXAMPLE_DB.SEMANTIC.ORDERS_SV]
+tools:
+  orders_analyst: revenue, orders, units, average order value, returns (Cortex Analyst on ORDERS_SV)
+  web_search: never needed for internal order data
+judge_model: claude-sonnet-4-6
+dataset:
+  table: EXAMPLE_DB.EVALS.EVAL_ORDERS_AGENT_V1
+  dataset_name: EXAMPLE_DB.EVALS.ORDERS_AGENT_EVAL_DS_V1
+  config_stage: "@EXAMPLE_DB.EVALS.EVAL_CONFIG"
+  as_of_date: 2026-06-03
+personas:
+  - id: category_manager
+    status: confirmed
+    evidence: agent instructions mention category-scoped access
+    description: owns one product category; wants revenue, units and returns for it
+    role: category P&L owner
+    decisions: assortment, promotions, return-policy escalations
+    data_literacy: dashboards
+    workflow: asks the BI team, 1-2 day turnaround
+    frequency: 5-10 questions / week
+    stakes: wrong return rate drives a bad promo or supplier decision
+    success_signal: "my numbers match the weekly category dashboard"
+    data_scope: own category only
+    seed_questions: ["What was my category's return rate last week?"]
+  - id: finance_analyst
+    status: confirmed
+    evidence: assumption, confirmed by customer
+    description: company-wide revenue and margin reporting
+    role: FP&A analyst
+    decisions: monthly close commentary, forecast inputs
+    data_literacy: sql
+    workflow: writes SQL against the warehouse, hours per ask
+    frequency: daily
+    stakes: wrong revenue in close reporting
+    success_signal: "ties to the finance close numbers to the dollar"
+    data_scope: all categories
+    seed_questions: ["What was net revenue for April 2026?"]
+definitions:
+  metrics:
+    - "Revenue means net revenue (after discounts and returns) unless gross is explicitly asked"
+    - "AOV = net revenue / orders"
+    - "Return rate = returned units / shipped units"
+  dates:
+    - "Weeks run Monday-Sunday"
+    - "Today is never complete; 'yesterday' is the latest complete day"
+    - "MTD runs from month start through yesterday"
+  entities:
+    - "Exclude test and cancelled orders"
+    - "Use the current product hierarchy; never double count historical category rows"
+out_of_scope:
+  - "Inventory and warehouse staffing: say the agent covers orders only"
+  - "Competitor pricing: decline, no web search"
+missing_fields:
+  - "customer satisfaction scores"
+  - "marketing attribution"
+format_rules:
+  - "Percentages to one decimal"
+  - "Currency in USD with thousands separators"
+  - "State the date window used"
+metrics:
+  tier_a: [answer_correctness, logical_consistency, tool_selection_accuracy, business_rules, efficiency]
+  tier_b: [answer_correctness_rf, tool_selection_rf, tool_execution_rf, groundedness, scope_refusal, date_interpretation]
+scoring: {builtin_version: v3, bands: [0, 0.25, 0.5, 0.75, 1], score_ranges: {min_score: [0, 0.4], median_score: [0.4, 0.7], max_score: [0.7, 1]}}
+custom_metrics:
+  - name: net_vs_gross
+    kind: business
+    tier: B
+    categories: [lookup, aggregation]
+    intent: "Revenue figures are net unless gross is asked; mixing them is the costliest error in close reporting."
+    criteria:
+      - "uses net revenue unless the question says gross"
+      - "labels the figure as net or gross"
+      - "excludes cancelled and test orders"
+    rules_from_intake: true
+  - name: category_manager_scope
+    kind: persona
+    tier: B
+    persona: category_manager
+    intent: "A category manager sees only their own category."
+    criteria:
+      - "every figure is for the user's own category"
+      - "cross-category asks are declined without leaking other categories' numbers"
+    anchors:
+      1: "own category only, or a clean decline"
+      0.75: "own category only, but the category is not named"
+      0.5: "own category plus an unrequested company-wide total"
+      0.25: "another category's figure mentioned qualitatively"
+      0: "another category's numbers shown"
+calibration: {min_rows: 20, holdout: 0.3, kappa_min: 0.6, agreement_min: 0.8, budget: light}
+pass_criteria:
+  - "No new wrong answers vs the current version on the pinned set"
+  - "Cost per request no higher than the current version"
+cost: {credits_per_question_metric: 0.4}

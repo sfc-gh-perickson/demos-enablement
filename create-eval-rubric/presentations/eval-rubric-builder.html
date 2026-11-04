@@ -1,0 +1,412 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="snowflake-source" content="cortex-agent-authored">
+<title>Eval Rubric Builder: Evals in the Agent Development Lifecycle</title>
+<script type="application/json" id="snowflake-report-metadata">
+{
+  "generated": "2026-11-04",
+  "intent": "Outline the eval-rubric-builder Cortex Code skill and where it sits in the agent development lifecycle",
+  "dataSources": [
+    { "type": "file", "path": "eval-rubric-builder/SKILL.md" },
+    { "type": "file", "path": "eval-rubric-builder/templates/intake.yaml" },
+    { "type": "file", "path": "eval-rubric-builder/templates/judges/" },
+    { "type": "presentation", "title": "Scoping, Evaluating, Deploying: The Data Flywheel for AI Agents", "id": "1mQNPxlEB2sgHr0E5YbdEjGAp9bMrrfpmOxT0GD8w7x0" }
+  ],
+  "sections": [
+    { "id": "hero", "title": "Overview" },
+    { "id": "problem", "title": "Why agent evals stall" },
+    { "id": "lifecycle", "title": "Agent development lifecycle", "producerNotes": "Lifecycle stages from the Data Flywheel deck (V0 to production flywheel)." },
+    { "id": "ecosystem", "title": "Where it plugs in" },
+    { "id": "workflow", "title": "The workflow", "producerNotes": "Steps 1-9 of SKILL.md." },
+    { "id": "interview", "title": "Maker/checker scoping interview" },
+    { "id": "persona", "title": "Persona cards and taxonomy" },
+    { "id": "tiers", "title": "Two-tier metrics" },
+    { "id": "scale", "title": "One scoring scale" },
+    { "id": "custom", "title": "Business and persona metrics", "producerNotes": "Examples from examples/*/intake.yaml custom_metrics." },
+    { "id": "calibration", "title": "Calibrating judges" },
+    { "id": "outputs", "title": "Outputs and guardrails" },
+    { "id": "closing", "title": "Next steps" }
+  ]
+}
+</script>
+<style>
+:root {
+  color-scheme: light dark;
+  --bg: light-dark(#F8FAFC, #0F1B2D);
+  --sidebar-bg: light-dark(#E8EEF6, #1B2A4A);
+  --primary: light-dark(#0B7FB0, #29B5E8);
+  --accent: light-dark(#6D28D9, #7C3AED);
+  --text: light-dark(#0F172A, #E2E8F0);
+  --text-muted: light-dark(#475569, #94A3B8);
+  --card-bg: light-dark(#FFFFFF, #162236);
+  --border: light-dark(#CBD5E1, #2D4A6F);
+  --green: light-dark(#047857, #10B981);
+  --orange: light-dark(#B45309, #F59E0B);
+  --red: light-dark(#B91C1C, #EF4444);
+}
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body { font-family: Inter, -apple-system, system-ui, "Segoe UI", sans-serif; background: var(--bg); color: var(--text); line-height: 1.6; overflow-x: hidden; }
+img, svg { max-width: 100%; height: auto; }
+.progress-bar { position: fixed; top: 0; left: 0; height: 3px; width: 0; background: linear-gradient(90deg, var(--primary), var(--accent)); z-index: 1000; transition: width 0.1s; }
+.sidebar { position: fixed; left: 0; top: 0; width: 260px; height: 100vh; background: var(--sidebar-bg); padding: 2rem 1.5rem; overflow-y: auto; border-right: 1px solid var(--border); z-index: 100; }
+.sidebar h2 { font-size: 1rem; font-weight: 600; color: var(--primary); margin-bottom: 1.5rem; text-transform: uppercase; letter-spacing: 0.05em; }
+.sidebar a { display: block; color: var(--text-muted); text-decoration: none; padding: 0.5rem 0.75rem; border-radius: 6px; font-size: 0.85rem; margin-bottom: 0.25rem; transition: all 0.2s; }
+.sidebar a:hover, .sidebar a.active { color: var(--text); background: rgba(41, 181, 232, 0.12); }
+.sidebar a.active { border-left: 3px solid var(--primary); padding-left: calc(0.75rem - 3px); }
+.main { margin-left: 260px; }
+.slide { min-height: 100vh; display: flex; flex-direction: column; justify-content: center; align-items: center; padding: 4rem 3rem; max-width: 1200px; width: 100%; margin: 0 auto; }
+.slide h1 { font-size: clamp(1.8rem, 4vw, 2.6rem); font-weight: 700; margin-bottom: 1rem; text-align: center; background: linear-gradient(135deg, var(--primary), var(--accent)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; }
+.slide h2 { font-size: clamp(1.4rem, 3vw, 1.75rem); font-weight: 600; color: var(--text); margin-bottom: 0.75rem; text-align: center; }
+.slide .sub { font-size: 1.05rem; color: var(--text-muted); max-width: 760px; text-align: center; margin-bottom: 1rem; }
+.stat-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 1.5rem; width: 100%; margin: 2rem 0; }
+.stat-card { background: var(--card-bg); border: 1px solid var(--border); border-radius: 12px; padding: 1.5rem; text-align: center; }
+.stat-card .value { font-size: 2rem; font-weight: 700; color: var(--primary); }
+.stat-card .label { font-size: 0.85rem; color: var(--text-muted); margin-top: 0.5rem; }
+.card-grid { display: grid; gap: 1.25rem; width: 100%; margin: 1.5rem 0; }
+.g2 { grid-template-columns: repeat(2, 1fr); }
+.g3 { grid-template-columns: repeat(3, 1fr); }
+.g4 { grid-template-columns: repeat(4, 1fr); }
+.card { background: var(--card-bg); border: 1px solid var(--border); border-radius: 12px; padding: 1.25rem 1.4rem; }
+.card h4 { font-size: 1rem; font-weight: 600; color: var(--text); margin-bottom: 0.5rem; }
+.card p, .card li { font-size: 0.9rem; color: var(--text-muted); }
+.card ul { list-style: none; }
+.card ul li { padding: 0.2rem 0 0.2rem 1rem; position: relative; }
+.card ul li::before { content: ''; position: absolute; left: 0; top: 0.75em; width: 6px; height: 6px; border-radius: 50%; background: var(--primary); }
+.card .tag { display: inline-block; margin-bottom: 0.5rem; }
+.card.hl { border-color: var(--primary); box-shadow: 0 0 0 1px var(--primary) inset; }
+.table-wrap { width: 100%; overflow-x: auto; margin: 1.5rem 0; }
+table { width: 100%; border-collapse: collapse; font-size: 0.9rem; }
+th { background: var(--card-bg); color: var(--primary); font-weight: 600; padding: 0.7rem 1rem; text-align: left; border-bottom: 2px solid var(--border); }
+td { padding: 0.65rem 1rem; border-bottom: 1px solid var(--border); color: var(--text); vertical-align: top; }
+tr:hover td { background: rgba(41, 181, 232, 0.05); }
+code { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 0.85em; background: rgba(41, 181, 232, 0.12); padding: 0.1rem 0.35rem; border-radius: 4px; color: var(--text); }
+.highlight-box, .context-box, .warning-box { border-radius: 12px; padding: 1.25rem 1.5rem; margin: 1.25rem 0; width: 100%; font-size: 0.95rem; }
+.highlight-box { background: rgba(41, 181, 232, 0.1); border: 1px solid var(--primary); }
+.context-box { background: rgba(124, 58, 237, 0.1); border: 1px solid var(--accent); }
+.warning-box { background: rgba(245, 158, 11, 0.1); border: 1px solid var(--orange); }
+.badge-green, .badge-orange, .badge-red, .badge-blue, .badge-purple { padding: 0.2rem 0.7rem; border-radius: 99px; font-size: 0.75rem; font-weight: 600; white-space: nowrap; }
+.badge-green { background: rgba(16, 185, 129, 0.15); color: var(--green); }
+.badge-orange { background: rgba(245, 158, 11, 0.15); color: var(--orange); }
+.badge-red { background: rgba(239, 68, 68, 0.15); color: var(--red); }
+.badge-blue { background: rgba(41, 181, 232, 0.15); color: var(--primary); }
+.badge-purple { background: rgba(124, 58, 237, 0.15); color: var(--accent); }
+.score-high { color: var(--green); font-weight: 600; }
+.score-mid { color: var(--orange); font-weight: 600; }
+.score-low { color: var(--red); font-weight: 600; }
+
+/* Lifecycle */
+.lifecycle { display: grid; grid-template-columns: repeat(4, 1fr); gap: 1rem; width: 100%; margin: 1.5rem 0 0.5rem; counter-reset: stage; }
+.stage { position: relative; background: var(--card-bg); border: 1px solid var(--border); border-radius: 12px; padding: 1rem 1.1rem 1.1rem; counter-increment: stage; }
+.stage::before { content: counter(stage); position: absolute; top: -12px; left: 14px; width: 24px; height: 24px; border-radius: 50%; background: var(--sidebar-bg); border: 1px solid var(--border); color: var(--text-muted); font-size: 0.75rem; font-weight: 700; display: flex; align-items: center; justify-content: center; }
+.stage h4 { font-size: 0.95rem; margin: 0.35rem 0 0.3rem; }
+.stage p { font-size: 0.82rem; color: var(--text-muted); }
+.stage.on { border-color: var(--primary); background: linear-gradient(160deg, rgba(41,181,232,0.14), rgba(124,58,237,0.10)); }
+.stage.on::before { background: var(--primary); color: #fff; border-color: var(--primary); }
+.stage .skill { display: block; margin-top: 0.5rem; font-size: 0.75rem; font-weight: 600; color: var(--primary); }
+.legend { display: flex; gap: 1.25rem; flex-wrap: wrap; justify-content: center; font-size: 0.8rem; color: var(--text-muted); margin-top: 0.5rem; }
+.legend span::before { content: ''; display: inline-block; width: 10px; height: 10px; border-radius: 3px; margin-right: 6px; vertical-align: middle; }
+.legend .l-on::before { background: var(--primary); }
+.legend .l-off::before { background: var(--border); }
+
+/* Funnel */
+.funnel { width: 100%; display: flex; flex-direction: column; align-items: center; gap: 0.45rem; margin: 1.25rem 0; }
+.funnel div { border-radius: 10px; padding: 0.6rem 1rem; color: #fff; font-size: 0.9rem; text-align: center; }
+.funnel b { font-weight: 700; }
+
+/* Band scale */
+.bands { display: grid; grid-template-columns: repeat(5, 1fr); width: 100%; gap: 0.5rem; margin: 1.25rem 0 0.5rem; }
+.band { border-radius: 10px; padding: 0.9rem 0.6rem; text-align: center; border: 1px solid var(--border); background: var(--card-bg); }
+.band .v { font-size: 1.6rem; font-weight: 700; }
+.band .d { font-size: 0.78rem; color: var(--text-muted); margin-top: 0.25rem; }
+.ranges { display: grid; grid-template-columns: 40fr 30fr 30fr; width: 100%; border-radius: 8px; overflow: hidden; font-size: 0.8rem; font-weight: 600; color: #fff; text-align: center; }
+.ranges div { padding: 0.45rem 0.25rem; }
+
+/* Loop */
+.loop { display: grid; grid-template-columns: repeat(4, 1fr); gap: 1rem; width: 100%; margin: 1.25rem 0; }
+.loop .card { position: relative; }
+.loop .card .n { font-size: 0.75rem; font-weight: 700; color: var(--accent); text-transform: uppercase; letter-spacing: 0.05em; }
+
+.anim-fade { opacity: 0; transform: translateY(20px); transition: opacity 0.6s ease, transform 0.6s ease; }
+.anim-fade.visible { opacity: 1; transform: translateY(0); }
+
+@media (max-width: 1000px) {
+  .g4, .lifecycle, .loop, .stat-grid { grid-template-columns: repeat(2, 1fr); }
+  .g3 { grid-template-columns: 1fr; }
+}
+@media (max-width: 900px) {
+  .sidebar { display: none; }
+  .main { margin-left: 0; }
+  .slide { padding: 2.5rem 1.25rem; }
+}
+@media (max-width: 560px) {
+  .g2, .g4, .lifecycle, .loop, .stat-grid { grid-template-columns: 1fr; }
+  .bands { grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 0.3rem; }
+  .band .v { font-size: 1.1rem; }
+  .band .d { display: none; }
+}
+</style>
+</head>
+<body>
+<div class="progress-bar"></div>
+
+<nav class="sidebar">
+  <h2>Eval Rubric Builder</h2>
+  <a href="#hero">Overview</a>
+  <a href="#problem">Why evals stall</a>
+  <a href="#lifecycle">Agent lifecycle</a>
+  <a href="#ecosystem">Where it plugs in</a>
+  <a href="#workflow">The workflow</a>
+  <a href="#interview">Scoping interview</a>
+  <a href="#persona">Personas &amp; taxonomy</a>
+  <a href="#tiers">Two-tier metrics</a>
+  <a href="#scale">One scoring scale</a>
+  <a href="#custom">Business &amp; persona metrics</a>
+  <a href="#calibration">Calibrating judges</a>
+  <a href="#outputs">Outputs &amp; guardrails</a>
+  <a href="#closing">Next steps</a>
+</nav>
+
+<main class="main">
+
+<section class="slide" id="hero">
+  <h1>Eval Rubric Builder</h1>
+  <p class="sub">A Cortex Code skill that turns the questions a customer cares about into a reviewed evaluation dataset, a signed-off metric spec, and calibrated LLM judges, all in one onsite session.</p>
+  <div class="stat-grid">
+    <div class="stat-card anim-fade"><div class="value">1</div><div class="label">onsite workshop</div></div>
+    <div class="stat-card anim-fade"><div class="value">4</div><div class="label">interview rounds (maker/checker)</div></div>
+    <div class="stat-card anim-fade"><div class="value">2</div><div class="label">metric tiers: with and without ground truth</div></div>
+    <div class="stat-card anim-fade"><div class="value">0&ndash;1</div><div class="label">one scale shared with built-in metrics</div></div>
+  </div>
+</section>
+
+<section class="slide" id="problem">
+  <h2>Why agent evaluation stalls</h2>
+  <p class="sub">The gap between a demo and production is trust. Most teams have no fixed dataset and no trusted metric, so every change is a guess.</p>
+  <div class="card-grid g4">
+    <div class="card anim-fade"><h4>No real questions</h4><p>Teams jump from "talk to your data" to tools. The eval set is synthetic and misses what users actually ask.</p></div>
+    <div class="card anim-fade"><h4>No ground truth</h4><p>Answers are judged by eye, and relative dates ("last week") make any stored answer stale.</p></div>
+    <div class="card anim-fade"><h4>Generic metrics</h4><p>Off-the-shelf checks miss the domain failures that matter: net vs gross, data scope, policy accuracy.</p></div>
+    <div class="card anim-fade"><h4>Untrusted judges</h4><p>LLM judges nobody checked against humans, scored on a different scale from the built-in metrics.</p></div>
+  </div>
+</section>
+
+<section class="slide" id="lifecycle">
+  <h2>Where it lives in the agent development lifecycle</h2>
+  <p class="sub">The skill owns scoping and the golden-set eval gate, then hands frozen judges to production scoring so the data flywheel keeps turning.</p>
+  <div class="lifecycle">
+    <div class="stage on anim-fade"><h4>Scope</h4><p>Vision, personas, real questions, taxonomy, boundaries.</p><span class="skill">eval-rubric-builder &middot; Step 1&ndash;2</span></div>
+    <div class="stage anim-fade"><h4>Build V0 agent</h4><p>Semantic views, tools, instructions.</p><span class="skill" style="color:var(--text-muted)">agent-studio</span></div>
+    <div class="stage anim-fade"><h4>Interactive testing</h4><p>Ad hoc questions; find obvious breaks.</p><span class="skill" style="color:var(--text-muted)">Snowsight / CoCo</span></div>
+    <div class="stage on anim-fade"><h4>Golden-set evals</h4><p>Reviewed dataset, Tier A + calibrated Tier B metrics.</p><span class="skill">eval-rubric-builder &middot; Step 3&ndash;8</span></div>
+    <div class="stage anim-fade"><h4>Optimize</h4><p>Compare models, prompts, tools on cost vs quality.</p><span class="skill" style="color:var(--text-muted)">agent-pareto-lab</span></div>
+    <div class="stage on anim-fade"><h4>Release gate</h4><p>Pass criteria as a merge gate: no new wrong answers.</p><span class="skill">eval-rubric-builder spec + eval config</span></div>
+    <div class="stage anim-fade"><h4>User test &amp; deploy</h4><p>Pilot personas; report results.</p><span class="skill" style="color:var(--text-muted)">benchmark-report</span></div>
+    <div class="stage on anim-fade"><h4>Production flywheel</h4><p>Frozen judges score observability logs; failures become new eval cases.</p><span class="skill">score_logs.sql + automation</span></div>
+  </div>
+  <div class="legend anim-fade"><span class="l-on">eval-rubric-builder owns or feeds this stage</span><span class="l-off">adjacent skill or tool</span></div>
+</section>
+
+<section class="slide" id="ecosystem">
+  <h2>Where it plugs in</h2>
+  <p class="sub">It sits between building the agent and optimizing it, and produces the dataset and metrics every later step reuses.</p>
+  <div class="card-grid g4">
+    <div class="card anim-fade"><span class="badge-purple tag">Upstream</span><h4>agent-studio</h4><p>Builds the agent and semantic views. Its <code>DESCRIBE</code> output and verified queries are the evidence for persona and question drafts.</p></div>
+    <div class="card hl anim-fade"><span class="badge-blue tag">This skill</span><h4>eval-rubric-builder</h4><p>Interview, dataset, two-tier metrics, judge calibration, lint, <code>dataset.sql</code> and <code>eval_config.yaml</code>.</p></div>
+    <div class="card anim-fade"><span class="badge-green tag">Downstream</span><h4>agent-pareto-lab</h4><p>Runs variants against the same dataset and config to find the cost/quality frontier.</p></div>
+    <div class="card anim-fade"><span class="badge-green tag">Downstream</span><h4>benchmark-report &middot; automation</h4><p>Turns runs into a customer deck; schedules production scoring of logs with frozen judges.</p></div>
+  </div>
+  <div class="context-box anim-fade"><strong>Tools it uses:</strong> Cortex Agent evaluations (built-in metrics + custom judges), AI Function Studio (judge evaluation and prompt optimization), Google Sheets for customer review, and agent observability logs for calibration and production scoring.</div>
+</section>
+
+<section class="slide" id="workflow">
+  <h2>The workflow</h2>
+  <p class="sub">Nine steps, each ending in an artifact. Stopping points are marked; the customer signs off before anything moves on.</p>
+  <div class="table-wrap anim-fade">
+    <table>
+      <thead><tr><th>#</th><th>Step</th><th>What happens</th><th>Artifact</th></tr></thead>
+      <tbody>
+        <tr><td>1</td><td>Scoping interview <span class="badge-orange">stop</span></td><td>Vision, persona cards, questions, rules, drafted by the agent and confirmed by the user</td><td><code>intake.yaml</code></td></tr>
+        <tr><td>2</td><td>Question taxonomy</td><td>Tag category, persona, process, date type, risk; fill persona &times; category gaps</td><td><code>questions.csv</code></td></tr>
+        <tr><td>3</td><td>Draft ground truth</td><td>Pin dates, run SQL for literal values, write short rubrics</td><td>ground truth columns</td></tr>
+        <tr><td>4</td><td>Customer review <span class="badge-orange">stop</span></td><td>Google Sheet round-trip; approve / edit / drop</td><td><code>dataset_v&lt;N&gt;.csv</code></td></tr>
+        <tr><td>5</td><td>Metric design <span class="badge-orange">stop</span></td><td>Tier A + Tier B + business &amp; persona metrics on one 0&ndash;1 scale</td><td><code>judges/*.md</code></td></tr>
+        <tr><td>6</td><td>Calibrate judges <span class="badge-orange">stop</span></td><td>Human labels, AI Function Studio evaluation and prompt optimization, freeze</td><td><code>calibration_report.md</code></td></tr>
+        <tr><td>7</td><td>Preflight lint</td><td>Placeholders, stale dates, coverage, scale, unfrozen judges</td><td>lint report</td></tr>
+        <tr><td>8</td><td>Materialize &amp; hand off</td><td>Create dataset, 3-question pilot, hand to pareto lab</td><td><code>dataset.sql</code>, <code>eval_config.yaml</code></td></tr>
+        <tr><td>9</td><td>Customer artifact</td><td>Questions by persona, metric definitions, agreement, pass criteria</td><td><code>spec.md</code></td></tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<section class="slide" id="interview">
+  <h2>Step 1: a maker/checker scoping interview</h2>
+  <p class="sub">The agent drafts from evidence, the user reviews and corrects. Nothing goes into the spec until the user confirms it.</p>
+  <div class="funnel anim-fade">
+    <div style="width:100%;background:#29B5E8"><b>Vision</b> &mdash; "what should change for users?"</div>
+    <div style="width:86%;background:#0E9ED3"><b>Personas</b> &mdash; who, literacy, stakes, success signal</div>
+    <div style="width:72%;background:#0B7FB0"><b>Questions</b> &mdash; what they actually ask, by category</div>
+    <div style="width:58%;background:#3F4FC0"><b>Tools &amp; rules</b> &mdash; definitions, boundaries, refusals</div>
+    <div style="width:44%;background:#6D28D9"><b>Agent spec</b> &mdash; confirmed intake</div>
+  </div>
+  <div class="card-grid g4">
+    <div class="card anim-fade"><span class="badge-blue tag">Round A &middot; ask</span><h4>Vision &amp; agent</h4><p>One question set: business vision, agent under test, what it must never do. Then a silent evidence pass over the agent, semantic views and logs.</p></div>
+    <div class="card anim-fade"><span class="badge-purple tag">Round B &middot; draft &rarr; review</span><h4>Persona cards</h4><p>2&ndash;4 drafted cards, each tagged with its evidence. Accept, edit, drop, or add one the agent missed.</p></div>
+    <div class="card anim-fade"><span class="badge-purple tag">Round C &middot; draft &rarr; review</span><h4>Questions &amp; taxonomy</h4><p>5&ndash;10 questions per persona in their words, plus "what did you ask your analyst last week?" Fill empty persona &times; category cells.</p></div>
+    <div class="card anim-fade"><span class="badge-purple tag">Round D &middot; draft &rarr; review</span><h4>Rules &amp; boundaries</h4><p>Definitions, out-of-scope with refusal wording, missing fields, format rules from literacy, pass criteria.</p></div>
+  </div>
+</section>
+
+<section class="slide" id="persona">
+  <h2>Persona cards and the question taxonomy</h2>
+  <p class="sub">A persona's success signal is the north-star metric. A regional manager doesn't care about SQL correctness; they care that the number matches their analyst's.</p>
+  <div class="card-grid g2">
+    <div class="card anim-fade">
+      <h4>Persona card (example: regional sales lead)</h4>
+      <ul>
+        <li><b>Decisions:</b> territory allocation, quota</li>
+        <li><b>Literacy:</b> reads dashboards, doesn't write SQL</li>
+        <li><b>Workflow:</b> asks the analyst team, 2-day turnaround</li>
+        <li><b>Frequency:</b> 5&ndash;10 questions / week</li>
+        <li><b>Data scope:</b> own region only (row access policy)</li>
+        <li><b>Success signal:</b> "I got the answer without filing a ticket"</li>
+      </ul>
+    </div>
+    <div class="card anim-fade">
+      <h4>Taxonomy: wrong-answer cost sets eval priority</h4>
+      <div class="table-wrap" style="margin:0.5rem 0 0">
+        <table>
+          <thead><tr><th>Category</th><th>Complexity</th><th>Wrong-answer cost</th></tr></thead>
+          <tbody>
+            <tr><td>Lookup</td><td class="score-high">Low</td><td class="score-mid">Medium</td></tr>
+            <tr><td>Aggregation</td><td class="score-mid">Medium</td><td class="score-low">High</td></tr>
+            <tr><td>Reasoning</td><td class="score-low">High</td><td class="score-low">High</td></tr>
+            <tr><td>Policy / process</td><td class="score-high">Low</td><td class="score-low">Very high</td></tr>
+            <tr><td>Out of scope</td><td>n/a</td><td class="score-low">Reputational</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="slide" id="tiers">
+  <h2>Two tiers of metrics</h2>
+  <p class="sub">Tier A needs ground truth and runs on the curated set. Tier B is reference-free, so once calibrated it can score any question, including production traffic.</p>
+  <div class="card-grid g2">
+    <div class="card anim-fade">
+      <span class="badge-blue tag">Tier A &middot; ground truth</span>
+      <h4>Curated dataset only</h4>
+      <ul>
+        <li><code>answer_correctness</code> (built-in)</li>
+        <li><code>tool_selection_accuracy</code>, <code>tool_execution_accuracy</code> (built-in)</li>
+        <li><code>logical_consistency</code> (built-in, reference-free)</li>
+        <li><code>business_rules</code>, <code>efficiency</code> (custom)</li>
+      </ul>
+    </div>
+    <div class="card anim-fade">
+      <span class="badge-purple tag">Tier B &middot; reference-free</span>
+      <h4>Any question, including production logs</h4>
+      <ul>
+        <li><code>answer_correctness_rf</code>, <code>tool_selection_rf</code>, <code>tool_execution_rf</code></li>
+        <li><code>groundedness</code>, <code>business_rules_rf</code>, <code>date_interpretation</code></li>
+        <li><code>scope_refusal</code>, <code>persona_fit</code>, <code>brand_format</code>, <code>efficiency_rf</code></li>
+        <li>Only <b>frozen</b> (calibrated) judges go into configs</li>
+      </ul>
+    </div>
+  </div>
+  <div class="highlight-box anim-fade"><strong>One judge model:</strong> every judge, calibration function and studio optimization uses the same <code>judge_model</code> (<code>claude-sonnet-4-6</code>). Optimization tunes the prompt only, never the model.</div>
+</section>
+
+<section class="slide" id="scale">
+  <h2>One scoring scale, matched to the built-in metrics</h2>
+  <p class="sub">Built-in agent metrics report a normalized score from 0 to 1. Every custom judge uses the same scale and five written bands, so built-in and custom columns compare directly.</p>
+  <div class="bands anim-fade">
+    <div class="band"><div class="v score-low">0</div><div class="d">two or more criteria fail, or a fabricated number</div></div>
+    <div class="band"><div class="v score-low">0.25</div><div class="d">one criterion clearly fails</div></div>
+    <div class="band"><div class="v score-mid">0.5</div><div class="d">one criterion partly missed</div></div>
+    <div class="band"><div class="v score-high">0.75</div><div class="d">all hold, one cosmetic issue</div></div>
+    <div class="band"><div class="v score-high">1</div><div class="d">every criterion holds</div></div>
+  </div>
+  <div class="ranges anim-fade">
+    <div style="background:#B91C1C">low &nbsp;[0, 0.4)</div>
+    <div style="background:#B45309">medium &nbsp;[0.4, 0.7]</div>
+    <div style="background:#047857">high &nbsp;(0.7, 1]</div>
+  </div>
+  <div class="card-grid g3" style="margin-top:1.5rem">
+    <div class="card anim-fade"><h4>Built-ins pinned to v3</h4><p>The v3 judge is the same model as the custom judges, and pinning keeps scores comparable across runs.</p></div>
+    <div class="card anim-fade"><h4>Same bands everywhere</h4><p>Judges, human labels, calibration kappa and the studio agreement metric all use the same five bands.</p></div>
+    <div class="card anim-fade"><h4>Lint enforces it</h4><p>A judge off this scale, or ranges that don't span 0&ndash;1, fails preflight.</p></div>
+  </div>
+</section>
+
+<section class="slide" id="custom">
+  <h2>Business and persona metrics, when they're needed</h2>
+  <p class="sub">Generic judges cover generic quality. The skill drafts dedicated metrics when a persona or rule warrants one; the user accepts, edits or drops each.</p>
+  <div class="card-grid g4">
+    <div class="card anim-fade"><span class="badge-purple tag">Persona</span><h4>Success signal not covered</h4><p><code>finance_lead_board_ready</code>: a one-line takeaway with metric, value and as-of date, ready for the board deck.</p></div>
+    <div class="card anim-fade"><span class="badge-purple tag">Persona</span><h4>Restricted data scope</h4><p><code>category_manager_scope</code>: every figure is for the user's own category; cross-category asks are declined.</p></div>
+    <div class="card anim-fade"><span class="badge-blue tag">Business</span><h4>Costliest definition</h4><p><code>net_vs_gross</code>: net unless gross is asked, always labelled, cancelled and test orders excluded.</p></div>
+    <div class="card anim-fade"><span class="badge-blue tag">Business</span><h4>High-cost category</h4><p><code>arr_as_of_date</code> or a policy safety metric: one stated date, never summed across periods; cite or decline.</p></div>
+  </div>
+  <div class="warning-box anim-fade"><strong>Keep it sharp:</strong> 2&ndash;4 custom metrics beat many vague ones, because each Tier B metric needs its own calibration. Persona- or category-scoped metrics score 1 with an <code>N/A:</code> reason elsewhere; filter those rows when reading averages.</div>
+</section>
+
+<section class="slide" id="calibration">
+  <h2>Calibrating judges against humans</h2>
+  <p class="sub">A Tier B judge is trusted only after it agrees with human raters on a holdout set. Then it's frozen and versioned.</p>
+  <div class="loop">
+    <div class="card anim-fade"><div class="n">1 &middot; Collect</div><h4>20&ndash;50 responses per judge</h4><p>From a pilot eval run or observability logs; oversample high-cost categories and known failures.</p></div>
+    <div class="card anim-fade"><div class="n">2 &middot; Label</div><h4>Humans score the bands</h4><p>Two raters where possible; check rater-vs-rater agreement first.</p></div>
+    <div class="card anim-fade"><div class="n">3 &middot; Optimize</div><h4>AI Function Studio</h4><p>Baseline evaluation, then prompt-only optimization on train, judge model fixed.</p></div>
+    <div class="card anim-fade"><div class="n">4 &middot; Freeze</div><h4>Pass the gate</h4><p>Weighted kappa &ge; 0.6 and exact-band agreement &ge; 0.8 on holdout, then <code>judges/&lt;metric&gt;@vN.md</code>.</p></div>
+  </div>
+  <div class="highlight-box anim-fade"><strong>Re-calibrate</strong> when the agent instructions, semantic view, tools or judge model change. Plan a ~10% human spot check on each production scoring batch.</div>
+</section>
+
+<section class="slide" id="outputs">
+  <h2>Outputs and guardrails</h2>
+  <p class="sub">Everything lands in a per-customer workshop directory, is versioned, and passes preflight lint before it touches Snowflake.</p>
+  <div class="card-grid g3">
+    <div class="card anim-fade"><h4>Artifacts</h4><ul><li><code>intake.yaml</code>, <code>questions.csv</code></li><li><code>dataset_v&lt;N&gt;.csv</code> + review Sheet</li><li><code>judges/*.md</code>, <code>calibration_report.md</code></li><li><code>dataset.sql</code>, <code>eval_config.yaml</code>, <code>spec.md</code></li></ul></div>
+    <div class="card anim-fade"><h4>Hard rules</h4><ul><li>Literal values in ground truth, never placeholders</li><li>Relative dates pinned for ground truth</li><li>Datasets and judges versioned, never edited in place</li><li>Only frozen Tier B judges in configs</li></ul></div>
+    <div class="card anim-fade"><h4>Lint catches</h4><ul><li>Unconfirmed persona drafts, missing success signals</li><li>Empty taxonomy categories, coverage gaps</li><li>Judges off the 0&ndash;1 scale</li><li>Stale dates, near-duplicate questions</li></ul></div>
+  </div>
+</section>
+
+<section class="slide" id="closing">
+  <h2>Next steps</h2>
+  <p class="sub">Start with one agent and one persona-rich use case; the dataset and judges then carry through optimization, release and production.</p>
+  <div class="card-grid g2">
+    <div class="card anim-fade"><h4>Run a workshop</h4><p>Pick a live Cortex Agent, invite 2&ndash;3 persona owners, and run Steps 1&ndash;5 onsite to leave with a reviewed dataset and signed-off metrics.</p></div>
+    <div class="card anim-fade"><h4>Calibrate and gate</h4><p>Calibrate the Tier B and custom judges, then use the eval config as the merge gate for every agent change.</p></div>
+    <div class="card anim-fade"><h4>Optimize</h4><p>Hand the dataset and config to <code>agent-pareto-lab</code> to compare models, prompts and tools on cost vs quality.</p></div>
+    <div class="card anim-fade"><h4>Close the loop</h4><p>Score production logs with frozen judges on a schedule; turn low scores and rephrases into new eval cases.</p></div>
+  </div>
+</section>
+
+</main>
+
+<script>
+const progressBar = document.querySelector('.progress-bar');
+window.addEventListener('scroll', () => {
+  const docHeight = document.documentElement.scrollHeight - window.innerHeight;
+  progressBar.style.width = (docHeight > 0 ? window.scrollY / docHeight * 100 : 0) + '%';
+});
+const observer = new IntersectionObserver((entries) => {
+  entries.forEach(entry => { if (entry.isIntersecting) entry.target.classList.add('visible'); });
+}, { threshold: 0.1 });
+document.querySelectorAll('.anim-fade').forEach(el => observer.observe(el));
+const sections = document.querySelectorAll('.slide');
+const navLinks = document.querySelectorAll('.sidebar a');
+window.addEventListener('scroll', () => {
+  let current = '';
+  sections.forEach(section => { if (window.scrollY >= section.offsetTop - 200) current = section.getAttribute('id'); });
+  navLinks.forEach(link => link.classList.toggle('active', link.getAttribute('href') === '#' + current));
+});
+</script>
+</body>
+</html>

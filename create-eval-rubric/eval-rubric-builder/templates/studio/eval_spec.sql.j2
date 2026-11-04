@@ -1,0 +1,15 @@
+-- Baseline agreement of {{ fn }} vs human labels on holdout. Judge model fixed: {{ judge_model }}.
+USE {{ db }}.{{ schema }};
+CREATE EXPERIMENT {{ experiment }}_EVAL
+  TYPE = 'AI_FUNCTION_EVALUATION'
+  FROM SPECIFICATION $$
+    query_text: {{ db }}.{{ schema }}.{{ fn }}(INPUT, OUTPUT, TOOL_INFO)
+    metrics:
+      - name: custom
+        custom_udf: {{ db }}.{{ schema }}.JUDGE_AGREEMENT
+    dataset:
+      name: {{ holdout_ds }}
+      version: V1
+      ground_truth: HUMAN_SCORE
+  $$;
+EXECUTE EXPERIMENT {{ experiment }}_EVAL;

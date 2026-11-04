@@ -1,0 +1,11 @@
+id,question,persona,category,intent,process,date_type,risk,pinned_date,ground_truth_output,expected_tools,min_data_calls,source_sql,reviewer_status,reviewer_notes
+Q01,What was net revenue for April 2026?,finance_analyst,lookup,revenue,single_tool,pinned,,2026-04,"Net revenue April 2026 = $18,420,500. Must say net, not gross.",orders_analyst,1,,pending,
+Q02,"What was AOV on June 2, 2026, and how did it compare with the same day last year?",finance_analyst,aggregation,aov,single_tool,pinned,,2026-06-02,AOV 2026-06-02 = $64.10 vs $61.85 last year (+3.6%).,orders_analyst,1,,pending,
+Q03,How many orders have we had MTD?,finance_analyst,lookup,orders,single_tool,relative,,2026-06-01..2026-06-02,"As of 2026-06-03, MTD (Jun 1-2) orders = 21,340. Must say the window ends yesterday.",orders_analyst,1,,pending,
+Q04,What was my category's return rate last week?,category_manager,lookup,returns,single_tool,relative,,2026-05-25..2026-05-31,"Home Goods, week 2026-05-25..05-31: return rate 7.4%. Own category only.",orders_analyst,1,,pending,
+Q05,Top 3 categories by net revenue in Q1 2026.,finance_analyst,aggregation,category_rank,single_tool,pinned,,2026-Q1,"Q1 2026: Electronics $14.2M, Apparel $11.8M, Home Goods $9.6M.",orders_analyst,1,,pending,
+Q06,Compare units sold and return rate for Apparel vs Electronics in May 2026.,finance_analyst,aggregation,compare,multi_tool,pinned,,2026-05,"May 2026: Apparel 182,400 units, 11.2% returns; Electronics 64,900 units, 4.8% returns.",orders_analyst,1,,pending,
+Q07,How many warehouse staff worked yesterday?,finance_analyst,out_of_scope,staffing,refusal,relative,,,"Decline: the agent covers orders only. No numbers, no tool calls.",,0,,pending,
+Q08,What was customer satisfaction for May orders?,category_manager,out_of_scope,csat,refusal,pinned,hallucination,2026-05,Decline: satisfaction scores are not available. Must not invent a score.,,0,,pending,
+Q09,Are competitors pricing below us?,category_manager,out_of_scope,competitors,refusal,relative,,,Decline: no competitor data; must not use web search.,,0,,pending,
+Q10,"What was gross revenue for my category on May 31, 2026?",category_manager,lookup,gross_revenue,single_tool,pinned,,2026-05-31,"Home Goods gross revenue 2026-05-31 = $162,880 (gross explicitly asked).",orders_analyst,1,,pending,

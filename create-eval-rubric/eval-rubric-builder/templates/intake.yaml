@@ -1,0 +1,70 @@
+# Eval workshop intake. Fill with the customer; keep values anonymized in shared examples.
+customer: ACME
+vision: ""                    # one sentence: what should change for users (Round A)
+must_never: []                # things the agent must never do (Round A)
+domain: ""                    # e.g. e-commerce orders, subscription revenue
+agent: DB.SCHEMA.AGENT_NAME   # Cortex Agent under test
+agent_version: LIVE
+semantic_views: []            # FQNs the agent's analyst tools use
+tools:                        # name -> one line on when it should be used
+  # orders_analyst: revenue, orders, AOV questions
+judge_model: claude-sonnet-4-6   # the single Sonnet supported by Cortex Agent evals; used by ALL judges
+dataset:
+  table: DB.SCHEMA.EVAL_<AGENT>_V1
+  dataset_name: DB.SCHEMA.<AGENT>_EVAL_DS_V1
+  config_stage: "@DB.SCHEMA.EVAL_CONFIG"
+  as_of_date: 2026-11-01      # anchor for pinning relative dates
+personas:                     # Round B persona cards (maker drafts, user confirms)
+  - id: default
+    status: drafted           # drafted | confirmed | user
+    evidence: ""              # where the draft came from, or "assumption"
+    description: ""
+    role: ""                  # role & responsibility
+    decisions: ""             # what decisions they make with the answers
+    data_literacy: dashboards # sql | dashboards | narrative
+    workflow: ""              # how they get answers today + turnaround
+    frequency: ""             # e.g. "5-10 questions / week"
+    stakes: ""                # what happens if the answer is wrong
+    success_signal: ""        # their definition of "right", in their words
+    data_scope: ""            # e.g. "own region only" (row access policy)
+    seed_questions: []        # Round C confirmed questions, in their words
+taxonomy:                     # Round C categories; wrong_answer_cost drives eval priority
+  lookup:         {complexity: low,    data_source: structured,   wrong_answer_cost: medium}
+  aggregation:    {complexity: medium, data_source: structured,   wrong_answer_cost: high}
+  reasoning:      {complexity: high,   data_source: structured+unstructured, wrong_answer_cost: high}
+  policy_process: {complexity: low,    data_source: unstructured, wrong_answer_cost: very_high}
+  out_of_scope:   {complexity: n/a,    data_source: n/a,          wrong_answer_cost: reputational}
+definitions:                  # business rules the agent must follow; used by judges
+  metrics: []                 # "net sales unless gross is asked"
+  dates: []                   # "weeks run Sunday-Saturday"
+  entities: []                # "exclude test orders; no SCD2 duplicate rows"
+out_of_scope: []              # topics the agent must decline, with expected behavior
+missing_fields: []            # fields users ask about that are NOT in the semantic view
+format_rules: []              # brand voice, units, rounding, tables vs prose
+metrics:
+  tier_a: [answer_correctness, logical_consistency, business_rules, efficiency]
+  tier_b: [answer_correctness_rf, tool_selection_rf, tool_execution_rf, groundedness, scope_refusal]
+scoring:                      # same 0-1 scale as the built-in metrics (normalized_score)
+  builtin_version: v3         # pin built-ins; v3 judge = claude-sonnet-4-6 (= judge_model)
+  bands: [0, 0.25, 0.5, 0.75, 1]
+  score_ranges: {min_score: [0, 0.4], median_score: [0.4, 0.7], max_score: [0.7, 1]}
+custom_metrics: []            # business / persona metrics (Step 5; draft with build.py suggest-metrics)
+  # - name: regional_lead_success
+  #   kind: persona            # persona | business
+  #   tier: B                  # A = may use {{ground_truth}}; B = reference-free, needs calibration
+  #   persona: regional_sales_lead   # optional: only scored for this persona (else 1, reason "N/A:")
+  #   categories: [lookup, aggregation]  # optional: only for these taxonomy categories
+  #   intent: "numbers a regional lead can act on without an analyst"
+  #   criteria: ["matches the analyst's territory number", "names region and window"]
+  #   rules_from_intake: false   # true = include definitions.* in the prompt
+  #   anchors: {1: "...", 0.75: "...", 0.5: "...", 0.25: "...", 0: "..."}   # optional; defaults are generic
+calibration:
+  min_rows: 20
+  holdout: 0.3
+  kappa_min: 0.6              # quadratic-weighted kappa on holdout
+  agreement_min: 0.8          # exact-band agreement on holdout
+pass_criteria:
+  - "No new wrong answers vs the current version"
+  - "Tier B scores >= 0.8 average on the curated set"
+cost:
+  credits_per_question_metric: 0.5   # rough planning number; refine from past runs

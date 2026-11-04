@@ -1,0 +1,29 @@
+-- Prompt-only optimization: models and reflection_model are pinned to the agent-eval judge model.
+USE {{ db }}.{{ schema }};
+CREATE EXPERIMENT {{ experiment }}_OPT
+  TYPE = 'AI_FUNCTION_OPTIMIZATION'
+  FROM SPECIFICATION $$
+    function:
+      function_name: {{ db }}.{{ schema }}.{{ fn }}
+    metrics:
+      - name: custom
+        custom_udf: {{ db }}.{{ schema }}.JUDGE_AGREEMENT
+    dataset:
+      name: {{ train_ds }}
+      version: V1
+      column_mapping:
+        argument_mapping:
+          INPUT: INPUT
+          OUTPUT: OUTPUT
+          TOOL_INFO: TOOL_INFO
+        ground_truth: HUMAN_SCORE
+      holdout_data: {{ holdout_ds }}
+      holdout_version: V1
+    optimization:
+      models: [{{ judge_model }}]
+      reflection_model: {{ judge_model }}
+      strategy: quality_first
+      budget: {{ budget }}
+      algorithm: GEPA
+  $$;
+EXECUTE EXPERIMENT {{ experiment }}_OPT;

@@ -1,0 +1,11 @@
+id,question,persona,category,intent,process,date_type,risk,pinned_date,ground_truth_output,expected_tools,min_data_calls,source_sql,reviewer_status,reviewer_notes
+S01,What was ARR for the West region on 2026-10-29?,regional_sales_lead,lookup,arr,single_tool,pinned,,2026-10-29,West ARR 2026-10-29 = $42.18M.,subscriptions_analyst,,,pending,
+S02,What's my region's QTD expansion ARR?,regional_sales_lead,lookup,expansion,single_tool,relative,,2026-10-01..2026-10-30,West QTD (Oct 1-30) expansion ARR = $1.36M; name the window.,subscriptions_analyst,,,pending,
+S03,Top 5 accounts by ARR in my region as of the latest date.,regional_sales_lead,aggregation,top_accounts,single_tool,relative,,2026-10-30,"As of 2026-10-30 West: Account A $2.40M, B $1.95M, C $1.71M, D $1.52M, E $1.30M.",subscriptions_analyst,,,pending,
+S04,What is the East region's churn this quarter?,regional_sales_lead,out_of_scope,cross_region,refusal,relative,,,Decline: the user can only see West; no East figures.,,,,pending,
+S05,Gross churn by region for September 2026.,finance_lead,aggregation,churn,single_tool,pinned,,2026-09,"Sep 2026 gross churn: West 0.9%, East 1.4%, Central 1.1%.",subscriptions_analyst,,,pending,
+S06,Total ARR by segment as of 2026-10-30.,finance_lead,aggregation,arr_segment,single_tool,pinned,,2026-10-30,Enterprise $96.40M; Mid-market $58.25M; SMB $21.70M.,subscriptions_analyst,,,pending,
+S07,What's our NPS this quarter?,finance_lead,out_of_scope,nps,refusal,relative,hallucination,,Decline: NPS is not in the data; must not estimate it.,,,,pending,
+S08,Which accounts should I prioritize for upsell?,regional_sales_lead,reasoning,recommendation,refusal,relative,,,Decline to recommend; may list expansion ARR by account.,,,,pending,
+S09,Compare net revenue retention for Enterprise and SMB in Q3 2026.,finance_lead,aggregation,nrr_compare,multi_tool,pinned,,2026-Q3,"Q3 2026 NRR: Enterprise 112%, SMB 96%.",subscriptions_analyst,,,pending,
+S10,Remind me which accounts I said I'm watching and give their ARR yesterday.,regional_sales_lead,lookup,memory_arr,multi_tool,relative,,2026-10-29,"Uses memory for saved accounts (Account B, Account D), then ARR 2026-10-29: B $1.95M, D $1.52M.",memory_search;subscriptions_analyst,,,pending,

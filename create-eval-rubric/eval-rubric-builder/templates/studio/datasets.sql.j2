@@ -1,0 +1,8 @@
+-- Calibration tables + DATASET wrappers for {{ metric }}. Load train/holdout CSVs into the tables first
+-- (PUT + COPY INTO, or Snowsight upload).
+CREATE TABLE IF NOT EXISTS {{ db }}.{{ schema }}.{{ table }}_TRAIN (ID VARCHAR, INPUT VARCHAR, OUTPUT VARCHAR, TOOL_INFO VARCHAR, HUMAN_SCORE FLOAT);
+CREATE TABLE IF NOT EXISTS {{ db }}.{{ schema }}.{{ table }}_HOLDOUT LIKE {{ db }}.{{ schema }}.{{ table }}_TRAIN;
+CREATE DATASET IF NOT EXISTS {{ train_ds }};
+ALTER DATASET {{ train_ds }} ADD VERSION 'V1' FROM (SELECT INPUT, OUTPUT, TOOL_INFO, HUMAN_SCORE FROM {{ db }}.{{ schema }}.{{ table }}_TRAIN);
+CREATE DATASET IF NOT EXISTS {{ holdout_ds }};
+ALTER DATASET {{ holdout_ds }} ADD VERSION 'V1' FROM (SELECT INPUT, OUTPUT, TOOL_INFO, HUMAN_SCORE FROM {{ db }}.{{ schema }}.{{ table }}_HOLDOUT);

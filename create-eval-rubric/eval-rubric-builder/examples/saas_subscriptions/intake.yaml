@@ -1,0 +1,91 @@
+# Fictional example: a SaaS company's subscription analytics agent with per-team personas. Invented data.
+customer: EXAMPLE_SAAS
+vision: "sales and finance leaders get ARR and churn answers without filing an analyst ticket"
+domain: SaaS subscription and revenue analytics
+agent: EXAMPLE_DB.AGENTS.SUBSCRIPTIONS_AGENT
+agent_version: LIVE
+semantic_views: [EXAMPLE_DB.SEMANTIC.SUBSCRIPTIONS_SV]
+tools:
+  subscriptions_analyst: ARR, MRR, churn, expansion, accounts by segment/region (Cortex Analyst on SUBSCRIPTIONS_SV)
+  memory_search: user preferences and saved notes only; never for metrics
+judge_model: claude-sonnet-4-6
+dataset:
+  table: EXAMPLE_DB.EVALS.EVAL_SUBSCRIPTIONS_V1
+  dataset_name: EXAMPLE_DB.EVALS.SUBSCRIPTIONS_EVAL_DS_V1
+  config_stage: "@EXAMPLE_DB.EVALS.EVAL_CONFIG"
+  as_of_date: 2026-10-30
+personas:
+  - id: regional_sales_lead
+    status: confirmed
+    evidence: row access policy on region; VQRs phrased "my region"
+    description: leads one sales region; wants their pipeline of renewals and expansion
+    role: regional sales manager
+    decisions: territory allocation, quota, renewal prioritization
+    data_literacy: dashboards
+    workflow: asks the analyst team, 2-day turnaround
+    frequency: 5-10 questions / week
+    stakes: misallocated territory or quota
+    success_signal: "I got the answer without filing a ticket, and it matches my analyst's number"
+    data_scope: own region only (row access policy)
+    seed_questions: ["What's my region's QTD expansion ARR?"]
+  - id: finance_lead
+    status: confirmed
+    evidence: assumption, confirmed by customer
+    description: company-wide ARR, churn and forecasting inputs
+    role: VP finance
+    decisions: board reporting, forecast
+    data_literacy: narrative
+    workflow: gets a weekly pack from FP&A
+    frequency: 1-3 questions / week
+    stakes: wrong ARR or churn in board materials
+    success_signal: "a one-line answer I can paste into the board deck"
+    data_scope: all regions
+    seed_questions: ["Gross churn by region for September 2026."]
+definitions:
+  metrics:
+    - "ARR = sum of active subscription annualized value on the as-of date; never summed across dates"
+    - "Gross churn = lost ARR from cancellations / starting ARR for the period"
+    - "Net revenue retention = (starting ARR + expansion - contraction - churn) / starting ARR"
+  dates:
+    - "Months are calendar months; 'last month' = previous complete month"
+    - "QTD runs from quarter start through the latest as-of date"
+  entities:
+    - "Exclude internal and trial accounts"
+    - "A regional lead sees only their region; never reveal other regions' figures"
+out_of_scope:
+  - "Deal-level recommendations or forecasts: decline"
+  - "Product usage telemetry: not in this data"
+missing_fields:
+  - "NPS"
+  - "support ticket volume"
+format_rules:
+  - "USD in millions with 2 decimals for totals"
+  - "Name the as-of date used"
+metrics:
+  tier_a: [answer_correctness, logical_consistency, business_rules]
+  tier_b: [answer_correctness_rf, tool_execution_rf, groundedness, scope_refusal, persona_fit]
+scoring: {builtin_version: v3, bands: [0, 0.25, 0.5, 0.75, 1], score_ranges: {min_score: [0, 0.4], median_score: [0.4, 0.7], max_score: [0.7, 1]}}
+custom_metrics:
+  - name: arr_as_of_date
+    kind: business
+    tier: B
+    intent: "ARR is a point-in-time balance; summing it across dates inflates board numbers."
+    criteria:
+      - "ARR is reported as of one stated date"
+      - "ARR is never summed across dates or periods"
+      - "internal and trial accounts are excluded"
+    rules_from_intake: true
+  - name: finance_lead_board_ready
+    kind: persona
+    tier: B
+    persona: finance_lead
+    intent: "Finance lead's success signal: a one-line answer they can paste into the board deck."
+    criteria:
+      - "leads with a one-line takeaway that states metric, value and as-of date"
+      - "numbers are rounded and labelled for a board audience"
+      - "no SQL or tool jargon in the answer"
+calibration: {min_rows: 20, holdout: 0.3, kappa_min: 0.6, agreement_min: 0.8, budget: light}
+pass_criteria:
+  - "Zero cross-region data leaks for the regional persona"
+  - "answer_correctness >= 0.85 on the pinned set"
+cost: {credits_per_question_metric: 0.4}

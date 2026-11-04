@@ -1,0 +1,12 @@
+-- Score production agent requests with a frozen Tier B judge function (no ground truth needed).
+-- Adapt the source to your observability view; columns needed: request id, user question, answer, tool trace.
+CREATE TABLE IF NOT EXISTS {{ db }}.{{ schema }}.JUDGE_SCORES (
+  REQUEST_ID VARCHAR, METRIC VARCHAR, JUDGE_VERSION VARCHAR, SCORE FLOAT, REASON VARCHAR, SCORED_AT TIMESTAMP_LTZ);
+INSERT INTO {{ db }}.{{ schema }}.JUDGE_SCORES
+SELECT l.REQUEST_ID, '{{ metric }}', '{{ version }}',
+       l.j:score::FLOAT, l.j:reason::VARCHAR, CURRENT_TIMESTAMP()
+FROM (
+  SELECT REQUEST_ID, {{ db }}.{{ schema }}.{{ fn }}(INPUT, OUTPUT, TOOL_INFO) AS j
+  FROM {{ log_source }}
+  WHERE REQUEST_ID NOT IN (SELECT REQUEST_ID FROM {{ db }}.{{ schema }}.JUDGE_SCORES WHERE METRIC = '{{ metric }}')
+) l;
