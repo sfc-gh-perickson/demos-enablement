@@ -1,0 +1,54 @@
+# agent-pareto-lab config. Paths are relative to this file.
+agent: MY_DB.MY_SCHEMA.MY_AGENT          # existing agent (created if missing from the first variant's spec)
+connection: my_connection                # ~/.snowflake/config.toml connection name
+role: SYSADMIN                           # optional
+eval_warehouse: MY_AGENT_EVAL_WH         # eval orchestration only; keep it separate from variant warehouses
+dataset: MY_DB.MY_SCHEMA.MY_EVAL_DS      # created with SYSTEM$CREATE_EVALUATION_DATASET
+dataset_table: MY_DB.MY_SCHEMA.MY_EVAL_TABLE  # table behind the dataset; preflight.py checks its ground-truth keys
+config_stage: MY_DB.MY_SCHEMA.EVAL_CONFIG
+run_prefix: r1                           # round id: agent alias + eval run = <run_prefix>_<name>; new prefix per round
+since: "2026-10-27"                      # lower bound for ACCOUNT_USAGE lookups (date the runs start)
+repeats: 1                               # one run per variant; do not repeat the same version
+correct_threshold: 0.7                   # answer_correctness >= this counts as a correct answer
+description: "My agent Pareto lab."
+out_dir: pareto_out
+
+base_spec: specs/base.json
+
+# Each variant becomes one committed agent version. Give a short `name` (e.g. sonnet55); the agent alias
+# and eval run are both <run_prefix>_<name> (e.g. r1_sonnet55). Don't repeat the prefix inside `name`.
+#   spec:      optional full spec file instead of base_spec (e.g. a production replica)
+#   overrides: JSON merge patch applied to the spec (dicts merge, lists replace, null deletes)
+#   warehouse: sets every warehouse tool_resource, so Analyst SQL cost is attributable per variant
+variants:
+  - name: baseline
+    label: "A baseline"
+    spec: specs/production.json
+    warehouse: MY_AGENT_A_WH
+  - name: lean
+    label: "B lean (auto)"
+    warehouse: MY_AGENT_B_WH
+  - name: lean_sonnet55
+    label: "C lean + claude-sonnet-5-5"
+    overrides: {models: {orchestration: claude-sonnet-5-5}}
+    warehouse: MY_AGENT_C_WH
+
+# Built-in metric names, {name, version}, or a custom judge {name, model, prompt_file, ground_truth_keys}.
+# Ground truth each metric reads: answer_correctness -> ground_truth_output;
+# tool_selection_accuracy / tool_execution_accuracy -> ground_truth_invocations (NOT expected_tools);
+# custom judges -> whole VARIANT via {{ground_truth}}: list the keys they need in ground_truth_keys.
+metrics:
+  - {name: answer_correctness, version: v3}
+  - logical_consistency
+  - {name: business_rule_compliance, model: claude-sonnet-4-6, prompt_file: judges/business_rules.md}
+  - {name: efficiency, model: claude-sonnet-4-6, prompt_file: judges/efficiency.md, ground_truth_keys: [min_data_calls]}
+
+# Frontier axes. metric = any scorecard column (lower-case); direction max|min.
+# The first two are the chart axes.
+objectives:
+  - {metric: answer_correctness, direction: max}
+  - {metric: credits_per_request, direction: min}
+  # - {metric: logical_consistency, direction: max}
+  # - {metric: p95_duration_s, direction: min}
+constraints:                              # optional: variants failing these are excluded from the frontier
+  answer_correctness: {min: 0.85}

@@ -1,0 +1,13 @@
+{
+  "models": {"orchestration": "auto"},
+  "instructions": {
+    "orchestration": "Answer questions about online orders. Revenue means net revenue unless gross is asked. Exclude cancelled orders. Weeks start Monday.",
+    "response": "Lead with the number, then one sentence of context. Use USD with no decimals."
+  },
+  "tools": [
+    {"tool_spec": {"type": "cortex_analyst_text_to_sql", "name": "orders_analyst", "description": "Orders, revenue, returns and customers by day, category and region."}}
+  ],
+  "tool_resources": {
+    "orders_analyst": {"semantic_view": "EXAMPLE_DB.AGENTS.ORDERS_SV", "execution_environment": {"type": "warehouse", "warehouse": "ORDERS_AGENT_WH"}}
+  }
+}

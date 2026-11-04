@@ -1,0 +1,32 @@
+evaluation:
+  agent_params:
+    agent_name: "{{ lab.agent }}"
+    agent_type: "CORTEX AGENT"
+    agent_version: "{{ version_name }}"
+  run_params:
+    label: "{{ variant.get('label', variant.alias) }} - {{ lab.run_prefix }}"
+    description: "{{ lab.get('description', 'agent-pareto-lab run') }} Version {{ version_name }} ({{ variant.alias }})."
+  source_metadata:
+    type: "dataset"
+    dataset_name: "{{ lab.dataset }}"
+
+metrics:
+{%- for m in metrics %}
+{%- if m.builtin is defined %}
+  - "{{ m.builtin }}"
+{%- elif m.prompt is defined %}
+  - name: "{{ m.name }}"
+    model: "{{ m.get('model', 'claude-sonnet-4-6') }}"
+    score_ranges:
+      min_score: [0, 0.4]
+      median_score: [0.4, 0.7]
+      max_score: [0.7, 1]
+    prompt: |
+{{ m.prompt | indent(6, first=True) }}
+{%- else %}
+  - name: "{{ m.name }}"
+{%- if m.version is defined %}
+    version: "{{ m.version }}"
+{%- endif %}
+{%- endif %}
+{%- endfor %}

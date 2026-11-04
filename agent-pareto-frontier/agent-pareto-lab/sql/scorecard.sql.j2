@@ -1,0 +1,84 @@
+-- agent-pareto-lab scorecard views for {{ agent }} runs {{ prefix }}_* (generated; safe to re-create).
+--   {{ v }}_REQUESTS     one row per request: version, run, tokens, steps, tool calls
+--   {{ v }}_REQUEST_COST + billed token credits (request_id join) and Analyst SQL time/bytes
+--   {{ v }}_RUN_SCORECARD per run: efficiency + cost
+--   {{ v }}_RUN_METRICS   per run x metric: mean judge score, n, n >= correct threshold
+--   {{ v }}_WAREHOUSE_CREDITS per variant warehouse per hour
+USE SCHEMA {{ db }}.{{ schema }};
+
+CREATE OR REPLACE VIEW {{ v }}_REQUESTS AS
+WITH spans AS (
+  SELECT START_TIMESTAMP, RECORD:name::VARCHAR AS SPAN_NAME, RECORD_ATTRIBUTES AS A,
+         RECORD_ATTRIBUTES:"ai.observability.record_id"::VARCHAR AS RECORD_ID
+  FROM TABLE(SNOWFLAKE.LOCAL.GET_AI_OBSERVABILITY_EVENTS('{{ db }}', '{{ schema }}', '{{ name }}', 'CORTEX AGENT'))
+)
+SELECT
+  RECORD_ID,
+  MAX(A:"snow.ai.observability.object.version.name"::VARCHAR)                 AS AGENT_VERSION,
+  MAX(UPPER(A:"snow.ai.observability.object.version.alias"::VARCHAR))         AS VERSION_ALIAS,
+  MAX(A:"snow.ai.observability.run.name"::VARCHAR)                            AS EVAL_RUN_NAME,
+  MAX(IFF(SPAN_NAME = 'AgentV2RequestResponseInfo', A:"snow.ai.observability.agent.request_id"::VARCHAR, NULL)) AS REQUEST_ID,
+  MIN(START_TIMESTAMP)                                                         AS STARTED_AT,
+  MAX(IFF(SPAN_NAME = 'AgentV2RequestResponseInfo', A:"snow.ai.observability.agent.duration"::NUMBER, NULL)) / 1000 AS DURATION_S,
+  MAX(IFF(SPAN_NAME = 'CORTEX_AGENT_REQUEST', A:"snow.ai.observability.token_count.input"::NUMBER, NULL))             AS INPUT_TOKENS,
+  MAX(IFF(SPAN_NAME = 'CORTEX_AGENT_REQUEST', A:"snow.ai.observability.token_count.cache_read_input"::NUMBER, NULL))  AS CACHE_READ_TOKENS,
+  MAX(IFF(SPAN_NAME = 'CORTEX_AGENT_REQUEST', A:"snow.ai.observability.token_count.output"::NUMBER, NULL))            AS OUTPUT_TOKENS,
+  MAX(IFF(SPAN_NAME = 'CORTEX_AGENT_REQUEST', A:"snow.ai.observability.token_count.total"::NUMBER, NULL))             AS TOTAL_TOKENS,
+  COUNT_IF(SPAN_NAME LIKE 'ReasoningAgentStepPlanning-%')                      AS PLANNING_STEPS,
+  COUNT_IF(SPAN_NAME LIKE 'SemanticContextTool_%')                             AS ANALYST_CALLS,
+  COUNT_IF(SPAN_NAME = 'SqlExecution_SystemSQL')                               AS SQL_EXECUTIONS,
+  COUNT_IF(SPAN_NAME ILIKE '%web%search%')                                     AS WEB_SEARCH_CALLS,
+  MAX(IFF(SPAN_NAME LIKE 'ReasoningAgentStepPlanning-%', A:"snow.ai.observability.agent.planning.model"::VARCHAR, NULL)) AS ORCHESTRATION_MODEL,
+  ARRAY_AGG(DISTINCT IFF(SPAN_NAME = 'SqlExecution_SystemSQL', A:"snow.ai.observability.agent.tool.sql_execution.query_id"::VARCHAR, NULL)) AS SQL_QUERY_IDS
+FROM spans
+WHERE RECORD_ID IS NOT NULL
+GROUP BY RECORD_ID
+HAVING MAX(IFF(SPAN_NAME = 'CORTEX_AGENT_REQUEST', 1, 0)) = 1
+   AND MAX(A:"snow.ai.observability.run.name"::VARCHAR) IN ({{ run_list }});
+
+CREATE OR REPLACE VIEW {{ v }}_REQUEST_COST AS
+WITH sql_time AS (
+  SELECT r.RECORD_ID, SUM(q.EXECUTION_TIME) / 1000 AS SQL_EXEC_S, SUM(q.BYTES_SCANNED) AS SQL_BYTES_SCANNED
+  FROM {{ v }}_REQUESTS r, LATERAL FLATTEN(r.SQL_QUERY_IDS) f
+  JOIN SNOWFLAKE.ACCOUNT_USAGE.QUERY_HISTORY q ON q.QUERY_ID = f.value::VARCHAR
+  WHERE q.START_TIME >= '{{ since }}'::TIMESTAMP_LTZ
+  GROUP BY 1
+)
+SELECT r.*, u.TOKEN_CREDITS AS AGENT_TOKEN_CREDITS, s.SQL_EXEC_S, s.SQL_BYTES_SCANNED
+FROM {{ v }}_REQUESTS r
+LEFT JOIN SNOWFLAKE.ACCOUNT_USAGE.CORTEX_AGENT_USAGE_HISTORY u
+  ON u.REQUEST_ID = r.REQUEST_ID AND UPPER(u.AGENT_NAME) = '{{ name | upper }}' AND u.START_TIME >= '{{ since }}'::TIMESTAMP_LTZ
+LEFT JOIN sql_time s ON s.RECORD_ID = r.RECORD_ID;
+
+CREATE OR REPLACE VIEW {{ v }}_RUN_SCORECARD AS
+SELECT EVAL_RUN_NAME, ANY_VALUE(AGENT_VERSION) AS AGENT_VERSION, ANY_VALUE(VERSION_ALIAS) AS VERSION_ALIAS,
+       ANY_VALUE(ORCHESTRATION_MODEL) AS ORCHESTRATION_MODEL,
+       COUNT(*) AS REQUESTS, COUNT(AGENT_TOKEN_CREDITS) AS REQUESTS_BILLED,
+       SUM(AGENT_TOKEN_CREDITS) AS AGENT_TOKEN_CREDITS,
+       SUM(AGENT_TOKEN_CREDITS) / NULLIF(COUNT(AGENT_TOKEN_CREDITS), 0) AS CREDITS_PER_REQUEST,
+       AVG(TOTAL_TOKENS) AS AVG_TOTAL_TOKENS, AVG(PLANNING_STEPS) AS AVG_PLANNING_STEPS,
+       AVG(ANALYST_CALLS) AS AVG_ANALYST_CALLS, AVG(SQL_EXECUTIONS) AS AVG_SQL_EXECUTIONS,
+       SUM(WEB_SEARCH_CALLS) AS WEB_SEARCH_CALLS,
+       AVG(DURATION_S) AS AVG_DURATION_S, APPROX_PERCENTILE(DURATION_S, 0.95) AS P95_DURATION_S,
+       SUM(SQL_EXEC_S) AS SQL_EXEC_S, SUM(SQL_BYTES_SCANNED) / 1e9 AS SQL_GB_SCANNED
+FROM {{ v }}_REQUEST_COST
+GROUP BY 1;
+
+CREATE OR REPLACE VIEW {{ v }}_RUN_METRICS AS
+{%- for r in runs %}
+SELECT '{{ r }}' AS EVAL_RUN_NAME, LOWER(METRIC_NAME) AS METRIC_NAME, AVG(EVAL_AGG_SCORE) AS SCORE,
+       COUNT(EVAL_AGG_SCORE) AS N, COUNT_IF(EVAL_AGG_SCORE >= {{ threshold }}) AS N_AT_THRESHOLD
+FROM TABLE(SNOWFLAKE.LOCAL.GET_AI_EVALUATION_DATA('{{ db }}', '{{ schema }}', '{{ name }}', 'CORTEX AGENT', '{{ r }}'))
+GROUP BY 1, 2
+{%- if not loop.last %}
+UNION ALL
+{%- endif %}
+{%- endfor %};
+{%- if warehouses %}
+
+CREATE OR REPLACE VIEW {{ v }}_WAREHOUSE_CREDITS AS
+SELECT WAREHOUSE_NAME, DATE_TRUNC('hour', START_TIME) AS HOUR, SUM(CREDITS_USED) AS CREDITS_USED
+FROM SNOWFLAKE.ACCOUNT_USAGE.WAREHOUSE_METERING_HISTORY
+WHERE WAREHOUSE_NAME IN ({{ warehouses }}) AND START_TIME >= '{{ since }}'::TIMESTAMP_LTZ
+GROUP BY 1, 2;
+{%- endif %}

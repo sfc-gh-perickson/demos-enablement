@@ -1,0 +1,440 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="snowflake-source" content="cortex-agent-authored">
+<title>Agent Pareto Lab: Choosing Agent Versions on Cost vs Quality</title>
+<script type="application/json" id="snowflake-report-metadata">
+{
+  "generated": "2026-11-04",
+  "intent": "Outline the agent-pareto-lab Cortex Code skill and where it sits in the agent development lifecycle",
+  "dataSources": [
+    {
+      "type": "file",
+      "path": "agent-pareto-lab/SKILL.md"
+    },
+    {
+      "type": "file",
+      "path": "agent-pareto-lab/templates/lab.yaml"
+    },
+    {
+      "type": "file",
+      "path": "agent-pareto-lab/examples/ecommerce_orders/lab.yaml"
+    },
+    {
+      "type": "file",
+      "path": "../create-eval-rubric/presentations/eval-rubric-builder.html"
+    }
+  ],
+  "sections": [
+    {
+      "id": "hero",
+      "title": "Overview"
+    },
+    {
+      "id": "problem",
+      "title": "Why version choices stall"
+    },
+    {
+      "id": "lifecycle",
+      "title": "Agent development lifecycle"
+    },
+    {
+      "id": "ecosystem",
+      "title": "Where it plugs in"
+    },
+    {
+      "id": "variants",
+      "title": "Variants as patches",
+      "producerNotes": "Excerpt of examples/ecommerce_orders/lab.yaml (fictional)."
+    },
+    {
+      "id": "workflow",
+      "title": "The workflow",
+      "producerNotes": "Steps 1-8 of SKILL.md."
+    },
+    {
+      "id": "pilot",
+      "title": "Preflight and pilot"
+    },
+    {
+      "id": "cost",
+      "title": "Cost attribution"
+    },
+    {
+      "id": "frontier",
+      "title": "Reading the frontier",
+      "producerNotes": "Chart is illustrative, not measured data."
+    },
+    {
+      "id": "noise",
+      "title": "One run, honest gaps"
+    },
+    {
+      "id": "outputs",
+      "title": "Outputs and guardrails"
+    },
+    {
+      "id": "closing",
+      "title": "Next steps"
+    }
+  ]
+}
+</script>
+<style>
+:root {
+  color-scheme: light dark;
+  --bg: light-dark(#F8FAFC, #0F1B2D);
+  --sidebar-bg: light-dark(#E8EEF6, #1B2A4A);
+  --primary: light-dark(#0B7FB0, #29B5E8);
+  --accent: light-dark(#6D28D9, #7C3AED);
+  --text: light-dark(#0F172A, #E2E8F0);
+  --text-muted: light-dark(#475569, #94A3B8);
+  --card-bg: light-dark(#FFFFFF, #162236);
+  --border: light-dark(#CBD5E1, #2D4A6F);
+  --green: light-dark(#047857, #10B981);
+  --orange: light-dark(#B45309, #F59E0B);
+  --red: light-dark(#B91C1C, #EF4444);
+}
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body { font-family: Inter, -apple-system, system-ui, "Segoe UI", sans-serif; background: var(--bg); color: var(--text); line-height: 1.6; overflow-x: hidden; }
+img, svg { max-width: 100%; height: auto; }
+.progress-bar { position: fixed; top: 0; left: 0; height: 3px; width: 0; background: linear-gradient(90deg, var(--primary), var(--accent)); z-index: 1000; transition: width 0.1s; }
+.sidebar { position: fixed; left: 0; top: 0; width: 260px; height: 100vh; background: var(--sidebar-bg); padding: 2rem 1.5rem; overflow-y: auto; border-right: 1px solid var(--border); z-index: 100; }
+.sidebar h2 { font-size: 1rem; font-weight: 600; color: var(--primary); margin-bottom: 1.5rem; text-transform: uppercase; letter-spacing: 0.05em; }
+.sidebar a { display: block; color: var(--text-muted); text-decoration: none; padding: 0.5rem 0.75rem; border-radius: 6px; font-size: 0.85rem; margin-bottom: 0.25rem; transition: all 0.2s; }
+.sidebar a:hover, .sidebar a.active { color: var(--text); background: rgba(41, 181, 232, 0.12); }
+.sidebar a.active { border-left: 3px solid var(--primary); padding-left: calc(0.75rem - 3px); }
+.main { margin-left: 260px; }
+.slide { min-height: 100vh; display: flex; flex-direction: column; justify-content: center; align-items: center; padding: 4rem 3rem; max-width: 1200px; width: 100%; margin: 0 auto; }
+.slide h1 { font-size: clamp(1.8rem, 4vw, 2.6rem); font-weight: 700; margin-bottom: 1rem; text-align: center; background: linear-gradient(135deg, var(--primary), var(--accent)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; }
+.slide h2 { font-size: clamp(1.4rem, 3vw, 1.75rem); font-weight: 600; color: var(--text); margin-bottom: 0.75rem; text-align: center; }
+.slide .sub { font-size: 1.05rem; color: var(--text-muted); max-width: 760px; text-align: center; margin-bottom: 1rem; }
+.stat-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 1.5rem; width: 100%; margin: 2rem 0; }
+.stat-card { background: var(--card-bg); border: 1px solid var(--border); border-radius: 12px; padding: 1.5rem; text-align: center; }
+.stat-card .value { font-size: 2rem; font-weight: 700; color: var(--primary); }
+.stat-card .label { font-size: 0.85rem; color: var(--text-muted); margin-top: 0.5rem; }
+.card-grid { display: grid; gap: 1.25rem; width: 100%; margin: 1.5rem 0; }
+.g2 { grid-template-columns: repeat(2, 1fr); }
+.g3 { grid-template-columns: repeat(3, 1fr); }
+.g4 { grid-template-columns: repeat(4, 1fr); }
+.card { background: var(--card-bg); border: 1px solid var(--border); border-radius: 12px; padding: 1.25rem 1.4rem; }
+.card h4 { font-size: 1rem; font-weight: 600; color: var(--text); margin-bottom: 0.5rem; }
+.card p, .card li { font-size: 0.9rem; color: var(--text-muted); }
+.card ul { list-style: none; }
+.card ul li { padding: 0.2rem 0 0.2rem 1rem; position: relative; }
+.card ul li::before { content: ''; position: absolute; left: 0; top: 0.75em; width: 6px; height: 6px; border-radius: 50%; background: var(--primary); }
+.card .tag { display: inline-block; margin-bottom: 0.5rem; }
+.card.hl { border-color: var(--primary); box-shadow: 0 0 0 1px var(--primary) inset; }
+.table-wrap { width: 100%; overflow-x: auto; margin: 1.5rem 0; }
+table { width: 100%; border-collapse: collapse; font-size: 0.9rem; }
+th { background: var(--card-bg); color: var(--primary); font-weight: 600; padding: 0.7rem 1rem; text-align: left; border-bottom: 2px solid var(--border); }
+td { padding: 0.65rem 1rem; border-bottom: 1px solid var(--border); color: var(--text); vertical-align: top; }
+tr:hover td { background: rgba(41, 181, 232, 0.05); }
+code { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 0.85em; background: rgba(41, 181, 232, 0.12); padding: 0.1rem 0.35rem; border-radius: 4px; color: var(--text); }
+.highlight-box, .context-box, .warning-box { border-radius: 12px; padding: 1.25rem 1.5rem; margin: 1.25rem 0; width: 100%; font-size: 0.95rem; }
+.highlight-box { background: rgba(41, 181, 232, 0.1); border: 1px solid var(--primary); }
+.context-box { background: rgba(124, 58, 237, 0.1); border: 1px solid var(--accent); }
+.warning-box { background: rgba(245, 158, 11, 0.1); border: 1px solid var(--orange); }
+.badge-green, .badge-orange, .badge-red, .badge-blue, .badge-purple { padding: 0.2rem 0.7rem; border-radius: 99px; font-size: 0.75rem; font-weight: 600; white-space: nowrap; }
+.badge-green { background: rgba(16, 185, 129, 0.15); color: var(--green); }
+.badge-orange { background: rgba(245, 158, 11, 0.15); color: var(--orange); }
+.badge-red { background: rgba(239, 68, 68, 0.15); color: var(--red); }
+.badge-blue { background: rgba(41, 181, 232, 0.15); color: var(--primary); }
+.badge-purple { background: rgba(124, 58, 237, 0.15); color: var(--accent); }
+.score-high { color: var(--green); font-weight: 600; }
+.score-mid { color: var(--orange); font-weight: 600; }
+.score-low { color: var(--red); font-weight: 600; }
+
+/* Lifecycle */
+.lifecycle { display: grid; grid-template-columns: repeat(4, 1fr); gap: 1rem; width: 100%; margin: 1.5rem 0 0.5rem; counter-reset: stage; }
+.stage { position: relative; background: var(--card-bg); border: 1px solid var(--border); border-radius: 12px; padding: 1rem 1.1rem 1.1rem; counter-increment: stage; }
+.stage::before { content: counter(stage); position: absolute; top: -12px; left: 14px; width: 24px; height: 24px; border-radius: 50%; background: var(--sidebar-bg); border: 1px solid var(--border); color: var(--text-muted); font-size: 0.75rem; font-weight: 700; display: flex; align-items: center; justify-content: center; }
+.stage h4 { font-size: 0.95rem; margin: 0.35rem 0 0.3rem; }
+.stage p { font-size: 0.82rem; color: var(--text-muted); }
+.stage.on { border-color: var(--primary); background: linear-gradient(160deg, rgba(41,181,232,0.14), rgba(124,58,237,0.10)); }
+.stage.on::before { background: var(--primary); color: #fff; border-color: var(--primary); }
+.stage .skill { display: block; margin-top: 0.5rem; font-size: 0.75rem; font-weight: 600; color: var(--primary); }
+.legend { display: flex; gap: 1.25rem; flex-wrap: wrap; justify-content: center; font-size: 0.8rem; color: var(--text-muted); margin-top: 0.5rem; }
+.legend span::before { content: ''; display: inline-block; width: 10px; height: 10px; border-radius: 3px; margin-right: 6px; vertical-align: middle; }
+.legend .l-on::before { background: var(--primary); }
+.legend .l-off::before { background: var(--border); }
+
+/* Funnel */
+.funnel { width: 100%; display: flex; flex-direction: column; align-items: center; gap: 0.45rem; margin: 1.25rem 0; }
+.funnel div { border-radius: 10px; padding: 0.6rem 1rem; color: #fff; font-size: 0.9rem; text-align: center; }
+.funnel b { font-weight: 700; }
+
+/* Band scale */
+.bands { display: grid; grid-template-columns: repeat(5, 1fr); width: 100%; gap: 0.5rem; margin: 1.25rem 0 0.5rem; }
+.band { border-radius: 10px; padding: 0.9rem 0.6rem; text-align: center; border: 1px solid var(--border); background: var(--card-bg); }
+.band .v { font-size: 1.6rem; font-weight: 700; }
+.band .d { font-size: 0.78rem; color: var(--text-muted); margin-top: 0.25rem; }
+.ranges { display: grid; grid-template-columns: 40fr 30fr 30fr; width: 100%; border-radius: 8px; overflow: hidden; font-size: 0.8rem; font-weight: 600; color: #fff; text-align: center; }
+.ranges div { padding: 0.45rem 0.25rem; }
+
+/* Loop */
+.loop { display: grid; grid-template-columns: repeat(4, 1fr); gap: 1rem; width: 100%; margin: 1.25rem 0; }
+.loop .card { position: relative; }
+.loop .card .n { font-size: 0.75rem; font-weight: 700; color: var(--accent); text-transform: uppercase; letter-spacing: 0.05em; }
+
+.anim-fade { opacity: 0; transform: translateY(20px); transition: opacity 0.6s ease, transform 0.6s ease; }
+.anim-fade.visible { opacity: 1; transform: translateY(0); }
+
+@media (max-width: 1000px) {
+  .g4, .lifecycle, .loop, .stat-grid { grid-template-columns: repeat(2, 1fr); }
+  .g3 { grid-template-columns: 1fr; }
+}
+@media (max-width: 900px) {
+  .sidebar { display: none; }
+  .main { margin-left: 0; }
+  .slide { padding: 2.5rem 1.25rem; }
+}
+@media (max-width: 560px) {
+  .g2, .g4, .lifecycle, .loop, .stat-grid { grid-template-columns: 1fr; }
+  .bands { grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 0.3rem; }
+  .band .v { font-size: 1.1rem; }
+  .band .d { display: none; }
+}
+pre { background: rgba(41, 181, 232, 0.06); border: 1px solid var(--border); border-radius: 8px; padding: 0.75rem 1rem; }
+pre code { background: none; padding: 0; }
+</style>
+</head>
+<body>
+<div class="progress-bar"></div>
+
+<nav class="sidebar">
+  <h2>Agent Pareto Lab</h2>
+  <a href="#hero">Overview</a>
+  <a href="#problem">Why version choices stall</a>
+  <a href="#lifecycle">Agent lifecycle</a>
+  <a href="#ecosystem">Where it plugs in</a>
+  <a href="#variants">Variants as patches</a>
+  <a href="#workflow">The workflow</a>
+  <a href="#pilot">Preflight &amp; pilot</a>
+  <a href="#cost">Cost attribution</a>
+  <a href="#frontier">Reading the frontier</a>
+  <a href="#noise">One run, honest gaps</a>
+  <a href="#outputs">Outputs &amp; guardrails</a>
+  <a href="#closing">Next steps</a>
+</nav>
+
+<main class="main">
+
+<section class="slide" id="hero">
+  <h1>Agent Pareto Lab</h1>
+  <p class="sub">A Cortex Code skill that turns one Cortex Agent config into N committed versions, evaluates each once on the same dataset, attributes billed credits per request, and shows which versions are worth shipping.</p>
+  <div class="stat-grid">
+    <div class="stat-card anim-fade"><div class="value">N</div><div class="label">committed versions, one alias each</div></div>
+    <div class="stat-card anim-fade"><div class="value">1</div><div class="label">eval run per version, same dataset</div></div>
+    <div class="stat-card anim-fade"><div class="value">2+</div><div class="label">objectives: quality vs credits per request</div></div>
+    <div class="stat-card anim-fade"><div class="value">5</div><div class="label">stopping points for approval</div></div>
+  </div>
+</section>
+
+<section class="slide" id="problem">
+  <h2>Why "which version do we ship?" stalls</h2>
+  <p class="sub">Teams change models and prompts by feel. Without a fixed dataset and real cost per answer, every switch is an argument.</p>
+  <div class="card-grid g4">
+    <div class="card anim-fade"><h4>Model choice by anecdote</h4><p>"The new model felt better on three questions" is not evidence, and nobody re-checks the old version.</p></div>
+    <div class="card anim-fade"><h4>Cost is invisible</h4><p>Agent tokens and the warehouse running Analyst SQL bill separately and lag by hours. Nobody knows credits per answer.</p></div>
+    <div class="card anim-fade"><h4>Edits in place</h4><p>Overwriting the agent or re-running a changed config destroys the comparison you were trying to make.</p></div>
+    <div class="card anim-fade"><h4>Broken metrics, found late</h4><p>A ground-truth key mismatch silently scores every row wrong, and you find out after paying for every run.</p></div>
+  </div>
+</section>
+
+<section class="slide" id="lifecycle">
+  <h2>Where it lives in the agent development lifecycle</h2>
+  <p class="sub">The skill owns the optimize stage and produces the evidence for the release gate.</p>
+  <div class="lifecycle">
+    <div class="stage anim-fade"><h4>Scope</h4><p>Personas, real questions, boundaries.</p><span class="skill" style="color:var(--text-muted)">eval-rubric-builder</span></div>
+    <div class="stage anim-fade"><h4>Build V0 agent</h4><p>Semantic views, tools, instructions.</p><span class="skill" style="color:var(--text-muted)">agent-studio</span></div>
+    <div class="stage anim-fade"><h4>Interactive testing</h4><p>Ad hoc questions; find obvious breaks.</p><span class="skill" style="color:var(--text-muted)">Snowsight / CoCo</span></div>
+    <div class="stage anim-fade"><h4>Golden-set evals</h4><p>Reviewed dataset and calibrated metrics.</p><span class="skill" style="color:var(--text-muted)">eval-rubric-builder</span></div>
+    <div class="stage on anim-fade"><h4>Optimize</h4><p>Model &times; prompt &times; tools &times; budget variants on cost vs quality.</p><span class="skill">agent-pareto-lab &middot; Steps 1&ndash;6</span></div>
+    <div class="stage on anim-fade"><h4>Release gate</h4><p>Constraints (e.g. correctness &ge; 0.85) exclude variants; frontier picks the trade-off.</p><span class="skill">agent-pareto-lab &middot; Step 7</span></div>
+    <div class="stage anim-fade"><h4>User test &amp; deploy</h4><p>Pilot personas; report results.</p><span class="skill" style="color:var(--text-muted)">benchmark-report</span></div>
+    <div class="stage anim-fade"><h4>Production flywheel</h4><p>Score logs; failures become new eval cases and a new round.</p><span class="skill" style="color:var(--text-muted)">automation</span></div>
+  </div>
+  <div class="legend anim-fade"><span class="l-on">agent-pareto-lab owns this stage</span><span class="l-off">adjacent skill or tool</span></div>
+</section>
+
+<section class="slide" id="ecosystem">
+  <h2>Where it plugs in</h2>
+  <p class="sub">It needs an agent and a registered evaluation dataset. It does not build ground truth: with no dataset, it stops.</p>
+  <div class="card-grid g4">
+    <div class="card anim-fade"><span class="badge-purple tag">Upstream</span><h4>agent-studio</h4><p>The agent and its spec. The live spec, not the oldest version, becomes the base.</p></div>
+    <div class="card anim-fade"><span class="badge-purple tag">Upstream</span><h4>eval-rubric-builder</h4><p>Dataset registered with <code>SYSTEM$CREATE_EVALUATION_DATASET</code> and the metric list.</p></div>
+    <div class="card hl anim-fade"><span class="badge-blue tag">This skill</span><h4>agent-pareto-lab</h4><p>Versions, evals, billing join, <code>PARETO_*</code> views, frontier, <code>RESULTS.md</code>.</p></div>
+    <div class="card anim-fade"><span class="badge-green tag">Downstream</span><h4>benchmark-report</h4><p>Takes the run names and builds the customer-facing comparison deck.</p></div>
+  </div>
+  <div class="context-box anim-fade"><strong>Snowflake features it uses:</strong> Cortex Agent versions and aliases, <code>DATA_AGENT_RUN</code> for SQL smoke tests, Cortex Agent evaluations (<code>EXECUTE_AI_EVALUATION</code>, <code>GET_AI_EVALUATION_DATA</code>), and <code>ACCOUNT_USAGE</code> billing views (<code>CORTEX_AGENT_USAGE_HISTORY</code>, warehouse metering).</div>
+</section>
+
+<section class="slide" id="variants">
+  <h2>Variants are patches on one base spec</h2>
+  <p class="sub">Each variant is a short name plus a JSON merge patch. Alias and eval run share one name: <code>&lt;run_prefix&gt;_&lt;name&gt;</code>.</p>
+  <div class="card-grid g2">
+    <div class="card anim-fade">
+      <h4><code>lab.yaml</code> (excerpt, fictional orders agent)</h4>
+<pre style="font-size:0.8rem;overflow-x:auto;margin-top:0.5rem"><code>run_prefix: r1
+base_spec: specs/base.json
+variants:
+  - name: baseline              # r1_baseline
+    spec: specs/production.json
+    warehouse: ORDERS_PARETO_A_WH
+  - name: lean                  # r1_lean
+    warehouse: ORDERS_PARETO_B_WH
+  - name: lean_sonnet55         # r1_lean_sonnet55
+    overrides: {models: {orchestration: claude-sonnet-5-5}}
+    warehouse: ORDERS_PARETO_C_WH
+objectives:
+  - {metric: answer_correctness, direction: max}
+  - {metric: credits_per_request, direction: min}
+constraints:
+  answer_correctness: {min: 0.85}</code></pre>
+    </div>
+    <div class="card anim-fade">
+      <h4>What a variant can change</h4>
+      <ul>
+        <li><b>Model:</b> orchestration model (<code>auto</code> vs named)</li>
+        <li><b>Prompt:</b> orchestration / response instructions</li>
+        <li><b>Tools:</b> add, remove or re-describe tools and resources</li>
+        <li><b>Budget:</b> token and time limits</li>
+        <li><b>Whole spec:</b> e.g. a production replica via <code>spec:</code></li>
+        <li>Dicts merge, lists replace, <code>null</code> deletes</li>
+      </ul>
+      <p style="margin-top:0.75rem"><code>generate.py --diff</code> shows each variant's diff against the base before anything is created.</p>
+    </div>
+  </div>
+</section>
+
+<section class="slide" id="workflow">
+  <h2>The workflow</h2>
+  <p class="sub">Eight steps, each a script with a defined output. The customer approves at every stop.</p>
+  <div class="table-wrap anim-fade">
+    <table>
+      <thead><tr><th>#</th><th>Step</th><th>What happens</th><th>Output</th></tr></thead>
+      <tbody>
+        <tr><td>1</td><td>Intake <span class="badge-orange">stop</span></td><td>Describe agent and versions, check dataset and ground-truth keys, fill variant matrix</td><td><code>lab.yaml</code></td></tr>
+        <tr><td>2</td><td>Generate <span class="badge-orange">stop</span></td><td>Spec diffs; on approval create warehouses, versions, aliases; SQL smoke test each</td><td><code>versions.sql</code>, aliases</td></tr>
+        <tr><td>3</td><td>Preflight &amp; pilot <span class="badge-orange">stop</span></td><td>Lint dataset vs metrics; one run on the cheapest variant must score every metric</td><td>pilot coverage</td></tr>
+        <tr><td>4</td><td>Run evaluations</td><td>Upload configs, start remaining runs, poll to terminal state</td><td>eval runs</td></tr>
+        <tr><td>5</td><td>Wait for billing</td><td>Poll until every request is billed (hours of lag)</td><td>complete cost</td></tr>
+        <tr><td>6</td><td>Frontier</td><td>Scorecard views, constraints, frontier / dominated / excluded</td><td><code>frontier.{md,json,svg}</code></td></tr>
+        <tr><td>7</td><td>Interpret &amp; report <span class="badge-orange">stop</span></td><td>Read low scores; separate ground-truth errors, judge variance, agent failures</td><td><code>RESULTS.md</code></td></tr>
+        <tr><td>8</td><td>Teardown <span class="badge-orange">stop</span></td><td>Drop lab warehouses only, after billing is final</td><td>&mdash;</td></tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<section class="slide" id="pilot">
+  <h2>Preflight and pilot: break one run, not all of them</h2>
+  <p class="sub">The expensive failure is a metric that silently scores every row wrong. The skill catches it before the full launch.</p>
+  <div class="card-grid g3">
+    <div class="card anim-fade"><span class="badge-blue tag">Intake</span><h4>Ground-truth keys vs metrics</h4><p><code>tool_selection_accuracy</code> reads <code>ground_truth_invocations</code>. A dataset with only <code>expected_tools</code> scores every row as "expected 0 tools".</p></div>
+    <div class="card anim-fade"><span class="badge-blue tag">Preflight</span><h4>Placeholders and "today"</h4><p>Flags answers like <code>ROAS of X, Y</code> and questions whose truth depends on today, MTD or last week. Checks warehouses exist.</p></div>
+    <div class="card anim-fade"><span class="badge-purple tag">Pilot</span><h4>Every metric scores</h4><p>One run on the cheapest variant; per metric, status 200, plausible score, and judge calls showing the expected ground truth.</p></div>
+  </div>
+  <div class="warning-box anim-fade"><strong>Partial failures:</strong> a run is marked FAILED if any metric fails on any record, even when the agent answered and the other metrics scored. Inspect per-metric data before discarding it.</div>
+</section>
+
+<section class="slide" id="cost">
+  <h2>Cost attribution per request</h2>
+  <p class="sub">Each variant gets its own tool warehouse; eval orchestration runs on a separate one. That's what makes credits attributable to a version.</p>
+  <div class="card-grid g3">
+    <div class="card anim-fade"><h4>Agent credits</h4><p>Per request from <code>CORTEX_AGENT_USAGE_HISTORY</code>, joined to the run's requests.</p></div>
+    <div class="card anim-fade"><h4>Tool warehouse credits</h4><p>Analyst SQL runs on the variant's own warehouse, so its metering belongs to that variant only.</p></div>
+    <div class="card anim-fade"><h4>Credits per correct answer</h4><p>Credits per request &times; questions &divide; answers with correctness &ge; <code>correct_threshold</code>.</p></div>
+  </div>
+  <div class="highlight-box anim-fade"><strong>Billing lags hours.</strong> <code>wait_billing.py</code> exits 0 only when every request is billed. The frontier is not final before that; if you can't wait, label cost as partial. Dollars only with a credit price the customer gives.</div>
+</section>
+
+<section class="slide" id="frontier">
+  <h2>Reading the frontier</h2>
+  <p class="sub">A variant is dominated when another is at least as good on every objective and better on one. Variants failing a constraint are excluded.</p>
+  <div class="card-grid g2">
+    <div class="card anim-fade">
+      <h4>Illustrative chart (not measured data)</h4>
+      <svg viewBox="0 0 420 300" role="img" aria-label="Illustrative Pareto chart: correctness vs credits per request">
+        <rect x="50" y="20" width="350" height="230" fill="none" stroke="currentColor" stroke-opacity="0.25"/>
+        <line x1="50" y1="112" x2="400" y2="112" stroke="#F59E0B" stroke-dasharray="5 4"/>
+        <text x="396" y="106" font-size="11" text-anchor="end" fill="#F59E0B">constraint: correctness &ge; 0.85</text>
+        <polyline points="120,82 260,40" fill="none" stroke="#29B5E8" stroke-width="2"/>
+        <circle cx="120" cy="82" r="7" fill="#29B5E8"/><text x="130" y="78" font-size="12" fill="currentColor">B lean</text>
+        <circle cx="260" cy="40" r="7" fill="#29B5E8"/><text x="270" y="44" font-size="12" fill="currentColor">C lean + model swap</text>
+        <circle cx="340" cy="95" r="7" fill="#94A3B8"/><text x="300" y="120" font-size="12" fill="currentColor">A baseline (dominated)</text>
+        <circle cx="80" cy="160" r="7" fill="none" stroke="#EF4444" stroke-width="2"/><text x="92" y="164" font-size="12" fill="currentColor">D small model (excluded)</text>
+        <text x="225" y="282" font-size="12" text-anchor="middle" fill="currentColor">credits per request &rarr; (lower is better)</text>
+        <text x="16" y="135" font-size="12" text-anchor="middle" fill="currentColor" transform="rotate(-90 16 135)">answer correctness &rarr;</text>
+      </svg>
+    </div>
+    <div class="card anim-fade">
+      <h4>How to read it</h4>
+      <ul>
+        <li><b>Frontier</b> (blue): no other variant is cheaper <i>and</i> at least as correct. Each is a legitimate choice.</li>
+        <li><b>Dominated</b> (grey): another variant beats it on every objective. Here the long production prompt costs more for no gain.</li>
+        <li><b>Excluded</b> (red ring): cheapest, but fails the correctness constraint.</li>
+        <li>State each frontier trade-off plainly: "C costs X more credits per turn for +Y correctness".</li>
+        <li>The first two objectives are the chart axes; more objectives (latency, tokens) still count for dominance.</li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+<section class="slide" id="noise">
+  <h2>One run per variant, honest about the gaps</h2>
+  <p class="sub">The skill spends budget on more variants, not on repeating the same one. That trade-off has to be stated in the readout.</p>
+  <div class="card-grid g3">
+    <div class="card anim-fade"><h4>No repeats</h4><p><code>repeats: 1</code>. A repeated run of the same version adds cost but no new option to choose from.</p></div>
+    <div class="card anim-fade"><h4>No intervals</h4><p>With one run there's no confidence interval. A gap of a few points is within run-to-run noise: say so, don't declare a winner.</p></div>
+    <div class="card anim-fade"><h4>Read the low scores</h4><p>Before blaming the agent, check judge explanations in <code>METRIC_CALLS</code>: is it bad ground truth, judge variance, or a real failure?</p></div>
+  </div>
+  <div class="context-box anim-fade"><strong>Ground-truth errors</strong> become a new dataset version and a new <code>run_prefix</code>, never an edit to the dataset the runs already used.</div>
+</section>
+
+<section class="slide" id="outputs">
+  <h2>Outputs and guardrails</h2>
+  <p class="sub">Everything is additive: new versions, new runs, new views. Nothing that a previous round depends on is modified.</p>
+  <div class="card-grid g3">
+    <div class="card anim-fade"><h4>Artifacts</h4><ul><li>Agent versions + aliases <code>r1_&lt;name&gt;</code></li><li>Eval runs in Snowsight &gt; Evaluations</li><li><code>PARETO_R1_*</code> views in the agent's schema</li><li><code>frontier.{md,json,svg}</code>, <code>RESULTS.md</code></li></ul></div>
+    <div class="card anim-fade"><h4>Hard rules</h4><ul><li>Never <code>CREATE OR REPLACE</code> the agent</li><li>Never re-alias or edit a committed version</li><li>Never reuse a run name or overwrite a config</li><li>Agent calls via SQL, not the REST API</li></ul></div>
+    <div class="card anim-fade"><h4>Teardown</h4><ul><li>Drops the lab warehouses only, after billing</li><li>Never a shared warehouse (<code>SHOW WAREHOUSES</code> first)</li><li>Versions on dropped warehouses fail if run again</li><li>Promote the winner on a permanent warehouse</li></ul></div>
+  </div>
+</section>
+
+<section class="slide" id="closing">
+  <h2>Next steps</h2>
+  <p class="sub">Start with one agent that already has a reviewed dataset and a concrete question: which model, which prompt, what does a correct answer cost.</p>
+  <div class="card-grid g2">
+    <div class="card anim-fade"><h4>Pick the comparison</h4><p>Production vs a lean prompt vs one model swap is a good first round: three variants, one decision.</p></div>
+    <div class="card anim-fade"><h4>Get the dataset right first</h4><p>No dataset, no lab. Run <code>eval-rubric-builder</code> first if ground truth is missing or vague.</p></div>
+    <div class="card anim-fade"><h4>Agree the gate</h4><p>Set the constraints with the customer before running: e.g. correctness &ge; 0.85, no cost increase per request.</p></div>
+    <div class="card anim-fade"><h4>Iterate in rounds</h4><p>Each round is a new <code>run_prefix</code>. Frontier variants seed the next round's patches.</p></div>
+  </div>
+</section>
+
+</main>
+
+<script>
+const progressBar = document.querySelector('.progress-bar');
+window.addEventListener('scroll', () => {
+  const docHeight = document.documentElement.scrollHeight - window.innerHeight;
+  progressBar.style.width = (docHeight > 0 ? window.scrollY / docHeight * 100 : 0) + '%';
+});
+const observer = new IntersectionObserver((entries) => {
+  entries.forEach(entry => { if (entry.isIntersecting) entry.target.classList.add('visible'); });
+}, { threshold: 0.1 });
+document.querySelectorAll('.anim-fade').forEach(el => observer.observe(el));
+const sections = document.querySelectorAll('.slide');
+const navLinks = document.querySelectorAll('.sidebar a');
+window.addEventListener('scroll', () => {
+  let current = '';
+  sections.forEach(section => { if (window.scrollY >= section.offsetTop - 200) current = section.getAttribute('id'); });
+  navLinks.forEach(link => link.classList.toggle('active', link.getAttribute('href') === '#' + current));
+});
+</script>
+</body>
+</html>
