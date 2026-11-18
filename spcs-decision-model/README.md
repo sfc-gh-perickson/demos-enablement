@@ -1,5 +1,7 @@
 # Decision Engine Benchmark on Snowpark Container Services
 
+> **Slides:** [View presentation on GitHub Pages](https://sfc-gh-perickson.github.io/demos-enablement/spcs-decision-model/presentations/decision-engines-spcs.html)
+
 Deploy and benchmark multiple typed-decision engines on SPCS, then compare them against Snowflake's built-in AI functions. One Docker image, one generic SQL function, swap engines with an env var.
 
 ## Supported Engines

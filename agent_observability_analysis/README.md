@@ -1,5 +1,7 @@
 # Agent Observability Analysis
 
+> **Slides:** [View presentation on GitHub Pages](https://sfc-gh-perickson.github.io/demos-enablement/agent_observability_analysis/presentations/agent-observability-analysis.html)
+
 Mine production agent observability data to build targeted evaluation datasets. Demonstrates the flywheel: Deploy → Observe → Mine → Evaluate → Improve → Redeploy.
 
 ## What You'll Learn

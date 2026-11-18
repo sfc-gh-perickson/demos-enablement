@@ -1,5 +1,7 @@
 # eval-rubric-builder
 
+> **Slides:** [View presentation on GitHub Pages](https://sfc-gh-perickson.github.io/demos-enablement/create-eval-rubric/presentations/eval-rubric-builder.html)
+
 A Cortex Code skill for running an evaluation workshop with a customer. It turns
 "the questions our users actually ask" into:
 

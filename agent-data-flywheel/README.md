@@ -1,5 +1,7 @@
 # AI Agent Data Flywheel
 
+> **Slides:** [View presentation on GitHub Pages](https://sfc-gh-perickson.github.io/demos-enablement/agent-data-flywheel/presentations/ai-agent-data-flywheel.html)
+
 Strategic positioning deck making the case for Snowflake as the converged platform for AI agents that improve over time. Designed for CxO/VP-level conversations about where agent improvement data should live.
 
 ## Audience

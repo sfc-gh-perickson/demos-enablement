@@ -1,5 +1,7 @@
 # AI Functions Lifecycle: Evaluate → Optimize → Monitor
 
+> **Slides:** [View presentation on GitHub Pages](https://sfc-gh-perickson.github.io/demos-enablement/ai_functions_eval/presentations/ai-functions-evaluate-optimize-monitor.html)
+
 Customer enablement deck and demo for taking Snowflake AI functions (`AI_COMPLETE` with structured output) from prototype to production.
 
 **Use case:** support-ticket triage. One call extracts `product`, `issue_type`, `sentiment`, `requested_action`, `order_id`, and an `escalation_flag`.

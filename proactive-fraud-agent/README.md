@@ -1,5 +1,7 @@
 # Proactive Fraud Detection with Snowflake Cortex
 
+> **Slides:** [View presentation on GitHub Pages](https://sfc-gh-perickson.github.io/demos-enablement/proactive-fraud-agent/presentations/proactive-fraud-detection-agent.html)
+
 End-to-end fraud detection pipeline: synthetic data → dynamic tables → feature store → ML model (SHAP) → agent investigation → SAR investigation portal.
 
 ## Architecture

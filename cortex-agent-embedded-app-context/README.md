@@ -1,5 +1,7 @@
 # Cortex Agent Embedded App Context
 
+> **Slides:** [View presentation on GitHub Pages](https://sfc-gh-perickson.github.io/demos-enablement/cortex-agent-embedded-app-context/presentations/cortex-agent-embedded-app-context.html)
+
 Demonstrates how to scope Cortex Agent responses to the user's current context (page view, role, visible data) by injecting context into the **messages array** when calling a named Cortex Agent object.
 
 ## The Pattern

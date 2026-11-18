@@ -1,5 +1,7 @@
 # Cortex Agent Cost Observability
 
+> **Slides:** [View presentation on GitHub Pages](https://sfc-gh-perickson.github.io/demos-enablement/cortex-agent-cost-observability/presentations/cortex-agent-cost-observability.html)
+
 Understand and manage the cost of Cortex Agent deployments: token consumption, per-user attribution, Cortex Analyst credits, and warehouse compute.
 
 ## What You'll Learn

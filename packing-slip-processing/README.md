@@ -1,5 +1,7 @@
 # Packing Slip Extraction Pipeline
 
+> **Slides:** [View presentation on GitHub Pages](https://sfc-gh-perickson.github.io/demos-enablement/packing-slip-processing/presentations/packing-slip-automation.html)
+
 > **Enablement Lab** — This project uses sample data and anonymized supplier names
 > for hands-on learning. Follow the setup steps below to build and run the full
 > pipeline in your own Snowflake account.

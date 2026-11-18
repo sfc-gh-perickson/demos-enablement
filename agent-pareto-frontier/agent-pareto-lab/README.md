@@ -1,5 +1,7 @@
 # agent-pareto-lab
 
+> **Slides:** [View presentation on GitHub Pages](https://sfc-gh-perickson.github.io/demos-enablement/agent-pareto-frontier/presentations/agent-pareto-lab.html)
+
 A Cortex Code skill for answering "which version of this agent should we ship?" with numbers. From one
 existing Cortex Agent config it:
 

@@ -1,5 +1,7 @@
 # Document Knowledge Graph
 
+> **Slides:** [View presentation on GitHub Pages](https://sfc-gh-perickson.github.io/demos-enablement/doc-knowledge-graph/presentations/knowledge-vault.html)
+
 A graph-structured knowledge base in Snowflake that turns curated concept notes into a searchable knowledge graph, powered by Cortex AI and served via a Cortex Agent.
 
 ## Prerequisites

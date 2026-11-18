@@ -1,5 +1,7 @@
 # Agentic Schema Mapping
 
+> **Slides:** [View presentation on GitHub Pages](https://sfc-gh-perickson.github.io/demos-enablement/agentic-schema-mapping/presentations/schema-mapper-demo.html)
+
 An all-in-Snowflake pipeline that maps messy CSV data into canonical financial table schemas. A **Cortex Agent** orchestrates the workflow via Snowflake CoWork chat, using custom tools (stored procedures/UDFs) for profiling, AI-powered mapping proposals, and deterministic COPY INTO execution.
 
 ---

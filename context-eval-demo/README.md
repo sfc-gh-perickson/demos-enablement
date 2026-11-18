@@ -1,5 +1,7 @@
 # Context helps, evals earn trust: companion demo
 
+> **Slides:** [View presentation on GitHub Pages](https://sfc-gh-perickson.github.io/demos-enablement/context-eval-demo/presentations/one-agent-five-layers.html)
+
 The demo uses one Cortex Agent with five tagged versions. Each version adds a single context layer.
 There are five questions, and each one breaks the agent in a different way.
 A Streamlit app shows the story, runs the versions side by side, and shows the eval results.

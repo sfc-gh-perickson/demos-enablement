@@ -1,5 +1,7 @@
 # Graph-Based Fraud Ring Detection
 
+> **Slides:** [View presentation on GitHub Pages](https://sfc-gh-perickson.github.io/demos-enablement/graph-fraud-detection/presentations/graph-fraud-detection-demo.html)
+
 Detect fraud rings using GPU-accelerated graph community detection on Snowflake,
 with real-time feature serving via the Online Feature Store and canary model deployment via Gateway.
 

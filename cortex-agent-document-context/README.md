@@ -1,5 +1,7 @@
 # Cortex Agent Document Context Lab
 
+> **Slides:** [View presentation on GitHub Pages](https://sfc-gh-perickson.github.io/demos-enablement/cortex-agent-document-context/presentations/cortex-agent-document-context.html)
+
 Hands-on lab demonstrating how to build middleware that enables file/document uploads in a custom frontend calling the Cortex Agent REST API.
 
 ## Scenario

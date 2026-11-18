@@ -1,5 +1,7 @@
 # Snowflake Model Registry Demo
 
+> **Slides:** [View presentation on GitHub Pages](https://sfc-gh-perickson.github.io/demos-enablement/model-registry/presentations/model-registry-overview.html)
+
 Upload a pre-trained XGBoost model artifact (pickle) to Snowflake's Model Registry and run inference from it.
 
 ## Setup

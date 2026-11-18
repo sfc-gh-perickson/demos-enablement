@@ -1,5 +1,7 @@
 # Cortex Agent CI/CD Demo
 
+> **Slides:** [View presentation on GitHub Pages](https://sfc-gh-perickson.github.io/demos-enablement/agent-ci-cd/presentations/agent-ci-cd.html)
+
 End-to-end demonstration of CI/CD for Snowflake Cortex Agents using dbt and the `dbt_semantic_view` package.
 
 ## Architecture

@@ -1,5 +1,7 @@
 # Summit Brands — Marketing Command Center
 
+> **Slides:** [View presentation on GitHub Pages](https://sfc-gh-perickson.github.io/demos-enablement/marketing_command_center/presentations/marketing-command-center.html)
+
 A Snowflake-native ML demo for Summit Brands's marketing team. Shows Feature Store, Model Registry, ML Jobs (XGBoost), Cortex Agent, and a React dashboard with self-serve lookalike modeling.
 
 ## Prerequisites

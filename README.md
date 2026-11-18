@@ -39,7 +39,7 @@ An internal enablement repository for Snowflake sales engineers and account exec
 
 ## Overview
 
-This repository contains twenty-three enablement modules covering key Cortex AI and Snowflake ML topics:
+This repository contains thirty-four enablement modules covering key Cortex AI and Snowflake ML topics:
 
 | Module | Audience | Format | Slides |
 |--------|----------|--------|--------|
@@ -66,6 +66,17 @@ This repository contains twenty-three enablement modules covering key Cortex AI 
 | Cortex AI Gateway | SEs, Solution Architects, Platform Engineers | Presentation + Hands-on Lab | [View](https://sfc-gh-perickson.github.io/demos-enablement/cortex-ai-gateway/cortex-ai-gateway-presentation.html) |
 | CoCo Getting Started — Data Engineering | SEs, Customers, Data Engineers | Presentation + Hands-on Lab + Skill | [View](https://sfc-gh-perickson.github.io/demos-enablement/coco-getting-started/presentations/coco-data-engineering.html) |
 | Document Knowledge Graph | SEs, Analytics Engineers, Customers | Presentation + dbt Project + Demo Notebook | [View](https://sfc-gh-perickson.github.io/demos-enablement/doc-knowledge-graph/presentations/knowledge-vault.html) |
+| Cortex Agent CI/CD | SEs, Customers | Presentation + Demo | [View](https://sfc-gh-perickson.github.io/demos-enablement/agent-ci-cd/presentations/agent-ci-cd.html) |
+| Agent Pareto Lab | SEs, Customers | Presentation + Demo | [View](https://sfc-gh-perickson.github.io/demos-enablement/agent-pareto-frontier/presentations/agent-pareto-lab.html) |
+| AI Functions Lifecycle: Evaluate → Optimize → Monitor | SEs, Customers | Presentation + Demo | [View](https://sfc-gh-perickson.github.io/demos-enablement/ai_functions_eval/presentations/ai-functions-evaluate-optimize-monitor.html) |
+| Context Helps, Evals Earn Trust | SEs, Customers | Presentation + Demo | [View](https://sfc-gh-perickson.github.io/demos-enablement/context-eval-demo/presentations/one-agent-five-layers.html) |
+| Eval Rubric Builder | SEs, Customers | Presentation + Demo | [View](https://sfc-gh-perickson.github.io/demos-enablement/create-eval-rubric/presentations/eval-rubric-builder.html) |
+| Graph-Based Fraud Ring Detection | SEs, Customers | Presentation + Demo | [View](https://sfc-gh-perickson.github.io/demos-enablement/graph-fraud-detection/presentations/graph-fraud-detection-demo.html) |
+| Lookalike Modeling with Cortex Agent Skills | SEs, Customers | Presentation + Demo | [View](https://sfc-gh-perickson.github.io/demos-enablement/lookalike-modeling/presentations/lookalike-modeling.html) |
+| Marketing Command Center | SEs, Customers | Presentation + Demo | [View](https://sfc-gh-perickson.github.io/demos-enablement/marketing_command_center/presentations/marketing-command-center.html) |
+| OAuth Token Passthrough for Cortex Agents | SEs, Customers | Presentation + Demo | [View](https://sfc-gh-perickson.github.io/demos-enablement/oauth-token-passthrough/presentations/oauth-token-passthrough.html) |
+| Packing Slip Extraction Pipeline | SEs, Customers | Presentation + Demo | [View](https://sfc-gh-perickson.github.io/demos-enablement/packing-slip-processing/presentations/packing-slip-automation.html) |
+| Decision Engine Benchmark on SPCS | SEs, Customers | Presentation + Demo | [View](https://sfc-gh-perickson.github.io/demos-enablement/spcs-decision-model/presentations/decision-engines-spcs.html) |
 
 Each module includes an HTML slide deck and companion speaker notes. The evaluations, many-model-training, feature-store, cortex-ai-observability, cortex-agent-multi-tenancy, and label-studio-spcs modules also provide complete hands-on labs with SQL setup and notebooks.
 
