@@ -1,0 +1,28 @@
+business_domain: REVENUE_DEMO
+status: active
+warehouse: __WH__
+sources:
+  - name: catalog_objects
+    type: snowflake_metadata
+    enabled: true
+    rules:
+      - {type: pattern, pattern: __DB__.CRM.OPPORTUNITIES, est_tables: 1, user_prompt: "core revenue tables only"}
+      - {type: pattern, pattern: __DB__.CRM.PARTNER_REFERRALS, est_tables: 1, user_prompt: "core revenue tables only"}
+      - {type: pattern, pattern: __DB__.CRM.ACCOUNTS, est_tables: 1, user_prompt: "core revenue tables only"}
+      - {type: pattern, pattern: __DB__.CRM.REGIONS, est_tables: 1, user_prompt: "core revenue tables only"}
+      - {type: pattern, pattern: __DB__.CRM.REPS, est_tables: 1, user_prompt: "core revenue tables only"}
+      - {type: pattern, pattern: __DB__.CRM.SUBSCRIPTIONS, est_tables: 1, user_prompt: "core revenue tables only"}
+      - {type: pattern, pattern: __DB__.CRM.INVOICES, est_tables: 1, user_prompt: "core revenue tables only"}
+  - name: semantic_views
+    type: snowflake_content
+    enabled: true
+    rules:
+      - {type: pattern, pattern: __DB__.CRM.REVENUE_GOVERNED_SV, user_prompt: "governed revenue semantic view"}
+  - name: query_history
+    type: snowflake_metadata
+    enabled: true
+  - name: business_ontology
+    type: snowflake_metadata
+    enabled: true
+    rules:
+      - {type: ontology_domain, domain: Revenue Demo, node_count: 1, relationship_count: 0, association_count: 1, source_file_count: 0, user_prompt: "Revenue Demo ontology metadata"}

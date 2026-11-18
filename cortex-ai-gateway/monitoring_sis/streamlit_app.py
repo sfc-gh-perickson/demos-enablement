@@ -16,8 +16,8 @@ session = queries.get_session()
 # Page config
 # ---------------------------------------------------------------------------
 
-st.set_page_config(page_title="AI Gateway Monitor", page_icon=":material/monitoring:", layout="wide")
-st.title(":material/monitoring: AI Gateway Monitor")
+st.set_page_config(page_title="AI Gateway Monitor", layout="wide")
+st.title("AI Gateway Monitor")
 
 tab1, tab2, tab3, tab4 = st.tabs([
     "Overview Dashboard",

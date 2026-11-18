@@ -1,0 +1,15 @@
+definition_version: 2
+entities:
+  context_eval_demo_app:
+    type: streamlit
+    identifier:
+      name: CONTEXT_EVAL_DEMO_APP
+      database: __DB__
+      schema: APP
+    title: "One agent, five layers of context"
+    query_warehouse: __WH__
+    runtime_name: SYSTEM$ST_CONTAINER_RUNTIME_PY3_11
+    compute_pool: __POOL__
+    main_file: streamlit_app.py
+    artifacts:
+      - streamlit_app.py

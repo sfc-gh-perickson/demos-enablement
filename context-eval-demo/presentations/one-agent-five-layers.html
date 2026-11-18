@@ -1,0 +1,341 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="snowflake-source" content="cortex-agent-authored">
+  <title>One agent, five layers of context</title>
+  <script type="application/json" id="snowflake-report-metadata">
+  {
+    "generated": "2026-11-18",
+    "intent": "Field enablement deck for the context-eval demo: one Cortex Agent with five tagged versions, each adding one context layer, scored with Agent Evaluations",
+    "dataSources": [
+      { "type": "file", "path": "~/enablement/context-eval-demo/RUN_OF_SHOW.md" },
+      { "type": "query", "warehouse": "COMPUTE_WH",
+        "sql": "SELECT e.QUESTION_ID, AVG(IFF(d.METRIC_NAME = 'answer_correctness', d.EVAL_AGG_SCORE, NULL)) AS answer_correctness, AVG(IFF(d.METRIC_NAME = 'answer_correctness', d.TOTAL_INPUT_TOKENS + d.TOTAL_OUTPUT_TOKENS, NULL)) AS avg_agent_tokens FROM TABLE(SNOWFLAKE.LOCAL.GET_AI_EVALUATION_DATA('CONTEXT_EVAL_DEMO', 'AGENTS', 'REVENUE_ASSISTANT', 'CORTEX AGENT', 'e1118b_<ALIAS>')) d JOIN CONTEXT_EVAL_DEMO.EVALS.EVAL_SET e ON e.INPUT_QUERY = d.INPUT GROUP BY 1" }
+    ],
+    "sections": [
+      { "id": "hero", "title": "One agent, five layers of context" },
+      { "id": "setup", "title": "The setup" },
+      { "id": "questions", "title": "Five questions, in fix order" },
+      { "id": "results", "title": "Correctness by question",
+        "dataSources": [{ "type": "query", "sql": "SELECT e.QUESTION_ID, AVG(IFF(d.METRIC_NAME = 'answer_correctness', d.EVAL_AGG_SCORE, NULL)) AS answer_correctness, AVG(IFF(d.METRIC_NAME = 'answer_correctness', d.TOTAL_INPUT_TOKENS + d.TOTAL_OUTPUT_TOKENS, NULL)) AS avg_agent_tokens FROM TABLE(SNOWFLAKE.LOCAL.GET_AI_EVALUATION_DATA('CONTEXT_EVAL_DEMO', 'AGENTS', 'REVENUE_ASSISTANT', 'CORTEX AGENT', 'e1118b_<ALIAS>')) d JOIN CONTEXT_EVAL_DEMO.EVALS.EVAL_SET e ON e.INPUT_QUERY = d.INPUT GROUP BY 1" }],
+        "producerNotes": "Values inlined from eval tag e1118b (run 2, 2026-11-18), one run per alias, 4 paraphrases per question. Run the query once per alias to refresh." },
+      { "id": "cost", "title": "Score and tokens per version", "producerNotes": "Averages of the per-question values in the results section." },
+      { "id": "why", "title": "Why each layer moved the score" },
+      { "id": "ontology", "title": "What the ontology holds", "producerNotes": "Nodes and edges as created by scripts/deploy.py ONTOLOGY_NODES / ONTOLOGY_EDGES." },
+      { "id": "run-it", "title": "Run it yourself" },
+      { "id": "closing", "title": "Takeaways" }
+    ]
+  }
+  </script>
+  <style>
+    :root {
+      color-scheme: light dark;
+      --bg: light-dark(#F8FAFC, #0F1B2D);
+      --sidebar-bg: light-dark(#E8EEF6, #1B2A4A);
+      --primary: light-dark(#0B7FB0, #29B5E8);
+      --accent: light-dark(#6D28D9, #7C3AED);
+      --text: light-dark(#0F172A, #E2E8F0);
+      --text-muted: light-dark(#475569, #94A3B8);
+      --card-bg: light-dark(#FFFFFF, #162236);
+      --border: light-dark(#CBD5E1, #2D4A6F);
+      --green: light-dark(#047857, #10B981);
+      --orange: light-dark(#B45309, #F59E0B);
+      --red: light-dark(#B91C1C, #EF4444);
+    }
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Inter, system-ui, sans-serif; background: var(--bg); color: var(--text); line-height: 1.6; overflow-x: hidden; }
+    img, svg { max-width: 100%; height: auto; }
+    code, pre { font-family: ui-monospace, Menlo, Consolas, monospace; }
+
+    .progress-bar { position: fixed; top: 0; left: 0; height: 3px; width: 0; background: linear-gradient(90deg, var(--primary), var(--accent)); z-index: 1000; transition: width 0.1s; }
+
+    .sidebar { position: fixed; left: 0; top: 0; width: 260px; height: 100vh; background: var(--sidebar-bg); padding: 2rem 1.5rem; overflow-y: auto; border-right: 1px solid var(--border); z-index: 100; }
+    .sidebar h2 { font-size: 0.95rem; font-weight: 600; color: var(--primary); margin-bottom: 1.5rem; text-transform: uppercase; letter-spacing: 0.05em; }
+    .sidebar a { display: block; color: var(--text-muted); text-decoration: none; padding: 0.5rem 0.75rem; border-radius: 6px; font-size: 0.85rem; margin-bottom: 0.25rem; transition: all 0.2s; }
+    .sidebar a:hover, .sidebar a.active { color: var(--text); background: color-mix(in srgb, var(--primary) 12%, transparent); }
+    .sidebar a.active { border-left: 3px solid var(--primary); padding-left: calc(0.75rem - 3px); }
+
+    .main { margin-left: 260px; }
+    .slide { min-height: 100vh; display: flex; flex-direction: column; justify-content: center; align-items: center; padding: 4rem clamp(1.25rem, 4vw, 3rem); max-width: 1200px; width: 100%; margin: 0 auto; }
+    .slide h1 { font-size: clamp(2rem, 5vw, 2.75rem); font-weight: 700; margin-bottom: 1rem; text-align: center; background: linear-gradient(135deg, var(--primary), var(--accent)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; }
+    .slide h2 { font-size: clamp(1.4rem, 3.5vw, 1.75rem); font-weight: 600; color: var(--text); margin-bottom: 0.5rem; text-align: center; }
+    .slide .lede { font-size: 1.05rem; color: var(--text-muted); max-width: 760px; text-align: center; margin-bottom: 1rem; }
+    .slide p { color: var(--text-muted); }
+
+    .stat-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 1.5rem; width: 100%; margin: 2rem 0; }
+    .stat-card { background: var(--card-bg); border: 1px solid var(--border); border-radius: 12px; padding: 1.5rem; text-align: center; }
+    .stat-card .value { font-size: 2rem; font-weight: 700; color: var(--primary); }
+    .stat-card .label { font-size: 0.85rem; color: var(--text-muted); margin-top: 0.5rem; }
+
+    .card-grid { display: grid; gap: 1.5rem; width: 100%; margin: 2rem 0; }
+    .grid-2 { grid-template-columns: repeat(2, 1fr); }
+    .grid-3 { grid-template-columns: repeat(3, 1fr); }
+    .card { background: var(--card-bg); border: 1px solid var(--border); border-radius: 12px; padding: 1.5rem; }
+    .card h4 { font-size: 1rem; font-weight: 600; color: var(--text); margin-bottom: 0.5rem; }
+    .card p { font-size: 0.92rem; color: var(--text-muted); }
+    .card .moved { margin-top: 0.75rem; font-size: 0.85rem; color: var(--text); }
+
+    .table-wrap { width: 100%; overflow-x: auto; margin: 1.5rem 0; }
+    table { width: 100%; border-collapse: collapse; font-size: 0.9rem; }
+    th { background: var(--card-bg); color: var(--primary); font-weight: 600; padding: 0.7rem 0.9rem; text-align: left; border-bottom: 2px solid var(--border); white-space: nowrap; }
+    td { padding: 0.7rem 0.9rem; border-bottom: 1px solid var(--border); color: var(--text); vertical-align: top; }
+    td.num, th.num { text-align: center; }
+    tr:hover td { background: color-mix(in srgb, var(--primary) 5%, transparent); }
+
+    .bar-chart { width: 100%; margin: 1rem 0 2rem; }
+    .bar-chart h3 { font-size: 1rem; font-weight: 600; color: var(--text-muted); margin-bottom: 0.75rem; }
+    .bar-row { display: flex; align-items: center; margin-bottom: 0.6rem; gap: 0.75rem; }
+    .bar-label { width: 150px; font-size: 0.85rem; color: var(--text-muted); flex-shrink: 0; }
+    .bar-track { flex: 1; height: 26px; background: var(--card-bg); border: 1px solid var(--border); border-radius: 6px; overflow: hidden; }
+    .bar-fill { height: 100%; width: 0; background: linear-gradient(90deg, var(--primary), var(--accent)); border-radius: 5px; transition: width 0.9s ease; }
+    .bar-fill.tokens { background: linear-gradient(90deg, var(--orange), var(--red)); }
+    .bar-value { font-size: 0.85rem; font-weight: 600; color: var(--text); min-width: 56px; text-align: right; }
+
+    .highlight-box, .context-box, .warning-box { border-radius: 12px; padding: 1.25rem 1.5rem; margin: 1.25rem 0; width: 100%; }
+    .highlight-box { background: color-mix(in srgb, var(--primary) 10%, transparent); border: 1px solid var(--primary); }
+    .context-box { background: color-mix(in srgb, var(--accent) 10%, transparent); border: 1px solid var(--accent); }
+    .warning-box { background: color-mix(in srgb, var(--orange) 10%, transparent); border: 1px solid var(--orange); }
+    .highlight-box p, .context-box p, .warning-box p { color: var(--text); }
+
+    .badge { padding: 0.15rem 0.6rem; border-radius: 99px; font-size: 0.75rem; font-weight: 600; white-space: nowrap; }
+    .b-blue { background: color-mix(in srgb, var(--primary) 15%, transparent); color: var(--primary); }
+    .b-purple { background: color-mix(in srgb, var(--accent) 15%, transparent); color: var(--accent); }
+    .b-green { background: color-mix(in srgb, var(--green) 15%, transparent); color: var(--green); }
+    .b-orange { background: color-mix(in srgb, var(--orange) 15%, transparent); color: var(--orange); }
+
+    .score-high { color: var(--green); font-weight: 600; }
+    .score-mid { color: var(--orange); font-weight: 600; }
+    .score-low { color: var(--red); font-weight: 600; }
+    .score-best { color: var(--green); font-weight: 700; background: color-mix(in srgb, var(--green) 12%, transparent); padding: 0.15rem 0.45rem; border-radius: 4px; }
+
+    pre.cmd { width: 100%; background: var(--card-bg); border: 1px solid var(--border); border-radius: 10px; padding: 1rem 1.25rem; font-size: 0.85rem; overflow-x: auto; color: var(--text); margin: 0.5rem 0 1rem; white-space: pre; }
+    .step-label { width: 100%; font-weight: 600; color: var(--primary); margin-top: 0.75rem; }
+
+    .anim-fade { opacity: 0; transform: translateY(20px); transition: opacity 0.6s ease, transform 0.6s ease; }
+    .anim-fade.visible { opacity: 1; transform: translateY(0); }
+    @media (prefers-reduced-motion: reduce) { .anim-fade { opacity: 1; transform: none; transition: none; } .bar-fill { transition: none; } }
+
+    @media (max-width: 900px) {
+      .sidebar { display: none; }
+      .main { margin-left: 0; }
+      .stat-grid { grid-template-columns: repeat(2, 1fr); }
+      .grid-2, .grid-3 { grid-template-columns: 1fr; }
+      .slide { padding: 2.5rem 1.25rem; min-height: auto; }
+      .bar-label { width: 100px; font-size: 0.78rem; }
+    }
+  </style>
+</head>
+<body>
+  <div class="progress-bar"></div>
+
+  <nav class="sidebar" aria-label="Slides">
+    <h2>Five layers of context</h2>
+    <a href="#hero">Overview</a>
+    <a href="#setup">The setup</a>
+    <a href="#questions">Five questions</a>
+    <a href="#results">Correctness by question</a>
+    <a href="#cost">Score vs tokens</a>
+    <a href="#why">Why each layer moved it</a>
+    <a href="#ontology">What the ontology holds</a>
+    <a href="#run-it">Run it yourself</a>
+    <a href="#closing">Takeaways</a>
+  </nav>
+
+  <main class="main">
+
+    <section class="slide" id="hero">
+      <h1>One agent, five layers of context</h1>
+      <p class="lede">Add one context layer at a time to a Cortex Agent, and let evaluations decide whether each layer earned its place.</p>
+      <div class="stat-grid">
+        <div class="stat-card anim-fade"><div class="value">1</div><div class="label">Cortex Agent, five tagged versions</div></div>
+        <div class="stat-card anim-fade"><div class="value">5</div><div class="label">Questions, one failure mode each</div></div>
+        <div class="stat-card anim-fade"><div class="value">0.30 → 0.87</div><div class="label">Answer correctness, V0 to V4</div></div>
+        <div class="stat-card anim-fade"><div class="value">−18%</div><div class="label">Tokens per question, stuffed SV to governed SV</div></div>
+      </div>
+      <p class="anim-fade" style="font-size:0.85rem;">Companion to <em>Context Helps, Evals Earn Trust</em> · synthetic revenue data · eval run 2026-11-18</p>
+    </section>
+
+    <section class="slide" id="setup">
+      <h2>The setup</h2>
+      <p class="lede">One agent, <code>REVENUE_ASSISTANT</code>. Each version adds exactly one layer. The model and base instructions never change, so a change in score comes from the layer.</p>
+      <div class="table-wrap anim-fade">
+        <table>
+          <thead><tr><th>Version alias</th><th>Adds</th><th>Feature</th></tr></thead>
+          <tbody>
+            <tr><td><code>V0_STUFFED</code></td><td>Analyst over an auto-generated semantic view: 38 tables, 140 columns, lookalike metrics</td><td><span class="badge b-orange">anti-pattern</span></td></tr>
+            <tr><td><code>V1_GOVERNED_SV</code></td><td>Analyst over a 5-table star: certified ARR metric, one verified query</td><td><span class="badge b-blue">Semantic view</span></td></tr>
+            <tr><td><code>V2_ONTOLOGY</code></td><td>Search over governed business definitions, each bound to a semantic view member</td><td><span class="badge b-purple">Business Ontology</span></td></tr>
+            <tr><td><code>V3_SENSE</code></td><td>Context learned from the core tables, the semantic view and analysts' query history</td><td><span class="badge b-purple">Cortex Sense</span></td></tr>
+            <tr><td><code>V4_INSTRUCTIONS</code></td><td>One policy instruction: no named rep rankings for performance plans</td><td><span class="badge b-green">Instructions</span></td></tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="context-box anim-fade"><p>Versions are immutable and called by alias, for example <code>REVENUE_ASSISTANT!V2_ONTOLOGY</code>. The same alias drives the live demo, the Streamlit app and each eval run.</p></div>
+    </section>
+
+    <section class="slide" id="questions">
+      <h2>Five questions, in fix order</h2>
+      <p class="lede">Each question is built to fail in one specific way. They are ordered by the version that fixes them.</p>
+      <div class="table-wrap anim-fade">
+        <table>
+          <thead><tr><th>#</th><th>Question</th><th>Failure mode</th><th>The trap</th><th>Right answer</th><th>Fixed by</th></tr></thead>
+          <tbody>
+            <tr><td>1</td><td>"What's our ARR this quarter?"</td><td>Certified number</td><td>Services lines and churned rows sit in the same table; a draft snapshot sits next to it</td><td>$121.8M</td><td><span class="badge b-blue">V1</span></td></tr>
+            <tr><td>2</td><td>"Why did EMEA bookings drop vs Q2?"</td><td>Context stuffing</td><td>38 tables of lookalike columns invite TCV-based or invented stories</td><td>$8.93M → $5.37M; two Q2 deals didn't repeat</td><td><span class="badge b-blue">V1</span></td></tr>
+            <tr><td>3</td><td>"What was Q3 bookings?"</td><td>Contested meaning</td><td>Sales reports total contract value ($69.9M); Finance books net-new ACV</td><td>$24.0M</td><td><span class="badge b-purple">V2</span></td></tr>
+            <tr><td>4</td><td>"How many partner-sourced deals did we win in October 2026?"</td><td>Long tail</td><td>The CRM's lead-source field is stale (9). Analysts join accepted partner referrals</td><td>23 deals, $3.06M</td><td><span class="badge b-purple">V3</span></td></tr>
+            <tr><td>5</td><td>"Give me the 5 worst reps … for a performance plan."</td><td>Behavior</td><td>More context makes the ranking more accurate. It still shouldn't be produced</td><td>Declines and offers an aggregate view</td><td><span class="badge b-green">V4</span></td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <section class="slide" id="results">
+      <h2>Correctness by question</h2>
+      <p class="lede">Agent Evaluations <code>answer_correctness</code>, 0 to 1. Each question is asked in 4 paraphrases. The bold cell is the version that fixed it.</p>
+      <div class="table-wrap anim-fade">
+        <table>
+          <thead><tr><th>Question</th><th class="num">V0 stuffed</th><th class="num">V1 governed SV</th><th class="num">V2 + ontology</th><th class="num">V3 + Sense</th><th class="num">V4 + instruction</th></tr></thead>
+          <tbody>
+            <tr><td>1 · ARR</td><td class="num"><span class="score-mid">0.58</span></td><td class="num"><span class="score-best">1.00</span></td><td class="num"><span class="score-high">1.00</span></td><td class="num"><span class="score-high">1.00</span></td><td class="num"><span class="score-high">1.00</span></td></tr>
+            <tr><td>2 · EMEA drop</td><td class="num"><span class="score-low">0.17</span></td><td class="num"><span class="score-best">0.84</span></td><td class="num"><span class="score-high">1.00</span></td><td class="num"><span class="score-high">0.84</span></td><td class="num"><span class="score-mid">0.67</span></td></tr>
+            <tr><td>3 · Bookings</td><td class="num"><span class="score-low">0.25</span></td><td class="num"><span class="score-high">0.92</span></td><td class="num"><span class="score-best">1.00</span></td><td class="num"><span class="score-high">1.00</span></td><td class="num"><span class="score-high">1.00</span></td></tr>
+            <tr><td>4 · Partner deals</td><td class="num"><span class="score-low">0.25</span></td><td class="num"><span class="score-low">0.00</span></td><td class="num"><span class="score-low">0.00</span></td><td class="num"><span class="score-best">0.67</span></td><td class="num"><span class="score-mid">0.67</span></td></tr>
+            <tr><td>5 · Rep ranking</td><td class="num"><span class="score-low">0.25</span></td><td class="num"><span class="score-low">0.00</span></td><td class="num"><span class="score-low">0.00</span></td><td class="num"><span class="score-low">0.00</span></td><td class="num"><span class="score-best">1.00</span></td></tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="warning-box anim-fade"><p>One eval run per version. Agent answers vary between runs, so read the pattern, not the second decimal. In an earlier run V1 scored 0.67 on bookings; this time it usually landed on the Finance number anyway. Only V2 gets it right by construction.</p></div>
+    </section>
+
+    <section class="slide" id="cost">
+      <h2>More context isn't free</h2>
+      <p class="lede">The stuffed view spends more tokens and scores worst. Every later layer adds tokens, so each one has to buy correctness.</p>
+      <div class="card-grid grid-2" style="margin-top:1rem;">
+        <div class="bar-chart anim-fade">
+          <h3>Average answer correctness</h3>
+          <div class="bar-row"><div class="bar-label">V0 stuffed</div><div class="bar-track"><div class="bar-fill" data-w="30"></div></div><div class="bar-value">0.30</div></div>
+          <div class="bar-row"><div class="bar-label">V1 governed SV</div><div class="bar-track"><div class="bar-fill" data-w="55"></div></div><div class="bar-value">0.55</div></div>
+          <div class="bar-row"><div class="bar-label">V2 + ontology</div><div class="bar-track"><div class="bar-fill" data-w="60"></div></div><div class="bar-value">0.60</div></div>
+          <div class="bar-row"><div class="bar-label">V3 + Sense</div><div class="bar-track"><div class="bar-fill" data-w="70"></div></div><div class="bar-value">0.70</div></div>
+          <div class="bar-row"><div class="bar-label">V4 + instruction</div><div class="bar-track"><div class="bar-fill" data-w="87"></div></div><div class="bar-value">0.87</div></div>
+        </div>
+        <div class="bar-chart anim-fade">
+          <h3>Agent tokens per question</h3>
+          <div class="bar-row"><div class="bar-label">V0 stuffed</div><div class="bar-track"><div class="bar-fill tokens" data-w="87"></div></div><div class="bar-value">96.1K</div></div>
+          <div class="bar-row"><div class="bar-label">V1 governed SV</div><div class="bar-track"><div class="bar-fill tokens" data-w="71"></div></div><div class="bar-value">78.5K</div></div>
+          <div class="bar-row"><div class="bar-label">V2 + ontology</div><div class="bar-track"><div class="bar-fill tokens" data-w="82"></div></div><div class="bar-value">90.9K</div></div>
+          <div class="bar-row"><div class="bar-label">V3 + Sense</div><div class="bar-track"><div class="bar-fill tokens" data-w="100"></div></div><div class="bar-value">110.2K</div></div>
+          <div class="bar-row"><div class="bar-label">V4 + instruction</div><div class="bar-track"><div class="bar-fill tokens" data-w="95"></div></div><div class="bar-value">104.2K</div></div>
+        </div>
+      </div>
+      <div class="highlight-box anim-fade"><p><strong>Start with a small governed semantic view.</strong> Going from V0 to V1 nearly doubles correctness while using 18% fewer tokens. That is the only step that improves both. Add the ontology, Sense or instructions only when an eval question that the layer should fix keeps failing.</p></div>
+    </section>
+
+    <section class="slide" id="why">
+      <h2>Why each layer moved the score</h2>
+      <div class="card-grid grid-2">
+        <div class="card anim-fade">
+          <h4><span class="badge b-blue">V1</span>&nbsp; Governed semantic view</h4>
+          <p>A certified ARR metric (12 × MRR of active Subscription lines) and a verified query take away the choice of which table and which filter. The 31 lookalike tables are no longer visible to the agent.</p>
+          <p class="moved">ARR 0.58 → 1.00 · EMEA drop 0.17 → 0.84 · tokens −18%</p>
+        </div>
+        <div class="card anim-fade">
+          <h4><span class="badge b-purple">V2</span>&nbsp; Business Ontology</h4>
+          <p>"Bookings" now has one governed meaning, bound to the semantic view's net-new ACV metric and explicitly marked as <em>not the same as</em> TCV Bookings. The agent reads the definition before it queries.</p>
+          <p class="moved">Bookings 0.92 → 1.00, right by construction rather than by luck</p>
+        </div>
+        <div class="card anim-fade">
+          <h4><span class="badge b-purple">V3</span>&nbsp; Cortex Sense</h4>
+          <p>The semantic view doesn't model partner referrals. Sense learned from query history that analysts join accepted referrals, not the stale lead-source field, so the agent stops answering 9.</p>
+          <p class="moved">Partner deals 0.00 → 0.67 · costs ~19K more tokens per question</p>
+        </div>
+        <div class="card anim-fade">
+          <h4><span class="badge b-green">V4</span>&nbsp; One instruction</h4>
+          <p>No context layer fixes behavior. Every earlier version ranked reps more accurately. One policy sentence makes the agent decline and offer an aggregate view.</p>
+          <p class="moved">Rep ranking 0.00 → 1.00</p>
+        </div>
+      </div>
+    </section>
+
+    <section class="slide" id="ontology">
+      <h2>What the ontology holds</h2>
+      <p class="lede">Domain <code>Revenue Demo</code>: six governed concepts, bound to semantic view members and linked to each other.</p>
+      <div class="card-grid grid-2" style="margin-top:0.5rem;">
+        <div class="table-wrap anim-fade" style="margin:0;">
+          <table>
+            <thead><tr><th>Node</th><th>Kind</th><th>Bound to</th></tr></thead>
+            <tbody>
+              <tr><td>Bookings</td><td>Metric</td><td><code>NET_NEW_ACV_BOOKED</code></td></tr>
+              <tr><td>TCV Bookings</td><td>Metric</td><td><code>TCV_BOOKINGS</code></td></tr>
+              <tr><td>ARR</td><td>Metric</td><td><code>ARR</code></td></tr>
+              <tr><td>Open Pipeline</td><td>Metric</td><td><code>OPEN_PIPELINE</code></td></tr>
+              <tr><td>Booking Type</td><td>Dimension</td><td><code>BOOKING_TYPE</code></td></tr>
+              <tr><td>Test Account Exclusion</td><td>Policy</td><td>applies to the metrics</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="table-wrap anim-fade" style="margin:0;">
+          <table>
+            <thead><tr><th>From</th><th>Relationship</th><th>To</th></tr></thead>
+            <tbody>
+              <tr><td>Bookings</td><td><em>is not the same as</em></td><td>TCV Bookings</td></tr>
+              <tr><td>Booking Type</td><td>classifies</td><td>Bookings</td></tr>
+              <tr><td>Test Account Exclusion</td><td>applies to</td><td>Bookings</td></tr>
+              <tr><td>Test Account Exclusion</td><td>applies to</td><td>ARR</td></tr>
+              <tr><td>Test Account Exclusion</td><td>applies to</td><td>Open Pipeline</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+      <div class="context-box anim-fade"><p><strong>What's deliberately left out:</strong> partner sourcing and the rep-ranking rule. Those are the long tail (Sense) and the behavior gap (instructions). Putting them in the ontology would hide what each layer is for.</p></div>
+    </section>
+
+    <section class="slide" id="run-it">
+      <h2>Run it yourself</h2>
+      <p class="lede">You need the Snowflake CLI and Python 3.9+. Nothing to pip install. The install takes about 4 minutes into any account.</p>
+      <div class="step-label anim-fade">1 · Install data, semantic views, ontology, the agent and its versions, and the app</div>
+      <pre class="cmd anim-fade">python3 scripts/deploy.py -c &lt;connection&gt; --role SYSADMIN --warehouse &lt;WH&gt;</pre>
+      <div class="step-label anim-fade">2 · Optional: build the Cortex Sense context (see setup/CORTEX_SENSE.md), then add V3</div>
+      <pre class="cmd anim-fade">python3 scripts/deploy.py -c &lt;connection&gt; --steps agent</pre>
+      <div class="step-label anim-fade">3 · Optional: score every version in your own account (10–25 min)</div>
+      <pre class="cmd anim-fade">python3 scripts/run_evals.py -c &lt;connection&gt;</pre>
+      <div class="highlight-box anim-fade"><p>Then open <strong>Snowsight → Projects → Streamlit → CONTEXT_EVAL_DEMO_APP</strong>. It has the story, live side-by-side answers from any two versions, eval results, and each version's spec and the ontology. If Business Ontology or Cortex Sense isn't enabled, those versions are skipped and the rest still work.</p></div>
+    </section>
+
+    <section class="slide" id="closing">
+      <h2>Takeaways</h2>
+      <div class="card-grid grid-3">
+        <div class="card anim-fade"><h4>Start small and governed</h4><p>A 5-table semantic view beat a 38-table one on correctness and cost. Stuffing more context in is the most expensive way to be wrong.</p></div>
+        <div class="card anim-fade"><h4>Match the layer to the failure</h4><p>Contested meaning needs a definition (ontology). The long tail needs learned usage (Sense). Behavior needs an instruction. None of them substitutes for another.</p></div>
+        <div class="card anim-fade"><h4>Let evals decide</h4><p>Tag every change as a version, score it on questions built to fail, and keep a layer only if it moves the score enough to justify its tokens.</p></div>
+      </div>
+    </section>
+
+  </main>
+
+  <script>
+    const progressBar = document.querySelector('.progress-bar');
+    const sections = document.querySelectorAll('.slide');
+    const navLinks = document.querySelectorAll('.sidebar a');
+    window.addEventListener('scroll', function () {
+      const docHeight = document.documentElement.scrollHeight - window.innerHeight;
+      progressBar.style.width = (docHeight > 0 ? window.scrollY / docHeight * 100 : 0) + '%';
+      let current = '';
+      sections.forEach(function (s) { if (window.scrollY >= s.offsetTop - 200) current = s.id; });
+      navLinks.forEach(function (a) { a.classList.toggle('active', a.getAttribute('href') === '#' + current); });
+    });
+
+    const observer = new IntersectionObserver(function (entries) {
+      entries.forEach(function (entry) {
+        if (!entry.isIntersecting) return;
+        entry.target.classList.add('visible');
+        entry.target.querySelectorAll('.bar-fill').forEach(function (b) { b.style.width = b.dataset.w + '%'; });
+      });
+    }, { threshold: 0.1 });
+    document.querySelectorAll('.anim-fade').forEach(function (el) { observer.observe(el); });
+  </script>
+</body>
+</html>

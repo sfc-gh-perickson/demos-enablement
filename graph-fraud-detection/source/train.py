@@ -69,6 +69,35 @@ FEATURE_COLS = [
     'CLAIM_AMOUNT',
     'HAS_DIRECT_GRAPH',
 ]
+# Feature-set ablation: compare models with and without graph features
+TRANSACTIONAL_COLS = ['SUBMISSION_HOUR', 'IS_HIGH_CLAIM', 'IS_ODD_HOUR', 'CLAIM_AMOUNT']
+HEURISTIC_COLS = [
+    'SHARED_ADDRESS_COUNT', 'SHARED_IP_COUNT',
+    'ADDR_N_FILERS', 'ADDR_AVG_REFUND', 'IP_N_FILERS', 'IP_AVG_REFUND',
+]
+PROFILE_COLS = TRANSACTIONAL_COLS + ['ACCOUNT_AGE_DAYS', 'IS_MULTI_UNIT', 'IS_RISKY_IP', 'IS_ROUND_CLAIM']
+VELOCITY_COLS = PROFILE_COLS + HEURISTIC_COLS + ['DEVICE_REUSE_COUNT', 'BANK_REUSE_COUNT']
+GRAPH_COLS = [
+    'EFFECTIVE_COMMUNITY_SIZE', 'DEGREE', 'AVG_COMMUNITY_REFUND',
+    'COMMUNITY_REFUND_STDDEV', 'HAS_DIRECT_GRAPH',
+]
+FEATURE_SETS = {
+    'profile':   PROFILE_COLS,
+    'velocity':  VELOCITY_COLS,
+    'graph':     VELOCITY_COLS + GRAPH_COLS,
+    # Without device/bank reuse — the signals fraudsters most easily rotate
+    'velocity_lite': PROFILE_COLS + HEURISTIC_COLS,
+    'graph_lite':    PROFILE_COLS + HEURISTIC_COLS + GRAPH_COLS,
+    'baseline':  TRANSACTIONAL_COLS,
+    'heuristic': TRANSACTIONAL_COLS + HEURISTIC_COLS,
+    'full':      FEATURE_COLS,
+}
+FEATURE_SET = os.environ.get('FEATURE_SET', 'full').lower()
+if FEATURE_SET not in FEATURE_SETS:
+    raise ValueError(f'FEATURE_SET must be one of {list(FEATURE_SETS)}, got {FEATURE_SET!r}')
+RUN_NAME_PREFIX = {'velocity_lite': 'T2B_ADDR_IP_ONLY', 'graph_lite': 'T3B_ADDR_IP_GRAPH', 'profile': 'T1_PROFILE', 'velocity': 'T2_RULES_VELOCITY', 'graph': 'T3_GRAPH',
+                   'baseline': 'BASELINE_NO_GRAPH', 'heuristic': 'HEURISTIC_LINKS', 'full': 'FULL_GRAPH'}
+
 LABEL_COL = 'IS_FRAUD'
 MODEL_FILE   = 'fraud_ring_model.pkl'
 METRICS_FILE = 'fraud_ring_metrics.pkl'
@@ -142,10 +171,24 @@ def main():
             CASE WHEN HOUR(tr.SUBMITTED_AT) BETWEEN 0 AND 5 THEN 1.0 ELSE 0.0 END AS IS_ODD_HOUR,
             CASE WHEN cr.COMMUNITY_SIZE > 0 THEN cr.COMMUNITY_SIZE ELSE 0.0 END::DOUBLE AS EFFECTIVE_COMMUNITY_SIZE,
             CASE WHEN cr.COMMUNITY_SIZE > 0 THEN 1.0 ELSE 0.0 END AS HAS_DIRECT_GRAPH,
+            -- Non-graph baseline signals a rules team would use
+            DATEDIFF('day', an.CREATED_TS, tr.SUBMITTED_AT)::DOUBLE AS ACCOUNT_AGE_DAYS,
+            IFF(ad.IS_MULTI_UNIT, 1.0, 0.0) AS IS_MULTI_UNIT,
+            IFF(si.IP_TYPE IN ('vpn', 'public_wifi'), 1.0, 0.0) AS IS_RISKY_IP,
+            IFF(MOD(tr.CLAIM_AMOUNT, 100) = 0, 1.0, 0.0) AS IS_ROUND_CLAIM,
+            dv.N::DOUBLE AS DEVICE_REUSE_COUNT,
+            bk.N::DOUBLE AS BANK_REUSE_COUNT,
             CASE WHEN frm.APPLICANT_ID IS NOT NULL THEN 1.0 ELSE 0.0 END AS IS_FRAUD
         FROM {DATABASE}.GRAPH.COMMUNITY_RESULTS cr
         JOIN {DATABASE}.RAW.APPLICATIONS tr ON tr.APPLICANT_ID = cr.APPLICANT_ID
-        LEFT JOIN {DATABASE}.RAW.FRAUD_RING_MEMBERS frm ON frm.APPLICANT_ID = cr.APPLICANT_ID
+        LEFT JOIN {DATABASE}.RAW.APPLICANTS an ON an.APPLICANT_ID = tr.APPLICANT_ID
+        LEFT JOIN {DATABASE}.RAW.ADDRESSES ad ON ad.ADDRESS_ID = tr.ADDRESS_ID
+        LEFT JOIN {DATABASE}.RAW.SHARED_IPS si ON si.IP_ADDRESS = tr.IP_ADDRESS
+        LEFT JOIN (SELECT DEVICE_ID, COUNT(DISTINCT APPLICANT_ID) N FROM {DATABASE}.RAW.APPLICATIONS GROUP BY 1) dv
+               ON dv.DEVICE_ID = tr.DEVICE_ID
+        LEFT JOIN (SELECT BANK_ACCOUNT_HASH, COUNT(DISTINCT APPLICANT_ID) N FROM {DATABASE}.RAW.APPLICATIONS GROUP BY 1) bk
+               ON bk.BANK_ACCOUNT_HASH = tr.BANK_ACCOUNT_HASH
+        LEFT JOIN (SELECT DISTINCT APPLICANT_ID FROM {DATABASE}.RAW.FRAUD_RING_MEMBERS) frm ON frm.APPLICANT_ID = cr.APPLICANT_ID
         QUALIFY ROW_NUMBER() OVER (PARTITION BY cr.APPLICANT_ID ORDER BY tr.SUBMITTED_AT DESC) = 1
     """)
 
@@ -159,8 +202,10 @@ def main():
     train_pdf = training_sdf.to_pandas()
     print(f'  Loaded {len(train_pdf):,} rows, {len(train_pdf.columns)} columns')
 
-    available = [c for c in FEATURE_COLS if c in train_pdf.columns]
-    missing   = [c for c in FEATURE_COLS if c not in train_pdf.columns]
+    selected  = FEATURE_SETS[FEATURE_SET]
+    print(f'  Feature set: {FEATURE_SET} ({len(selected)} features)')
+    available = [c for c in selected if c in train_pdf.columns]
+    missing   = [c for c in selected if c not in train_pdf.columns]
     if missing:
         print(f'  WARNING: {len(missing)} feature cols not found: {missing[:5]}...')
     print(f'  Using {len(available)} features')
@@ -212,10 +257,22 @@ def main():
 
     metrics = calculate_metrics(y_test.values, y_pred, y_proba)
     metrics['threshold'] = best_threshold
+    # Fixed analyst budget: fraud caught in the top-K highest-scored applications
+    for k in (500, 1000, 2000):
+        top_k = np.argsort(-y_proba)[:k]
+        metrics[f'recall_at_top_{k}'] = float(y_test.values[top_k].sum() / max(y_test.sum(), 1))
+    # Operating points: precision at fixed recall, recall at fixed precision
+    from sklearn.metrics import precision_recall_curve
+    prec, rec, _ = precision_recall_curve(y_test, y_proba)
+    for r in (0.80, 0.90, 0.95):
+        metrics[f'precision_at_recall_{int(r*100)}'] = float(prec[rec >= r].max())
+    for pr in (0.50, 0.75, 0.90):
+        ok = rec[prec >= pr]
+        metrics[f'recall_at_precision_{int(pr*100)}'] = float(ok.max()) if len(ok) else 0.0
     for k, v in metrics.items():
         print(f'  {k}: {v:.4f}' if isinstance(v, float) else f'  {k}: {v}')
 
-    run_name = f'xgb_graph_fraud_{int(time.time())}'
+    run_name = f'{RUN_NAME_PREFIX[FEATURE_SET]}_{int(time.time())}'
     with exp.start_run(run_name):
         exp.log_params({
             'n_estimators':    str(N_ESTIMATORS),
@@ -225,6 +282,9 @@ def main():
             'subsample':       str(SUBSAMPLE),
             'colsample_bytree': str(COLSAMPLE_BYTREE),
             'run_type':        'graph_fraud_ml_job',
+            'feature_set':     FEATURE_SET,
+            'n_features':      str(len(available)),
+            'threshold':       str(round(best_threshold, 2)),
         })
         exp.log_metrics({
             'test_auc_roc':  metrics['auc_roc'],
@@ -232,8 +292,25 @@ def main():
             'test_recall':   metrics['recall'],
             'test_precision': metrics['precision'],
             'test_f1':       metrics['f1'],
+            'test_false_positive_rate': metrics['false_positive_rate'],
+            'test_true_positives':  float(metrics['true_positives']),
+            'test_false_positives': float(metrics['false_positives']),
+            'test_false_negatives': float(metrics['false_negatives']),
+            'test_recall_at_top_500':  metrics['recall_at_top_500'],
+            'test_recall_at_top_1000': metrics['recall_at_top_1000'],
+            'test_recall_at_top_2000': metrics['recall_at_top_2000'],
+            **{f'test_{k}': v for k, v in metrics.items()
+               if k.startswith(('precision_at_recall', 'recall_at_precision'))},
         })
+        importances = dict(zip(available, model.feature_importances_.tolist()))
+        exp.log_metrics({f'importance_{k}': float(v) for k, v in importances.items()})
     print(f'Logged run: {run_name}')
+
+    # Ablation runs only log to the experiment; don't overwrite production artifacts
+    if FEATURE_SET != 'full' or os.environ.get('ABLATION_ONLY', 'false').lower() == 'true':
+        print(f'\nAblation run (FEATURE_SET={FEATURE_SET}): skipping artifact upload / test table / registration')
+        print(f'AUC-ROC {metrics["auc_roc"]:.4f} | AUC-PR {metrics["auc_pr"]:.4f}')
+        return
 
     os.makedirs('/tmp/model', exist_ok=True)
     model_path   = f'/tmp/model/{MODEL_FILE}'
